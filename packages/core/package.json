@@ -1,0 +1,26 @@
+{
+  "name": "@nodara/core",
+  "version": "0.1.0-alpha.1",
+  "description": "Framework-agnostic visual engine for Gantt, charts, topologies and calendars.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./styles.css": "./src/styles.css"
+  },
+  "files": ["dist", "src/styles.css", "README.md"],
+  "sideEffects": ["**/*.css"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "publishConfig": { "access": "public" },
+  "keywords": ["gantt", "charts", "graph", "topology", "calendar", "typescript", "visualization"]
+}

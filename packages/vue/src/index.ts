@@ -1,0 +1,117 @@
+import {
+  createCalendar,
+  createChart,
+  createGantt,
+  createTopology,
+  type CalendarEvent,
+  type CalendarOptions,
+  type ChartOptions,
+  type ChartSeries,
+  type GanttOptions,
+  type GanttTask,
+  type NodaraController,
+  type TopologyData,
+  type TopologyOptions,
+} from "@nodara/core";
+import { defineComponent, h, onBeforeUnmount, onMounted, ref, watch, type PropType } from "vue";
+
+export const NodaraGantt = defineComponent({
+  name: "NodaraGantt",
+  props: {
+    data: { type: Array as PropType<GanttTask[]>, required: true },
+    options: { type: Object as PropType<Omit<GanttOptions, "data">>, default: () => ({}) },
+  },
+  emits: ["ready", "task-select", "task-change"],
+  setup(props, { emit }) {
+    const host = ref<HTMLElement>();
+    let controller: NodaraController<GanttTask[]> | undefined;
+    onMounted(() => {
+      if (!host.value) return;
+      controller = createGantt(host.value, { ...props.options, data: props.data });
+      controller.on("task:select", (event) => emit("task-select", event));
+      controller.on("task:change", (event) => emit("task-change", event));
+      emit("ready", controller);
+    });
+    watch(() => props.data, (data) => controller?.update(data), { deep: true });
+    onBeforeUnmount(() => controller?.destroy());
+    return () => h("div", { ref: host });
+  },
+});
+
+export const NodaraChart = defineComponent({
+  name: "NodaraChart",
+  props: {
+    series: { type: Array as PropType<ChartSeries[]>, required: true },
+    options: { type: Object as PropType<Omit<ChartOptions, "series">>, default: () => ({}) },
+  },
+  emits: ["ready", "point-select"],
+  setup(props, { emit }) {
+    const host = ref<HTMLElement>();
+    let controller: NodaraController<ChartSeries[]> | undefined;
+    onMounted(() => {
+      if (!host.value) return;
+      controller = createChart(host.value, { ...props.options, series: props.series });
+      controller.on("point:select", (event) => emit("point-select", event));
+      emit("ready", controller);
+    });
+    watch(() => props.series, (series) => controller?.update(series), { deep: true });
+    onBeforeUnmount(() => controller?.destroy());
+    return () => h("div", { ref: host });
+  },
+});
+
+export const NodaraTopology = defineComponent({
+  name: "NodaraTopology",
+  props: {
+    data: { type: Object as PropType<TopologyData>, required: true },
+    options: { type: Object as PropType<Omit<TopologyOptions, "data">>, default: () => ({}) },
+  },
+  emits: ["ready", "node-select"],
+  setup(props, { emit }) {
+    const host = ref<HTMLElement>();
+    let controller: NodaraController<TopologyData> | undefined;
+    onMounted(() => {
+      if (!host.value) return;
+      controller = createTopology(host.value, { ...props.options, data: props.data });
+      controller.on("node:select", (event) => emit("node-select", event));
+      emit("ready", controller);
+    });
+    watch(() => props.data, (data) => controller?.update(data), { deep: true });
+    onBeforeUnmount(() => controller?.destroy());
+    return () => h("div", { ref: host });
+  },
+});
+
+export const NodaraCalendar = defineComponent({
+  name: "NodaraCalendar",
+  props: {
+    events: { type: Array as PropType<CalendarEvent[]>, required: true },
+    options: { type: Object as PropType<Omit<CalendarOptions, "events">>, default: () => ({}) },
+  },
+  emits: ["ready", "event-select"],
+  setup(props, { emit }) {
+    const host = ref<HTMLElement>();
+    let controller: NodaraController<CalendarEvent[]> | undefined;
+    onMounted(() => {
+      if (!host.value) return;
+      controller = createCalendar(host.value, { ...props.options, events: props.events });
+      controller.on("event:select", (event) => emit("event-select", event));
+      emit("ready", controller);
+    });
+    watch(() => props.events, (events) => controller?.update(events), { deep: true });
+    onBeforeUnmount(() => controller?.destroy());
+    return () => h("div", { ref: host });
+  },
+});
+
+export type {
+  CalendarEvent,
+  CalendarOptions,
+  ChartOptions,
+  ChartSeries,
+  GanttOptions,
+  GanttTask,
+  NodaraController,
+  TopologyData,
+  TopologyOptions,
+} from "@nodara/core";

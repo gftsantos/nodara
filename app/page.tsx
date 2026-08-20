@@ -103,29 +103,29 @@ export function ProductPlan() {
     />
   );
 }`,
-  angular: `import { NodaraGanttModule } from '@nodara/angular';
+  angular: `import { NodaraGanttComponent } from '@nodara/angular';
 
 @Component({
   selector: 'product-plan',
-  imports: [NodaraGanttModule],
+  imports: [NodaraGanttComponent],
   template: \`
     <nd-gantt
       [data]="roadmap"
-      zoom="month"
-      (taskChange)="syncTask($event)"
+      [options]="{ zoom: 'month' }"
+      (taskSelect)="openTask($event)"
     />
   \`,
 })
 export class ProductPlan {}`,
   vue: `<script setup lang="ts">
-import { Gantt } from '@nodara/vue';
+import { NodaraGantt } from '@nodara/vue';
 import '@nodara/core/styles.css';
 </script>
 
 <template>
-  <Gantt
+  <NodaraGantt
     :data="roadmap"
-    zoom="month"
+    :options="{ zoom: 'month' }"
     @task-change="syncTask"
   />
 </template>`,
@@ -497,9 +497,9 @@ export default function Home() {
             <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós</strong><small>WebGL renderer</small></div></div>
           </div>
           <div className="hero-foot">
-            <div><strong>75+</strong><span>componentes</span></div>
-            <div><strong>&lt; 16ms</strong><span>render médio</span></div>
-            <div><strong>4</strong><span>frameworks</span></div>
+            <div><strong>5</strong><span>pacotes alpha</span></div>
+            <div><strong>6.2 kB</strong><span>core gzipped</span></div>
+            <div><strong>4</strong><span>adaptadores</span></div>
             <div><strong>AA</strong><span>WCAG 2.2</span></div>
           </div>
         </section>
@@ -615,7 +615,7 @@ export default function Home() {
               <div className="code-window">
                 <div className="code-window-head"><span><i /><i /><i /></span><p>ProductPlan.{activeFramework === "vue" ? "vue" : "tsx"}</p><CopyButton value={snippets[activeFramework]} /></div>
                 <pre><code>{snippets[activeFramework]}</code></pre>
-                <div className="code-status"><span><CheckCircle2 size={14} /> Compilado sem erros</span><b>8.4 kB gzipped</b></div>
+                <div className="code-status"><span><CheckCircle2 size={14} /> Compilado sem erros</span><b>6.8 kB core + adapter</b></div>
               </div>
             </div>
           </div>
@@ -653,7 +653,7 @@ export default function Home() {
               <div className="performance-bars"><i><span style={{ width: "24%" }} /></i><i><span style={{ width: "56%" }} /></i><i><span style={{ width: "88%" }} /></i></div>
               <div className="performance-labels"><span>DOM</span><span>CANVAS</span><span>WEBGL</span></div>
             </article>
-            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Pacotes independentes e tree-shaking real.</p><strong className="metric">8.4 <small>kB</small></strong></article>
+            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Cinco pacotes independentes e tree-shaking real.</p><strong className="metric">6.2 <small>kB CORE</small></strong></article>
             <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBLE</span><h3>Acessível de raiz.</h3><p>Teclado, leitores de ecrã e contraste testados.</p><strong className="metric">AA <small>WCAG 2.2</small></strong></article>
             <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>OPEN CORE</span><h3>Construída em público.</h3><p>Roadmap aberto, RFCs e releases previsíveis.</p><div className="community-row"><span>12.8k <small>stars</small></span><span>84 <small>contributors</small></span><span>99.9% <small>uptime</small></span></div></article>
           </div>

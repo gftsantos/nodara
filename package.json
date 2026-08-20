@@ -2,14 +2,24 @@
   "name": "nodara-showcase",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "vinext dev",
-    "build": "vinext build",
+    "build": "npm run build:lib && npm run build:site",
+    "build:lib": "npm run build -w @nodara/core && npm run build -w @nodara/react && npm run build -w @nodara/vue && npm run build -w @nodara/angular && npm run build -w @nodara/web-components",
+    "build:site": "vinext build",
     "start": "vinext start",
-    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test": "npm run test:lib && npm run build:site && node --test tests/rendered-html.test.mjs",
+    "test:lib": "vitest run --config vitest.config.ts",
+    "typecheck": "npm run build -w @nodara/core && npm run typecheck --workspaces --if-present",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "npm run build:lib && changeset publish",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate"
   },
@@ -20,6 +30,8 @@
     "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@angular/core": "^21.0.0",
+    "@changesets/cli": "^2.29.7",
     "@cloudflare/vite-plugin": "1.37.1",
     "@eslint/js": "9.39.4",
     "@next/eslint-plugin-next": "16.2.6",
@@ -37,11 +49,15 @@
     "globals": "16.4.0",
     "react-server-dom-webpack": "19.2.6",
     "tailwindcss": "4.2.1",
+    "tsup": "^8.5.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.59.3",
+    "vitest": "^3.2.4",
     "vinext": "1.0.0-beta.2",
     "vite": "8.0.13",
-    "wrangler": "4.92.0"
+    "vue": "^3.5.21",
+    "wrangler": "4.92.0",
+    "zone.js": "^0.15.1"
   },
   "type": "module"
 }

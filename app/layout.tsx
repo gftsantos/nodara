@@ -13,9 +13,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nodara-visual.gftsantos.chatgpt.site"),
   title: "Nodara — Visual infrastructure for the web",
   description:
     "Gantt, gráficos, grafos, topologias e calendários para React, Angular, Vue e JavaScript.",
+  openGraph: {
+    title: "Nodara — Dados complexos. Clareza instantânea.",
+    description: "Gantt, charts, topology e calendar num único core TypeScript.",
+    type: "website",
+    locale: "pt_PT",
+    images: [{ url: "/og.png", width: 1731, height: 909, alt: "Nodara — Dados complexos. Clareza instantânea." }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nodara — Dados complexos. Clareza instantânea.",
+    description: "Gantt, charts, topology e calendar num único core TypeScript.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({

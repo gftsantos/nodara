@@ -1,0 +1,25 @@
+{
+  "name": "@nodara/angular",
+  "version": "0.1.0-alpha.1",
+  "description": "Official Angular standalone components for Nodara.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake --external @angular/core --external @nodara/core",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": { "@nodara/core": "0.1.0-alpha.1" },
+  "peerDependencies": { "@angular/core": ">=17.0.0" },
+  "publishConfig": { "access": "public" }
+}
