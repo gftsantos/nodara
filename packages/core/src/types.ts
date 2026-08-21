@@ -115,9 +115,25 @@ export interface ChartSeries {
   data: ChartPoint[];
 }
 
+export type ChartType =
+  | "line"
+  | "area"
+  | "bar"
+  | "scatter"
+  | "bubble"
+  | "pie"
+  | "donut"
+  | "radar"
+  | "polar-area"
+  | "heatmap"
+  | "waterfall"
+  | "funnel"
+  | "gauge"
+  | "candlestick";
+
 export interface ChartOptions extends BaseOptions {
   series: ChartSeries[];
-  type?: "line" | "area" | "bar" | "scatter";
+  type?: ChartType;
   stacked?: boolean;
   showLegend?: boolean;
   showGrid?: boolean;

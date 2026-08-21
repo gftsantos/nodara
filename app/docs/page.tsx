@@ -39,6 +39,7 @@ import styles from "./docs.module.css";
 
 const pageIcons: Partial<Record<string, LucideIcon>> = {
   overview: BookOpen,
+  catalog: Layers3,
   installation: Terminal,
   architecture: Layers3,
   gantt: Rows3,
@@ -192,6 +193,7 @@ export default function DocsPage() {
         </div>
         <div className={styles.headerActions}>
           <span className={styles.version}>v0.1 ALPHA</span>
+          <a href="/catalog"><Layers3 size={16} /><span>Catálogo</span></a>
           <button className={styles.mobileSearchButton} onClick={() => { setMobileSearch((value) => !value); setMobileNav(false); window.setTimeout(() => searchRef.current?.focus(), 0); }} aria-label={mobileSearch ? "Fechar pesquisa" : "Abrir pesquisa"}><Search size={17} /></button>
           <button onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Alternar tema">{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
           <a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer"><Code2 size={16} /><span>GitHub</span><ExternalLink size={12} /></a>
@@ -201,7 +203,7 @@ export default function DocsPage() {
 
       <div className={styles.shell}>
         <aside className={`${styles.sidebar} ${mobileNav ? styles.sidebarOpen : ""}`} aria-label="Navegação da documentação">
-          <div className={styles.sidebarIntro}><span>DOCUMENTAÇÃO</span><strong>Referência completa</strong><small>{docsPages.length} guias · 4 componentes reais</small></div>
+          <div className={styles.sidebarIntro}><span>DOCUMENTAÇÃO</span><strong>Referência completa</strong><small>{docsPages.length} guias · 48 demos · 4 motores</small></div>
           <nav>
             {docGroups.map((group) => (
               <div className={styles.navGroup} key={group.id}>

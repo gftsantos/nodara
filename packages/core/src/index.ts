@@ -3,6 +3,8 @@ export { createChart } from "./chart";
 export { buildChartData, chartDomain, chartPointCount } from "./chart-model";
 export { createTopology } from "./topology";
 export { createCalendar } from "./calendar";
+export { getVisualCatalogItem, visualCatalog, visualCatalogCounts } from "./catalog";
+export type { VisualCatalogItem, VisualFamily } from "./catalog";
 export { calendarRange, moveCalendarEvent, replaceCalendarEvent, resizeCalendarEvent, startOfDay, startOfWeek } from "./calendar-model";
 export { applyTheme, defaultDarkTokens, defaultLightTokens, resolveTheme } from "./theme";
 export { contrastRatio, hexToRgb, readableTextColor, relativeLuminance } from "./color";

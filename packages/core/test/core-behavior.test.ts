@@ -16,9 +16,11 @@ import {
   relativeLuminance,
   renderWebGLPoints,
   resolveRenderMode,
+  visualCatalog,
+  visualCatalogCounts,
 } from "../src/index";
 import { createController } from "../src/controller";
-import type { BaseOptions, GanttTask, NodaraPlugin } from "../src/index";
+import type { BaseOptions, ChartType, GanttTask, NodaraPlugin } from "../src/index";
 import { createCanvas2DContext } from "./setup";
 
 function host(width = 900, height = 500): HTMLDivElement {
@@ -88,6 +90,18 @@ describe("real renderers and interactions", () => {
   it("[I127] renders accessible chart point controls", () => { const element = host(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }] }); expect(element.querySelector("table button")?.textContent).toContain("Jan"); });
   it("[I128] emits chart keyboard selection", () => { const element = host(); const onPointSelect = vi.fn(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }], onPointSelect }); element.querySelector<HTMLButtonElement>("table button")!.click(); expect(onPointSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });
   it("[I129] renders chart tooltips", () => { const element = host(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }], showTooltip: true }); expect(element.querySelector(".nd-chart__tooltip")).not.toBeNull(); });
+  it.each<ChartType>(["line", "area", "bar", "scatter", "bubble", "pie", "donut", "radar", "polar-area", "heatmap", "waterfall", "funnel", "gauge", "candlestick"])("[collection] renders the %s chart geometry", (type) => {
+    const element = host();
+    createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 24, meta: { size: 12, min: 0, max: 100, open: 18, high: 28, low: 15, close: 24 } }, { x: "Fev", y: 36 }] }], type });
+    expect(element.dataset.ndType).toBe(type);
+    expect(element.dataset.ndRenderer).toBe("canvas");
+    expect(element.querySelector("canvas")).not.toBeNull();
+  });
+  it("[collection] exposes exactly 48 documented visual recipes", () => {
+    expect(visualCatalog).toHaveLength(48);
+    expect(visualCatalogCounts).toEqual({ gantt: 10, charts: 20, topology: 10, calendar: 8 });
+    expect(new Set(visualCatalog.map((item) => item.id)).size).toBe(48);
+  });
   it("[I130] records topology layout and renderer", () => { const element = host(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, layout: "grid" }); expect(element.dataset.ndLayout).toBe("grid"); expect(element.dataset.ndRenderer).toBe("canvas"); });
   it("[I131] exposes topology nodes to keyboards", () => { const element = host(); const onNodeSelect = vi.fn(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, onNodeSelect }); element.querySelector<HTMLButtonElement>("ul button")!.click(); expect(onNodeSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });
   it("[I181] scales topology nodes down before dense layouts overlap", () => { const context = createCanvas2DContext(); vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(((type: string) => type === "2d" ? context : null) as typeof HTMLCanvasElement.prototype.getContext); createTopology(host(1120, 420), { data: { nodes: Array.from({ length: 180 }, (_, index) => ({ id: String(index), label: `Node ${index}` })), edges: [] }, layout: "grid", renderer: "canvas" }); expect(context.arc).toHaveBeenCalled(); expect(context.arc.mock.calls[0]?.[2]).toBeLessThan(10); });

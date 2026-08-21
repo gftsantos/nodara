@@ -60,7 +60,7 @@ const featureItems: Array<{
     description: "Planos, recursos e dependências",
     icon: Rows3,
     accent: "#6e7dff",
-    count: 1,
+    count: 10,
   },
   {
     id: "charts",
@@ -68,7 +68,7 @@ const featureItems: Array<{
     description: "Dashboards e análise em tempo real",
     icon: BarChart3,
     accent: "#ff7657",
-    count: 1,
+    count: 20,
   },
   {
     id: "topology",
@@ -76,7 +76,7 @@ const featureItems: Array<{
     description: "Sistemas, redes e relações",
     icon: Network,
     accent: "#c8fa63",
-    count: 1,
+    count: 10,
   },
   {
     id: "calendar",
@@ -84,7 +84,7 @@ const featureItems: Array<{
     description: "Agenda, recursos e recorrências",
     icon: CalendarDays,
     accent: "#52d6c7",
-    count: 1,
+    count: 8,
   },
 ];
 
@@ -698,7 +698,7 @@ export default function Home() {
           <sup>BETA</sup>
         </button>
         <nav className={mobileNav ? "main-nav is-open" : "main-nav"} aria-label="Navegação principal">
-          <button onClick={() => scrollTo("componentes")}>Componentes</button>
+          <a href="/catalog">Catálogo</a>
           <a href="/docs">Documentação</a>
           <button onClick={() => scrollTo("arquitetura")}>Arquitetura</button>
           <button onClick={() => scrollTo("enterprise")}>Enterprise</button>
@@ -723,9 +723,9 @@ export default function Home() {
           <div className="hero-copy">
             <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.2 alpha</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
-            <p>Uma biblioteca TypeScript, quatro ecossistemas e quatro visualizações essenciais para produtos ambiciosos.</p>
+            <p>Uma biblioteca TypeScript com 48 visualizações prontas, construídas sobre quatro motores consistentes para produtos ambiciosos.</p>
             <div className="hero-actions">
-              <button className="primary-button" onClick={() => scrollTo("componentes")}><Play size={16} fill="currentColor" /> Explorar playground</button>
+              <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar 48 visualizações</a>
               <CopyButton value="npm i @nodara/react" label="npm i @nodara/react" />
             </div>
             <div className="framework-proof">
@@ -764,7 +764,7 @@ export default function Home() {
           </div>
           <div className="hero-foot">
             <div><strong>5</strong><span>pacotes alpha</span></div>
-            <div><strong>16.1 kB</strong><span>core completo gzip</span></div>
+            <div><strong>48</strong><span>demos reais no catálogo</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
             <div><strong>200+</strong><span>testes automatizados</span></div>
           </div>
@@ -774,14 +774,14 @@ export default function Home() {
           <div className="section-heading">
             <div><span className="section-number">01</span><p>O MESMO MOTOR. TODAS AS FORMAS.</p></div>
             <h2>Um playground para<br />dados do mundo real.</h2>
-            <p>Troca de componente, inspeciona o contrato de dados e leva o código contigo. Tudo sem sair da página.</p>
+            <p>Experimenta aqui os quatro motores ou abre o catálogo para explorar 48 receitas com demo, dados e integração próprias.</p>
           </div>
 
           <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>
             <aside className="component-sidebar">
               <div className="sidebar-title"><span>EXPLORADOR</span><button onClick={() => setSidebarCollapsed((value) => !value)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"} title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}><PanelLeftClose size={15} /></button></div>
               <button className="sidebar-search" onClick={() => setShowSearch(true)}><Search size={14} /><span>Procurar componente</span><kbd>/</kbd></button>
-              <p className="sidebar-label">VISUALIZAÇÕES · 4 COMPONENTES</p>
+              <p className="sidebar-label">48 RECEITAS · 4 MOTORES</p>
               <div className="feature-nav">
                 {featureItems.map((item) => {
                   const Icon = item.icon;
@@ -820,7 +820,7 @@ export default function Home() {
                 <button role="tab" aria-selected={workspaceTab === "preview"} className={workspaceTab === "preview" ? "active" : ""} onClick={() => setWorkspaceTab("preview")}><Play size={13} /> Preview</button>
                 <button role="tab" aria-selected={workspaceTab === "data"} className={workspaceTab === "data" ? "active" : ""} onClick={() => setWorkspaceTab("data")}><FileJson size={13} /> Dados</button>
                 <button role="tab" aria-selected={workspaceTab === "api"} className={workspaceTab === "api" ? "active" : ""} onClick={() => setWorkspaceTab("api")}><Braces size={13} /> API</button>
-                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.name} · 1 componente real`}</div>
+                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.name} · ${activeFeatureData.count} receitas`}</div>
               </div>
               <div className="workspace-canvas">
                 {workspaceTab === "preview" && <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />}
@@ -968,7 +968,7 @@ export default function Home() {
 
       <footer>
         <div className="footer-brand"><div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>NODARA</span></div><p>Visual infrastructure for the web.</p></div>
-        <div className="footer-links"><div><strong>PRODUTO</strong><a href="#componentes">4 componentes</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
+          <div className="footer-links"><div><strong>PRODUTO</strong><a href="/catalog">48 visualizações</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
         <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer">GitHub</a><a href="/docs">Documentação</a><a href="/docs#architecture">Arquitetura</a></div></div>
       </footer>
 

@@ -1,6 +1,6 @@
 # Nodara — registo de 100 iterações
 
-Cada iteração seguiu o mesmo ciclo: identificar uma limitação, implementar a alteração e validar com um teste automatizado ou uma verificação real no browser. A suite final contém 182 testes automatizados no core, além das verificações desktop e mobile do portal.
+Cada iteração seguiu o mesmo ciclo: identificar uma limitação, implementar a alteração e validar com um teste automatizado ou uma verificação real no browser. A suite final contém 197 testes automatizados no core, além das verificações desktop e mobile do portal.
 
 | # | Funcionalidade ou bug identificado | Desenvolvimento / correção | Validação |
 |---:|---|---|---|
@@ -107,7 +107,7 @@ Cada iteração seguiu o mesmo ciclo: identificar uma limitação, implementar a
 
 ## Validação adicional
 
-- 182 testes automatizados em cinco suites.
+- 197 testes automatizados em cinco suites.
 - TypeScript strict nos cinco pacotes.
 - Build ESM, CJS e declarações para core e adaptadores.
 - Browser desktop: Gantt editável, dependencies, Chart Canvas/WebGL, Topology e Calendar recorrente.

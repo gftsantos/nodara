@@ -189,7 +189,7 @@ test("portal links to a complete and honest documentation hub", async ({ page },
   await page.locator(".site-header").getByRole("link", { name: "Documentação", exact: true }).click();
   await expect(page).toHaveURL(/\/docs/);
   await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
-  await expect(page.getByLabel("Navegação da documentação")).toContainText("21 guias · 4 componentes reais");
+  await expect(page.getByLabel("Navegação da documentação")).toContainText("22 guias · 48 demos · 4 motores");
 
   for (const component of ["Gantt", "Chart", "Topology", "Calendar"]) {
     await page.getByLabel("Navegação da documentação").getByRole("link", { name: component, exact: true }).click();
@@ -237,5 +237,47 @@ test("documentation typography and width remain readable", async ({ page }) => {
     return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
   });
   expect(audit.minimum).toBeGreaterThanOrEqual(10);
+  expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
+});
+
+test("catalog exposes all 48 real recipes and accurate family counts", async ({ page }) => {
+  await page.goto("/catalog");
+  await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("48 visualizações reais");
+  await expect(page.getByText("48 resultados", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Gráficos 20", exact: true }).click();
+  await expect(page.getByText("20 resultados", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Abrir demonstração: Line chart/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Abrir demonstração: Candlestick/ })).toBeVisible();
+});
+
+test("catalog opens real chart geometries and rerenders edited data", async ({ page }) => {
+  await page.goto("/catalog#donut-chart");
+  await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
+  await expect(page.locator(".nd-chart")).toHaveAttribute("data-nd-type", "donut");
+  const editor = page.getByRole("textbox", { name: "Editar dados da demonstração" });
+  await editor.fill((await editor.inputValue()).replace('"y": 38', '"y": 58'));
+  await page.getByRole("button", { name: "Validar e renderizar" }).click();
+  await expect(page.getByText("Dados validados e renderizados.")).toBeVisible();
+  await expect(page.locator(".nd-chart")).toHaveAttribute("data-nd-type", "donut");
+  await page.getByRole("link", { name: /Abrir referência completa da API/ }).click();
+  await expect(page).toHaveURL(/\/docs#charts$/);
+});
+
+test("catalog search, typography and responsive width remain usable", async ({ page }) => {
+  await page.goto("/catalog");
+  await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
+  await page.getByRole("textbox", { name: "Procurar no catálogo" }).fill("recorrentes");
+  await expect(page.getByText("1 resultados", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Eventos recorrentes/ })).toBeVisible();
+  const audit = await page.evaluate(() => {
+    const sizes = [...document.body.querySelectorAll("*")].filter((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return element.children.length === 0 && Boolean(element.textContent?.trim()) && rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    }).map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
+  });
+  expect(audit.minimum).toBeGreaterThanOrEqual(9);
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });
