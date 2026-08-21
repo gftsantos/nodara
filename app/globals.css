@@ -81,7 +81,20 @@ a {
   --surface-3: #e3e2db;
   --line: rgba(17, 20, 17, 0.11);
   --line-strong: rgba(17, 20, 17, 0.2);
+  --lime: #416700;
+  --yellow: #765500;
   --shadow: 0 28px 90px rgba(30, 35, 25, 0.14);
+}
+
+.site[data-theme="light"] .primary-button {
+  border-color: #416700;
+  background: #c8fa63;
+  color: #10150a;
+}
+
+.site[data-theme="light"] .code-window,
+.site[data-theme="light"] footer {
+  --lime: #c8fa63;
 }
 
 ::selection {
@@ -2009,7 +2022,17 @@ footer {
   backdrop-filter: blur(9px);
 }
 
+.search-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: default;
+}
+
 .search-dialog {
+  position: relative;
+  z-index: 1;
   width: min(620px, calc(100vw - 32px));
   border: 1px solid rgba(255,255,255,.18);
   border-radius: 10px;
@@ -2144,4 +2167,26 @@ footer {
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
   }
+}
+
+.real-preview.gantt-shell,
+.real-preview.charts-shell,
+.real-preview.topology-shell,
+.real-preview.calendar-shell {
+  display: block;
+  padding: 0;
+  background: var(--surface);
+}
+
+.real-preview > .nd-root {
+  height: 100%;
+  min-height: 445px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.site[data-theme="light"] .real-preview > .nd-root {
+  --nd-positive: #416700;
+  --nd-warning: #765500;
 }

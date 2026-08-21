@@ -4,41 +4,55 @@
 
 ```text
 Application data
-      │
-      ▼
-Public typed contracts + runtime validation
-      │
-      ▼
-@nodara/core controller and renderers
-      │
-      ├── Gantt DOM renderer
-      ├── Chart Canvas renderer
-      ├── Topology Canvas renderer
-      └── Calendar DOM renderer
-      │
-      ▼
-React · Vue · Angular · Web Components · JavaScript
+      |
+      v
+Typed contracts + runtime normalization
+      |
+      v
+Reactive controller + plugin lifecycle
+      |
+      +-- Gantt: semantic DOM / Canvas / WebGL density
+      +-- Charts: Canvas / WebGL + accessible table
+      +-- Topology: Canvas / WebGL + layout engine
+      +-- Calendar: semantic DOM + recurrence engine
+      |
+      v
+React | Vue | Angular | Web Components | JavaScript
 ```
 
-The framework adapters only map lifecycle and event semantics. Rendering,
-validation, theme tokens, accessibility metadata, and errors belong to core.
+Framework adapters only map component lifecycle and events. Rendering,
+normalization, themes, accessibility semantics, performance selection and
+errors belong to `@nodara/core`.
 
-## Controller contract
+## Reactive controller
 
-Every visual returns the same lifecycle surface:
+Data is normalized on initialization and every update. Options are shallowly
+merged and applied without replacing the controller. Render cleanup runs before
+every redraw; ResizeObserver, document listeners and plugin hooks are released
+on destroy.
 
-- `update(data)` replaces the current normalized dataset.
-- `resize()` requests a deterministic redraw.
-- `destroy()` removes observers, listeners, and rendered nodes.
-- `on(event, listener)` subscribes to domain and lifecycle events.
+## Renderer strategy
 
-## Performance strategy
+`renderer: "auto"` selects DOM for semantic small datasets, Canvas for dense
+data and WebGL after a configurable threshold when the browser supports it.
+Explicit WebGL gracefully falls back to Canvas. Each Canvas/WebGL component
+keeps an accessible DOM representation for assistive technology.
 
-The first alpha uses accessible DOM for semantic, row-oriented components and
-Canvas for dense analytical components. The renderer boundary is internal, so
-future WebGL virtualization does not change package APIs.
+## Performance
+
+- 10,000-task Gantt uses a density renderer instead of creating 10,000 rows.
+- Chart geometry and grid topology layouts are linear in item count.
+- Force layout iterations are bounded.
+- Recurrence expansion has configurable hard limits.
+- Device pixel ratio is capped to control Canvas memory.
+
+## Quality gates
+
+The repository runs TypeScript strict, 181 automated tests, package builds,
+server-rendered HTML verification and desktop/mobile browser smoke tests. The
+100-iteration implementation ledger is in `docs/ITERATIONS.md`.
 
 ## Compatibility
 
-The public target is evergreen browsers, Node.js 20+, React 18+, Vue 3.3+ and
-Angular 17+. All packages publish ESM, CommonJS, declarations and source maps.
+The target is evergreen browsers, Node.js 22+, React 18+, Vue 3.3+ and Angular
+17+. Packages publish ESM, CommonJS, declarations and source maps.

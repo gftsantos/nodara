@@ -47,7 +47,10 @@ export class NodaraGanttComponent implements AfterViewInit, OnChanges, OnDestroy
     this.controller.on<GanttTaskEvent>("task:change", (event) => this.taskChange.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["data"] && this.controller) this.controller.update(this.data); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["options"] && this.controller) this.controller.setOptions(this.options);
+    if (changes["data"] && this.controller) this.controller.update(this.data);
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -65,7 +68,10 @@ export class NodaraChartComponent implements AfterViewInit, OnChanges, OnDestroy
     this.controller.on<ChartPointEvent>("point:select", (event) => this.pointSelect.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["series"] && this.controller) this.controller.update(this.series); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["options"] && this.controller) this.controller.setOptions(this.options);
+    if (changes["series"] && this.controller) this.controller.update(this.series);
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -83,7 +89,10 @@ export class NodaraTopologyComponent implements AfterViewInit, OnChanges, OnDest
     this.controller.on<TopologyNodeEvent>("node:select", (event) => this.nodeSelect.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["data"] && this.controller) this.controller.update(this.data); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["options"] && this.controller) this.controller.setOptions(this.options);
+    if (changes["data"] && this.controller) this.controller.update(this.data);
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -101,7 +110,10 @@ export class NodaraCalendarComponent implements AfterViewInit, OnChanges, OnDest
     this.controller.on<CalendarEventSelectEvent>("event:select", (event) => this.eventSelect.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["events"] && this.controller) this.controller.update(this.events); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["options"] && this.controller) this.controller.setOptions(this.options);
+    if (changes["events"] && this.controller) this.controller.update(this.events);
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 

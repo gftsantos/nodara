@@ -121,8 +121,9 @@
 
 .nd-gantt__timeline {
   position: relative;
-  background-image: linear-gradient(90deg, transparent calc(25% - 1px), var(--nd-border) 25%, transparent calc(25% + 1px));
-  background-size: 25% 100%;
+  min-width: max(100%, calc(var(--nd-tick-count, 4) * 56px));
+  background-image: linear-gradient(90deg, transparent calc(100% - 1px), var(--nd-border) 100%);
+  background-size: calc(100% / var(--nd-tick-count, 4)) 100%;
 }
 
 .nd-gantt__scale {
@@ -152,7 +153,8 @@
   background: color-mix(in srgb, var(--nd-task-color) 42%, var(--nd-surface));
   cursor: pointer;
   transform: translateY(-50%);
-  overflow: hidden;
+  overflow: visible;
+  touch-action: none;
 }
 
 .nd-gantt__bar:hover,
@@ -168,13 +170,72 @@
 .nd-gantt__progress {
   display: block;
   height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
   background: color-mix(in srgb, var(--nd-task-color) 82%, transparent);
+}
+
+.nd-gantt__resize {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  inset-block: -3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--nd-task-color) 86%, var(--nd-fg));
+  cursor: ew-resize;
+  opacity: 0;
+}
+
+.nd-gantt__bar:hover .nd-gantt__resize,
+.nd-gantt__bar:focus-visible .nd-gantt__resize { opacity: 1; }
+.nd-gantt__resize--start { left: -4px; }
+.nd-gantt__resize--end { right: -4px; }
+
+.nd-gantt__dependencies {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.nd-gantt__dependencies path {
+  fill: none;
+  stroke: var(--nd-muted);
+  stroke-width: .35;
+  vector-effect: non-scaling-stroke;
+  opacity: .72;
+}
+
+.nd-gantt__density-canvas {
+  display: block;
+  max-width: 100%;
+  background-image: linear-gradient(90deg, transparent calc(10% - 1px), var(--nd-border) 10%, transparent calc(10% + 1px));
+  background-size: 10% 100%;
 }
 
 .nd-chart {
   display: flex;
   flex-direction: column;
 }
+
+.nd-chart__tooltip {
+  position: absolute;
+  z-index: 3;
+  max-width: 220px;
+  padding: 7px 9px;
+  border: 1px solid var(--nd-border);
+  border-radius: calc(var(--nd-radius) - 2px);
+  background: var(--nd-surface);
+  color: var(--nd-fg);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .22);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.nd-chart__tooltip[hidden] { display: none; }
 
 .nd-chart__legend {
   min-height: 38px;
@@ -206,6 +267,7 @@
   display: block;
   max-width: 100%;
   outline: 0;
+  touch-action: none;
 }
 
 .nd-calendar__grid {
@@ -222,6 +284,9 @@
   background-image: linear-gradient(var(--nd-border) 1px, transparent 1px);
   background-size: 100% 25%;
 }
+
+.nd-calendar__grid--month .nd-calendar__day { min-height: 118px; }
+.nd-calendar__day--outside { opacity: .58; }
 
 .nd-calendar__day:last-child {
   border-right: 0;
@@ -258,6 +323,7 @@
   color: var(--nd-fg);
   text-align: left;
   cursor: pointer;
+  touch-action: none;
 }
 
 .nd-calendar__event:hover,
@@ -284,4 +350,10 @@
     animation-duration: .01ms !important;
     transition-duration: .01ms !important;
   }
+}
+
+@media (forced-colors: active) {
+  .nd-root { border-color: CanvasText; }
+  .nd-gantt__bar, .nd-calendar__event { border: 2px solid ButtonText; }
+  .nd-gantt__dependencies path { stroke: CanvasText; }
 }

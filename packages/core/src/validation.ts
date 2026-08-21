@@ -4,6 +4,7 @@ import type {
   GanttTask,
   TopologyData,
 } from "./types";
+import { parseRecurrence } from "./recurrence";
 import { clamp, NodaraError, toTimestamp } from "./utils";
 
 function assertUniqueIds(items: Array<{ id: string }>, domain: string): void {
@@ -17,12 +18,17 @@ function assertUniqueIds(items: Array<{ id: string }>, domain: string): void {
 
 export function normalizeGanttTasks(input: GanttTask[]): GanttTask[] {
   assertUniqueIds(input, "task");
+  const ids = new Set(input.map((task) => task.id));
   return input.map((task) => {
     if (!task.label?.trim()) throw new NodaraError("ND_MISSING_LABEL", `Task ${task.id} requires a label.`);
     const start = toTimestamp(task.start, `${task.id}.start`);
     const end = toTimestamp(task.end, `${task.id}.end`);
     if (end < start) throw new NodaraError("ND_INVALID_RANGE", `Task ${task.id} ends before it starts.`);
-    return { ...task, progress: clamp(task.progress ?? 0, 0, 100) };
+    const dependencies = [...new Set(task.dependencies ?? [])];
+    if (dependencies.includes(task.id)) throw new NodaraError("ND_SELF_DEPENDENCY", `Task ${task.id} cannot depend on itself.`);
+    const missing = dependencies.find((id) => !ids.has(id));
+    if (missing) throw new NodaraError("ND_DANGLING_DEPENDENCY", `Task ${task.id} depends on unknown task ${missing}.`);
+    return { ...task, progress: clamp(task.progress ?? 0, 0, 100), dependencies };
   });
 }
 
@@ -32,6 +38,7 @@ export function normalizeChartSeries(input: ChartSeries[]): ChartSeries[] {
     if (!series.label?.trim()) throw new NodaraError("ND_MISSING_LABEL", `Series ${series.id} requires a label.`);
     const data = series.data.map((point) => {
       if (!Number.isFinite(point.y)) throw new NodaraError("ND_INVALID_VALUE", `Series ${series.id} contains a non-finite value.`);
+      if (point.x instanceof Date && !Number.isFinite(point.x.getTime())) throw new NodaraError("ND_INVALID_DATE", `Series ${series.id} contains an invalid date.`);
       return { ...point };
     });
     return { ...series, data };
@@ -46,6 +53,12 @@ export function normalizeTopology(input: TopologyData): TopologyData {
       throw new NodaraError("ND_DANGLING_EDGE", `Edge ${edge.from} → ${edge.to} references an unknown node.`);
     }
   }
+  const edgeIds = new Set<string>();
+  input.edges.forEach((edge, index) => {
+    const id = edge.id ?? `${edge.from}:${edge.to}:${index}`;
+    if (edgeIds.has(id)) throw new NodaraError("ND_DUPLICATE_EDGE", `Duplicate edge id: ${id}.`);
+    edgeIds.add(id);
+  });
   return { nodes: input.nodes.map((node) => ({ ...node })), edges: input.edges.map((edge) => ({ ...edge })) };
 }
 
@@ -54,8 +67,12 @@ export function normalizeCalendarEvents(input: CalendarEvent[]): CalendarEvent[]
   return input.map((event) => {
     if (!event.title?.trim()) throw new NodaraError("ND_MISSING_TITLE", `Event ${event.id} requires a title.`);
     const start = toTimestamp(event.start, `${event.id}.start`);
+    if (event.durationMinutes !== undefined && (!Number.isFinite(event.durationMinutes) || event.durationMinutes <= 0)) {
+      throw new NodaraError("ND_INVALID_DURATION", `Event ${event.id} requires a positive duration.`);
+    }
     const end = event.end === undefined ? start + (event.durationMinutes ?? 60) * 60_000 : toTimestamp(event.end, `${event.id}.end`);
     if (end < start) throw new NodaraError("ND_INVALID_RANGE", `Event ${event.id} ends before it starts.`);
-    return { ...event, end };
+    if (event.recurrence) parseRecurrence(event.recurrence);
+    return { ...event, start, end };
   });
 }

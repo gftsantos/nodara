@@ -33,6 +33,7 @@ export const NodaraGantt = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.data, (data) => controller?.update(data), { deep: true });
+    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -55,6 +56,7 @@ export const NodaraChart = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.series, (series) => controller?.update(series), { deep: true });
+    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -77,6 +79,7 @@ export const NodaraTopology = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.data, (data) => controller?.update(data), { deep: true });
+    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -99,6 +102,7 @@ export const NodaraCalendar = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.events, (events) => controller?.update(events), { deep: true });
+    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },

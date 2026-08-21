@@ -1,25 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Calendar, Chart, Gantt, Topology } from "@nodara/react";
+import type { CalendarEvent, ChartSeries, GanttTask, TopologyData, VisualTheme } from "@nodara/core";
 import {
   ArrowRight,
   BarChart3,
-  Blocks,
   Braces,
   CalendarDays,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   Code2,
   Command,
   Copy,
-  Database,
   ExternalLink,
   FileJson,
   Gauge,
-  Layers3,
   Menu,
   Moon,
   Network,
@@ -245,143 +243,71 @@ function CopyButton({ value, label = "Copiar" }: { value: string; label?: string
   );
 }
 
-function GanttPreview() {
-  const tasks = [
-    { name: "Discovery", owner: "MB", start: 4, width: 23, color: "#6e7dff", progress: 100 },
-    { name: "Design system", owner: "IR", start: 19, width: 35, color: "#ff7657", progress: 82 },
-    { name: "Core renderer", owner: "LA", start: 40, width: 39, color: "#c8fa63", progress: 64 },
-    { name: "Acessibilidade", owner: "SF", start: 58, width: 27, color: "#52d6c7", progress: 38 },
-    { name: "Release 1.0", owner: "EQ", start: 81, width: 15, color: "#f5c451", progress: 12 },
-  ];
+const initialGanttTasks: GanttTask[] = [
+  { id: "discovery", label: "Discovery", start: "2026-01-04", end: "2026-01-30", progress: 100, owner: { name: "Marta", color: "#7884ff" }, color: "#7884ff" },
+  { id: "design", label: "Design system", start: "2026-01-24", end: "2026-03-05", progress: 82, dependencies: ["discovery"], owner: { name: "Inês", color: "#ff7657" }, color: "#ff7657" },
+  { id: "renderer", label: "Core renderer", start: "2026-02-19", end: "2026-04-02", progress: 64, dependencies: ["design"], owner: { name: "Luís", color: "#c8fa63" }, color: "#c8fa63" },
+  { id: "a11y", label: "Acessibilidade", start: "2026-03-11", end: "2026-04-11", progress: 38, dependencies: ["renderer"], owner: { name: "Sofia", color: "#52d6c7" }, color: "#52d6c7" },
+  { id: "release", label: "Release 1.0", start: "2026-04-01", end: "2026-04-22", progress: 12, dependencies: ["a11y"], owner: { name: "Equipa", color: "#f5c451" }, color: "#f5c451" },
+];
 
-  return (
-    <div className="gantt-shell">
-      <div className="gantt-toolbar">
-        <div className="avatar-stack" aria-label="5 colaboradores">
-          <span>MB</span><span>IR</span><span>LA</span><span>+2</span>
-        </div>
-        <div className="gantt-toolbar-right">
-          <button>Hoje</button>
-          <button className="select-button">Trimestre <ChevronDown size={13} /></button>
-        </div>
-      </div>
-      <div className="gantt-chart" role="img" aria-label="Cronograma do roadmap de produto">
-        <div className="gantt-labels">
-          <div className="gantt-label-head">Tarefa</div>
-          {tasks.map((task) => (
-            <div className="gantt-label" key={task.name}>
-              <span className="task-avatar" style={{ background: task.color }}>{task.owner}</span>
-              <div><strong>{task.name}</strong><small>{task.progress}% concluído</small></div>
-            </div>
-          ))}
-        </div>
-        <div className="gantt-timeline">
-          <div className="gantt-months"><span>JAN</span><span>FEV</span><span>MAR</span><span>ABR</span></div>
-          {tasks.map((task, index) => (
-            <div className="gantt-row" key={task.name}>
-              <div
-                className="gantt-bar"
-                style={{ left: `${task.start}%`, width: `${task.width}%`, background: task.color }}
-                title={`${task.name}: ${task.progress}%`}
-              >
-                <span style={{ width: `${task.progress}%` }} />
-                {index === 2 && <i className="gantt-milestone" />}
-              </div>
-            </div>
-          ))}
-          <div className="today-line"><span>HOJE</span></div>
-        </div>
-      </div>
-    </div>
-  );
+const baseChartSeries: ChartSeries[] = [
+  { id: "actual", label: "MRR", color: "#7884ff", data: [31, 46, 42, 68, 58, 77, 70, 90, 76, 96].map((y, index) => ({ x: ["NOV", "DEZ", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO"][index]!, y: y * 4_820 })) },
+  { id: "forecast", label: "Forecast", color: "#52d6c7", data: [28, 39, 45, 57, 64, 70, 78, 84, 91, 100].map((y, index) => ({ x: index, y: y * 1_600 })) },
+];
+
+const baseTopology: TopologyData = {
+  nodes: [
+    { id: "gateway", label: "API Gateway", status: "healthy", value: "2.4k/s" },
+    { id: "auth", label: "Auth", status: "healthy", value: "99.99%" },
+    { id: "billing", label: "Billing", status: "warning", value: "99.97%" },
+    { id: "events", label: "Events", status: "healthy", value: "8.1k/s" },
+    { id: "warehouse", label: "Warehouse", status: "healthy", value: "12.8 TB" },
+  ],
+  edges: [
+    { from: "gateway", to: "auth", directed: true, label: "JWT" },
+    { from: "gateway", to: "billing", directed: true },
+    { from: "gateway", to: "events", directed: true },
+    { from: "events", to: "warehouse", directed: true },
+    { from: "billing", to: "warehouse", directed: true },
+  ],
+};
+
+const baseCalendarEvents: CalendarEvent[] = [
+  { id: "planning", title: "Planning", start: "2026-08-17T09:30:00", durationMinutes: 60, resourceId: "product", color: "#7884ff", recurrence: "FREQ=DAILY;COUNT=5" },
+  { id: "research", title: "Research", start: "2026-08-18T13:00:00", durationMinutes: 90, resourceId: "studio", color: "#52d6c7" },
+  { id: "api-review", title: "API review", start: "2026-08-19T10:30:00", durationMinutes: 75, resourceId: "platform", color: "#ff7657" },
+  { id: "release", title: "Release 1.0", start: "2026-08-21T12:00:00", durationMinutes: 120, allDay: false, color: "#f5c451" },
+];
+
+function GanttPreview({ theme }: { theme: VisualTheme }) {
+  const [tasks, setTasks] = useState(initialGanttTasks);
+  return <div className="real-preview gantt-shell"><Gantt data={tasks} theme={theme} locale="pt-PT" start="2026-01-01" end="2026-04-30" zoom="month" snap="day" rowHeight={54} dependencyRouting="orthogonal" onTaskChange={({ task }) => setTasks((current) => current.map((item) => item.id === task.id ? task : item))} style={{ height: 420 }} /></div>;
 }
 
-function ChartsPreview({ dense }: { dense: boolean }) {
-  const values = dense ? [38, 55, 46, 71, 62, 84, 73, 94, 81, 100] : [31, 46, 42, 68, 58, 77, 70, 90, 76, 96];
-  return (
-    <div className="charts-shell">
-      <div className="chart-summary">
-        <div><small>MRR TOTAL</small><strong>€ 482.8k</strong><span className="positive">↗ 18,4%</span></div>
-        <div><small>RETENÇÃO</small><strong>94,2%</strong><span>+2,1 pp</span></div>
-        <div><small>FORECAST</small><strong>€ 521k</strong><span>Setembro</span></div>
-      </div>
-      <div className="bar-chart" role="img" aria-label="Gráfico de receita mensal crescente">
-        <div className="chart-axis"><span>500k</span><span>250k</span><span>0</span></div>
-        <div className="chart-grid-lines"><i /><i /><i /></div>
-        <div className="chart-bars">
-          {values.map((value, index) => (
-            <div className="bar-column" key={index}>
-              <div className="bar-tooltip">€ {Math.round(value * 4.82)}k</div>
-              <div className="bar" style={{ height: `${value}%` }}><span /></div>
-              <small>{["NOV", "DEZ", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO"][index]}</small>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+function ChartsPreview({ dense, theme }: { dense: boolean; theme: VisualTheme }) {
+  const series = dense ? baseChartSeries.map((entry) => ({ ...entry, data: Array.from({ length: 1_200 }, (_, index) => ({ x: index, y: Math.round((Math.sin(index / 18) + 2.2) * 120_000 + index * 45) })) })) : baseChartSeries;
+  return <div className="real-preview charts-shell"><Chart series={series} theme={theme} locale="pt-PT" type={dense ? "line" : "area"} stacked={!dense} showTooltip valueFormatter={(value) => new Intl.NumberFormat("pt-PT", { notation: "compact", style: "currency", currency: "EUR" }).format(value)} performance={{ canvasThreshold: 500, webglThreshold: 1_000 }} style={{ height: 420 }} /></div>;
 }
 
-function TopologyPreview() {
-  const edges = [
-    { left: "19%", top: "27%", width: "25%", rotate: "18deg" },
-    { left: "42%", top: "40%", width: "22%", rotate: "-20deg" },
-    { left: "42%", top: "49%", width: "28%", rotate: "22deg" },
-    { left: "20%", top: "70%", width: "26%", rotate: "-22deg" },
-    { left: "67%", top: "39%", width: "14%", rotate: "52deg" },
-  ];
-  return (
-    <div className="topology-shell">
-      <div className="topology-board" role="img" aria-label="Topologia de cinco serviços conectados">
-        {edges.map((edge, index) => (
-          <span className="topology-edge" key={index} style={{ left: edge.left, top: edge.top, width: edge.width, transform: `rotate(${edge.rotate})` }}><i /></span>
-        ))}
-        <div className="topology-node gateway"><span><Zap size={15} /></span><div><strong>API Gateway</strong><small>2.4k req/s</small></div><i /></div>
-        <div className="topology-node auth"><span><ShieldCheck size={15} /></span><div><strong>Auth</strong><small>99.99%</small></div><i /></div>
-        <div className="topology-node billing"><span><Database size={15} /></span><div><strong>Billing</strong><small>99.97%</small></div><i /></div>
-        <div className="topology-node events"><span><Layers3 size={15} /></span><div><strong>Events</strong><small>8.1k msg/s</small></div><i /></div>
-        <div className="topology-node warehouse"><span><Blocks size={15} /></span><div><strong>Warehouse</strong><small>12.8 TB</small></div><i /></div>
-      </div>
-      <div className="topology-legend"><span><i /> Saudável</span><span><i /> 5 serviços</span><span><i /> 0 incidentes</span></div>
-    </div>
-  );
+function TopologyPreview({ dense, theme }: { dense: boolean; theme: VisualTheme }) {
+  const data = dense ? {
+    nodes: Array.from({ length: 180 }, (_, index) => ({ id: `node-${index}`, label: `Serviço ${index + 1}`, status: index % 19 === 0 ? "warning" as const : "healthy" as const, value: `${(index * 17) % 900} req/s` })),
+    edges: Array.from({ length: 300 }, (_, index) => ({ from: `node-${index % 180}`, to: `node-${(index * 7 + 11) % 180}`, directed: true })),
+  } : baseTopology;
+  return <div className="real-preview topology-shell"><Topology data={data} theme={theme} layout={dense ? "grid" : "force"} renderer="auto" performance={{ canvasThreshold: 80, webglThreshold: 150 }} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} style={{ height: 420 }} /></div>;
 }
 
-function CalendarPreview() {
-  const days = ["SEG 17", "TER 18", "QUA 19", "QUI 20", "SEX 21"];
-  const events = [
-    { day: 0, top: 19, height: 25, title: "Planning", meta: "09:30 · Produto", color: "violet" },
-    { day: 1, top: 47, height: 30, title: "Research", meta: "13:00 · Studio 2", color: "mint" },
-    { day: 2, top: 28, height: 36, title: "API review", meta: "10:30 · Platform", color: "coral" },
-    { day: 3, top: 15, height: 27, title: "Design critique", meta: "09:00 · Equipa", color: "yellow" },
-    { day: 3, top: 57, height: 24, title: "1:1 · Rita", meta: "15:00 · Meet", color: "violet" },
-    { day: 4, top: 37, height: 32, title: "Release 1.0", meta: "12:00 · All hands", color: "mint" },
-  ];
-  return (
-    <div className="calendar-shell">
-      <div className="calendar-heading"><button>‹</button><strong>17 – 21 agosto, 2026</strong><button>›</button><span>Semana</span></div>
-      <div className="calendar-grid" role="img" aria-label="Calendário semanal com seis eventos">
-        <div className="time-column"><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span></div>
-        {days.map((day, dayIndex) => (
-          <div className={`calendar-day ${dayIndex === 3 ? "is-today" : ""}`} key={day}>
-            <strong>{day}</strong>
-            {events.filter((event) => event.day === dayIndex).map((event) => (
-              <div className={`calendar-event ${event.color}`} key={event.title} style={{ top: `${event.top}%`, height: `${event.height}%` }}>
-                <strong>{event.title}</strong><small>{event.meta}</small>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function CalendarPreview({ theme }: { theme: VisualTheme }) {
+  const [events, setEvents] = useState(baseCalendarEvents);
+  return <div className="real-preview calendar-shell"><Calendar events={events} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => setEvents((current) => current.map((item) => item.id === event.id ? event : item))} style={{ height: 420 }} /></div>;
 }
 
-function FeaturePreview({ feature, dense }: { feature: FeatureId; dense: boolean }) {
-  if (feature === "charts") return <ChartsPreview dense={dense} />;
-  if (feature === "topology") return <TopologyPreview />;
-  if (feature === "calendar") return <CalendarPreview />;
-  return <GanttPreview />;
+function FeaturePreview({ feature, dense, theme }: { feature: FeatureId; dense: boolean; theme: VisualTheme }) {
+  if (feature === "charts") return <ChartsPreview dense={dense} theme={theme} />;
+  if (feature === "topology") return <TopologyPreview dense={dense} theme={theme} />;
+  if (feature === "calendar") return <CalendarPreview theme={theme} />;
+  return <GanttPreview theme={theme} />;
 }
 
 export default function Home() {
@@ -393,6 +319,7 @@ export default function Home() {
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const activeFrameworkData = frameworks.find((item) => item.id === activeFramework)!;
   const activeFeatureData = featureItems.find((item) => item.id === activeFeature)!;
@@ -412,6 +339,10 @@ export default function Home() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+  }, [showSearch]);
 
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -444,7 +375,7 @@ export default function Home() {
           <button className="icon-button theme-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Alternar tema">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-          <button className="github-button"><Code2 size={16} /><span>GitHub</span><b>12.8k</b></button>
+          <a className="github-button" href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer"><Code2 size={16} /><span>GitHub</span><b>ALPHA</b></a>
           <button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Abrir menu">
             {mobileNav ? <X /> : <Menu />}
           </button>
@@ -455,7 +386,7 @@ export default function Home() {
         <section className="hero" id="inicio">
           <div className="hero-grid" />
           <div className="hero-copy">
-            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.8</b></div>
+            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.2 alpha</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
             <p>Uma biblioteca TypeScript, quatro ecossistemas e todas as visualizações de que um produto ambicioso precisa.</p>
             <div className="hero-actions">
@@ -493,14 +424,14 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="float-card float-a"><CheckCircle2 size={17} /><div><strong>Render concluído</strong><small>8.4ms · 60 FPS</small></div></div>
-            <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós</strong><small>WebGL renderer</small></div></div>
+            <div className="float-card float-a"><CheckCircle2 size={17} /><div><strong>181 testes verdes</strong><small>core + adaptadores</small></div></div>
+            <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós testados</strong><small>Canvas / WebGL adaptativo</small></div></div>
           </div>
           <div className="hero-foot">
             <div><strong>5</strong><span>pacotes alpha</span></div>
-            <div><strong>6.2 kB</strong><span>core gzipped</span></div>
+            <div><strong>16.1 kB</strong><span>core completo gzip</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
-            <div><strong>AA</strong><span>WCAG 2.2</span></div>
+            <div><strong>181</strong><span>testes automatizados</span></div>
           </div>
         </section>
 
@@ -554,7 +485,7 @@ export default function Home() {
                 <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {dense ? "streaming" : "1.240 items"}</div>
               </div>
               <div className="workspace-canvas">
-                {workspaceTab === "preview" && <FeaturePreview feature={activeFeature} dense={dense} />}
+                {workspaceTab === "preview" && <FeaturePreview feature={activeFeature} dense={dense} theme={theme} />}
                 {workspaceTab === "data" && (
                   <div className="data-inspector">
                     <div className="data-inspector-head"><span><FileJson size={14} /> data.json</span><CopyButton value={payloads[activeFeature]} /></div>
@@ -566,13 +497,13 @@ export default function Home() {
                   <div className="api-table">
                     <div className="api-row api-head"><span>PROPRIEDADE</span><span>TIPO</span><span>DEFAULT</span><span>DESCRIÇÃO</span></div>
                     <div className="api-row"><code>data</code><span className="type-pill">T[]</span><code>[]</code><span>Itens normalizados da visualização.</span></div>
-                    <div className="api-row"><code>renderer</code><span className="type-pill">auto | svg | webgl</span><code>auto</code><span>Seleciona o motor de renderização.</span></div>
-                    <div className="api-row"><code>interactive</code><span className="type-pill">boolean</span><code>true</code><span>Ativa zoom, seleção e teclado.</span></div>
+                    <div className="api-row"><code>renderer</code><span className="type-pill">auto | dom | canvas | webgl</span><code>auto</code><span>Seleciona o motor de renderização.</span></div>
+                    <div className="api-row"><code>interactive</code><span className="type-pill">boolean | options</span><code>true</code><span>Controla ponteiro, teclado, pan e zoom.</span></div>
                     <div className="api-row"><code>onChange</code><span className="type-pill">(event) =&gt; void</span><code>—</code><span>Emite alterações com tipagem estrita.</span></div>
                   </div>
                 )}
               </div>
-              <div className="workspace-footer"><span><CheckCircle2 size={14} /> Dados validados</span><span>Canvas 1.240 × 620</span><span><ShieldCheck size={14} /> WCAG AA</span><span>Zoom 100%</span></div>
+              <div className="workspace-footer"><span><CheckCircle2 size={14} /> Dados validados</span><span>Motor real Nodara</span><span><ShieldCheck size={14} /> Teclado + leitor de ecrã</span><span>Zoom interativo</span></div>
             </div>
           </div>
         </section>
@@ -615,7 +546,7 @@ export default function Home() {
               <div className="code-window">
                 <div className="code-window-head"><span><i /><i /><i /></span><p>ProductPlan.{activeFramework === "vue" ? "vue" : "tsx"}</p><CopyButton value={snippets[activeFramework]} /></div>
                 <pre><code>{snippets[activeFramework]}</code></pre>
-                <div className="code-status"><span><CheckCircle2 size={14} /> Compilado sem erros</span><b>6.8 kB core + adapter</b></div>
+                <div className="code-status"><span><CheckCircle2 size={14} /> Compilado sem erros</span><b>16.6 kB core + React</b></div>
               </div>
             </div>
           </div>
@@ -653,18 +584,18 @@ export default function Home() {
               <div className="performance-bars"><i><span style={{ width: "24%" }} /></i><i><span style={{ width: "56%" }} /></i><i><span style={{ width: "88%" }} /></i></div>
               <div className="performance-labels"><span>DOM</span><span>CANVAS</span><span>WEBGL</span></div>
             </article>
-            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Cinco pacotes independentes e tree-shaking real.</p><strong className="metric">6.2 <small>kB CORE</small></strong></article>
-            <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBLE</span><h3>Acessível de raiz.</h3><p>Teclado, leitores de ecrã e contraste testados.</p><strong className="metric">AA <small>WCAG 2.2</small></strong></article>
-            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>OPEN CORE</span><h3>Construída em público.</h3><p>Roadmap aberto, RFCs e releases previsíveis.</p><div className="community-row"><span>12.8k <small>stars</small></span><span>84 <small>contributors</small></span><span>99.9% <small>uptime</small></span></div></article>
+            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Cinco pacotes independentes e tree-shaking real.</p><strong className="metric">16.1 <small>kB CORE GZIP</small></strong></article>
+            <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBLE</span><h3>Acessível de raiz.</h3><p>Teclado, leitores de ecrã e contraste testados.</p><strong className="metric">5.9:1 <small>CONTRASTE CLARO</small></strong></article>
+            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>ENGINEERING</span><h3>Validada de forma contínua.</h3><p>Contratos estáveis, testes automatizados e releases controladas.</p><div className="community-row"><span>181 <small>testes</small></span><span>5 <small>pacotes</small></span><span>4 <small>adaptadores</small></span></div></article>
           </div>
         </section>
 
         <section className="enterprise-section" id="enterprise">
           <div className="enterprise-orbit"><i /><i /><i /><span className="brand-mark"><i /><i /><i /><i /></span></div>
-          <p className="mini-label">PRONTO PARA PRODUÇÃO</p>
+          <p className="mini-label">ALPHA VALIDADA</p>
           <h2>Os teus dados já têm uma história.<br /><em>Vamos torná-la visível.</em></h2>
           <p>Começa com a comunidade. Cresce com suporte, colaboração e segurança enterprise.</p>
-          <div className="enterprise-actions"><button className="primary-button">Começar gratuitamente <ArrowRight size={16} /></button><button className="secondary-button">Falar com engenharia</button></div>
+          <div className="enterprise-actions"><button className="primary-button" onClick={() => scrollTo("integrar")}>Explorar integração <ArrowRight size={16} /></button><button className="secondary-button" onClick={() => scrollTo("arquitetura")}>Ver arquitetura</button></div>
           <div className="enterprise-note"><span><Check size={14} /> MIT core</span><span><Check size={14} /> Sem cartão</span><span><Check size={14} /> Suporte TypeScript</span></div>
         </section>
       </main>
@@ -672,13 +603,14 @@ export default function Home() {
       <footer>
         <div className="footer-brand"><div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>NODARA</span></div><p>Visual infrastructure for the web.</p></div>
         <div className="footer-links"><div><strong>PRODUTO</strong><a href="#componentes">Componentes</a><a href="#integrar">Frameworks</a><a href="#arquitetura">Roadmap</a></div><div><strong>RECURSOS</strong><a href="#integrar">Documentação</a><a href="#componentes">Exemplos</a><a href="#arquitetura">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="#enterprise">Segurança</a><a href="#enterprise">Contacto</a></div></div>
-        <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="#">GitHub</a><a href="#">Discord</a><a href="#">X / Twitter</a></div></div>
+        <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer">GitHub</a><a href="#integrar">Documentação</a><a href="#arquitetura">Arquitetura</a></div></div>
       </footer>
 
       {showSearch && (
-        <div className="search-overlay" role="presentation" onMouseDown={() => setShowSearch(false)}>
-          <div className="search-dialog" role="dialog" aria-modal="true" aria-label="Pesquisa da documentação" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="search-input-wrap"><Search size={19} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar componentes, APIs e guias…" /><kbd>ESC</kbd></div>
+        <div className="search-overlay">
+          <button type="button" className="search-backdrop" aria-label="Fechar pesquisa" onClick={() => setShowSearch(false)} />
+          <div className="search-dialog" role="dialog" aria-modal="true" aria-label="Pesquisa da documentação">
+            <div className="search-input-wrap"><Search size={19} /><input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar componentes, APIs e guias…" /><kbd>ESC</kbd></div>
             <p>SUGESTÕES</p>
             <div className="search-results">
               {filteredSearch.map((entry, index) => <button key={entry} onClick={() => { setShowSearch(false); scrollTo(index < 8 ? "componentes" : "integrar"); }}><span><Command size={14} />{entry}</span><ChevronRight size={14} /></button>)}
