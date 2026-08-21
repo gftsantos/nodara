@@ -151,8 +151,8 @@ test("search supports its visible keyboard shortcuts", async ({ page }) => {
   await input.fill("Topologias");
   await expect(page.getByRole("button", { name: /Topologias · auto-layout/ })).toBeVisible();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("dialog", { name: "Pesquisa da documentação" })).toBeHidden();
-  await expect(page.locator("#componentes")).toBeInViewport();
+  await expect(page).toHaveURL(/\/docs#topology$/);
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Topology");
 });
 
 test("framework tabs and theme controls update the interface", async ({ page }) => {
@@ -182,4 +182,60 @@ test("mobile navigation reaches every main section", async ({ page }, testInfo) 
   await page.getByRole("button", { name: "Abrir menu" }).click();
   await page.getByRole("button", { name: "Arquitetura", exact: true }).click();
   await expect(page.locator("#arquitetura")).toBeInViewport();
+});
+
+test("portal links to a complete and honest documentation hub", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium", "Desktop navigation audit");
+  await page.locator(".site-header").getByRole("link", { name: "Documentação", exact: true }).click();
+  await expect(page).toHaveURL(/\/docs/);
+  await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
+  await expect(page.getByLabel("Navegação da documentação")).toContainText("21 guias · 4 componentes reais");
+
+  for (const component of ["Gantt", "Chart", "Topology", "Calendar"]) {
+    await page.getByLabel("Navegação da documentação").getByRole("link", { name: component, exact: true }).click();
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText(component);
+    await expect(page.getByRole("main").getByRole("table").first()).toBeVisible();
+  }
+});
+
+test("documentation search and deep links reach specific API pages", async ({ page }, testInfo) => {
+  await page.goto("/docs#calendar");
+  await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Calendar");
+  await expect(page.getByRole("main")).toContainText("maxOccurrences");
+
+  if (testInfo.project.name === "mobile-chromium") await page.getByRole("button", { name: "Abrir pesquisa" }).click();
+  const search = page.getByRole("textbox", { name: "Pesquisar documentação" });
+  await search.fill("WebGL");
+  await expect(page.getByRole("option", { name: /Topology/ })).toBeVisible();
+  await page.getByRole("option", { name: /Topology/ }).click();
+  await expect(page).toHaveURL(/#topology$/);
+  await expect(page.getByRole("main")).toContainText("layoutIterations");
+});
+
+test("documentation mobile navigation opens and closes accessibly", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile-chromium", "Mobile-only docs interaction");
+  await page.goto("/docs");
+  await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
+  const menu = page.getByRole("button", { name: "Abrir navegação" });
+  await menu.click();
+  await expect(page.getByRole("button", { name: "Fechar navegação" })).toHaveAttribute("aria-expanded", "true");
+  await page.getByLabel("Navegação da documentação").getByRole("link", { name: "Calendar", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText("Calendar");
+  await expect(page.getByRole("button", { name: "Abrir navegação" })).toHaveAttribute("aria-expanded", "false");
+});
+
+test("documentation typography and width remain readable", async ({ page }) => {
+  await page.goto("/docs#gantt");
+  await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
+  const audit = await page.evaluate(() => {
+    const sizes = [...document.body.querySelectorAll("*")].filter((element) => {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return element.children.length === 0 && Boolean(element.textContent?.trim()) && rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    }).map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
+  });
+  expect(audit.minimum).toBeGreaterThanOrEqual(10);
+  expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });

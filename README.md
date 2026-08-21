@@ -2,11 +2,12 @@
 
 Monorepo e portal de integração da Nodara — infraestrutura visual para produtos web com Gantt, gráficos, grafos, topologias e calendários.
 
-[Portal privado](https://nodara-visual.gftsantos.chatgpt.site) · Publicação npm preparada, aguardando autorização da organização `@nodara`.
+[Portal privado](https://nodara-visual.gftsantos.chatgpt.site) · [Documentação completa](https://nodara-visual.gftsantos.chatgpt.site/docs) · Publicação npm preparada, aguardando autorização da organização `@nodara`.
 
 ## Experiência incluída
 
 - Playground interativo para quatro famílias de visualização
+- Portal pesquisável com 21 guias de componentes, frameworks, fundamentos e API
 - Exemplos de payloads e referência de propriedades da API
 - Integrações copiáveis para React, Angular, Vue e JavaScript
 - Temas claro/escuro, pesquisa rápida e layout responsivo

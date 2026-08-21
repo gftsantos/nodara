@@ -48,7 +48,7 @@ keeps an accessible DOM representation for assistive technology.
 
 ## Quality gates
 
-The repository runs TypeScript strict, 181 automated tests, package builds,
+The repository runs TypeScript strict, 182 automated core tests, package builds,
 server-rendered HTML verification and desktop/mobile browser smoke tests. The
 100-iteration implementation ledger is in `docs/ITERATIONS.md`.
 

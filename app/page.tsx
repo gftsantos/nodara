@@ -60,7 +60,7 @@ const featureItems: Array<{
     description: "Planos, recursos e dependências",
     icon: Rows3,
     accent: "#6e7dff",
-    count: 14,
+    count: 1,
   },
   {
     id: "charts",
@@ -68,7 +68,7 @@ const featureItems: Array<{
     description: "Dashboards e análise em tempo real",
     icon: BarChart3,
     accent: "#ff7657",
-    count: 42,
+    count: 1,
   },
   {
     id: "topology",
@@ -76,7 +76,7 @@ const featureItems: Array<{
     description: "Sistemas, redes e relações",
     icon: Network,
     accent: "#c8fa63",
-    count: 18,
+    count: 1,
   },
   {
     id: "calendar",
@@ -84,7 +84,7 @@ const featureItems: Array<{
     description: "Agenda, recursos e recorrências",
     icon: CalendarDays,
     accent: "#52d6c7",
-    count: 11,
+    count: 1,
   },
 ];
 
@@ -467,7 +467,7 @@ function FeaturePreview({ data, feature, liveTick, onCalendarChange, onGanttChan
   return <GanttPreview data={data.gantt} onChange={onGanttChange} liveTick={liveTick} theme={theme} />;
 }
 
-function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: DialogId; feature: FeatureId; onClose: () => void; onNavigate: (id: string) => void }) {
+function PortalDialog({ dialog, feature, onClose }: { dialog: DialogId; feature: FeatureId; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const featureData = featureItems.find((item) => item.id === feature)!;
 
@@ -484,7 +484,7 @@ function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: Dialog
             <article><div className="dialog-code-head"><span>DADOS DE ENTRADA</span><CopyButton value={payloads[feature]} /></div><pre><code>{payloads[feature]}</code></pre></article>
             <article><div className="dialog-code-head"><span>INTEGRAÇÃO REACT</span><CopyButton value={featureSnippets[feature]} /></div><pre><code>{featureSnippets[feature]}</code></pre></article>
           </div>
-          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><button className="primary-button" onClick={() => onNavigate("integrar")}>Ver guia de integração <ArrowRight size={15} /></button></div>
+          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href={`/docs#${feature}`}>Documentação de {featureData.name} <ArrowRight size={15} /></a></div>
         </section>
       </div>
     );
@@ -497,7 +497,7 @@ function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: Dialog
         <section className="info-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
           <div className="info-dialog-head"><div><span>SUPORTE DE ENGENHARIA</span><h2 id="dialog-title">Precisas de ajuda?</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
           <p>Partilha o caso de uso, volume de dados, framework e resultado esperado. Assim conseguimos responder com um exemplo reproduzível.</p>
-          <div className="support-options"><a className="primary-button" href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer"><ExternalLink size={15} /> Abrir pedido no GitHub</a><button className="secondary-button" onClick={() => onNavigate("integrar")}>Ver documentação</button></div>
+          <div className="support-options"><a className="primary-button" href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer"><ExternalLink size={15} /> Abrir pedido no GitHub</a><a className="secondary-button" href="/docs#overview">Ver documentação</a></div>
         </section>
       </div>
     );
@@ -511,13 +511,14 @@ function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: Dialog
           <div className="info-dialog-head"><div><span>ARQUITETURA NODARA</span><h2 id="dialog-title">Um core, três motores.</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
           <p>A API mantém-se estável enquanto o motor escolhe a estratégia adequada ao volume e às capacidades do browser.</p>
           <div className="architecture-dialog-grid"><article><b>DOM</b><strong>Semântica primeiro</strong><span>Listas pequenas, edição e acessibilidade nativa.</span></article><article><b>CANVAS</b><strong>Interação fluida</strong><span>Centenas a milhares de elementos visuais.</span></article><article><b>WEBGL</b><strong>Grandes volumes</strong><span>Buffers compactos e renderização acelerada.</span></article></div>
-          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><button className="primary-button" onClick={() => onNavigate("integrar")}>Integrar agora <ArrowRight size={15} /></button></div>
+          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href="/docs#architecture">Ver arquitetura completa <ArrowRight size={15} /></a></div>
         </section>
       </div>
     );
   }
 
   const details = foundationDetails[dialog];
+  const docsTarget = dialog === "schemas" ? "schemas" : dialog === "tokens" ? "themes" : "accessibility";
   return (
     <div className="info-overlay">
       <button type="button" className="info-backdrop" aria-label={`Fechar ${details.title}`} onClick={onClose} />
@@ -526,6 +527,7 @@ function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: Dialog
         <p>{details.description}</p>
         <ul className="foundation-list">{details.items.map((item) => <li key={item}><CheckCircle2 size={16} />{item}</li>)}</ul>
         <div className="foundation-code"><div className="dialog-code-head"><span>EXEMPLO</span><CopyButton value={details.code} /></div><pre><code>{details.code}</code></pre></div>
+        <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href={`/docs#${docsTarget}`}>Documentação completa <ArrowRight size={15} /></a></div>
       </section>
     </div>
   );
@@ -609,12 +611,15 @@ export default function Home() {
   function openSearchResult(entry: string) {
     setShowSearch(false);
     setQuery("");
-    scrollTo(entry.includes("migração") || entry.includes("Tokens") ? "integrar" : "componentes");
-  }
-
-  function navigateFromDialog(id: string) {
-    setActiveDialog(null);
-    window.setTimeout(() => scrollTo(id), 0);
+    const lower = entry.toLowerCase();
+    const target = lower.includes("gantt") ? "gantt"
+      : lower.includes("gráfico") ? "charts"
+        : lower.includes("topologia") ? "topology"
+          : lower.includes("calendário") ? "calendar"
+            : lower.includes("token") ? "themes"
+              : lower.includes("migração") ? "installation"
+                : "overview";
+    window.location.assign(`/docs#${target}`);
   }
 
   function toggleLiveData() {
@@ -694,7 +699,7 @@ export default function Home() {
         </button>
         <nav className={mobileNav ? "main-nav is-open" : "main-nav"} aria-label="Navegação principal">
           <button onClick={() => scrollTo("componentes")}>Componentes</button>
-          <button onClick={() => scrollTo("integrar")}>Documentação</button>
+          <a href="/docs">Documentação</a>
           <button onClick={() => scrollTo("arquitetura")}>Arquitetura</button>
           <button onClick={() => scrollTo("enterprise")}>Enterprise</button>
         </nav>
@@ -718,7 +723,7 @@ export default function Home() {
           <div className="hero-copy">
             <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.2 alpha</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
-            <p>Uma biblioteca TypeScript, quatro ecossistemas e todas as visualizações de que um produto ambicioso precisa.</p>
+            <p>Uma biblioteca TypeScript, quatro ecossistemas e quatro visualizações essenciais para produtos ambiciosos.</p>
             <div className="hero-actions">
               <button className="primary-button" onClick={() => scrollTo("componentes")}><Play size={16} fill="currentColor" /> Explorar playground</button>
               <CopyButton value="npm i @nodara/react" label="npm i @nodara/react" />
@@ -776,7 +781,7 @@ export default function Home() {
             <aside className="component-sidebar">
               <div className="sidebar-title"><span>EXPLORADOR</span><button onClick={() => setSidebarCollapsed((value) => !value)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"} title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}><PanelLeftClose size={15} /></button></div>
               <button className="sidebar-search" onClick={() => setShowSearch(true)}><Search size={14} /><span>Procurar componente</span><kbd>/</kbd></button>
-              <p className="sidebar-label">VISUALIZAÇÕES</p>
+              <p className="sidebar-label">VISUALIZAÇÕES · 4 COMPONENTES</p>
               <div className="feature-nav">
                 {featureItems.map((item) => {
                   const Icon = item.icon;
@@ -784,7 +789,7 @@ export default function Home() {
                     <button key={item.id} className={activeFeature === item.id ? "active" : ""} onClick={() => selectFeature(item.id)}>
                       <span className="feature-icon" style={{ "--feature-accent": item.accent } as React.CSSProperties}><Icon size={16} /></span>
                       <span><strong>{item.name}</strong><small>{item.description}</small></span>
-                      <b>{item.count}</b>
+                      <b>{String(item.count).padStart(2, "0")}</b>
                     </button>
                   );
                 })}
@@ -815,7 +820,7 @@ export default function Home() {
                 <button role="tab" aria-selected={workspaceTab === "preview"} className={workspaceTab === "preview" ? "active" : ""} onClick={() => setWorkspaceTab("preview")}><Play size={13} /> Preview</button>
                 <button role="tab" aria-selected={workspaceTab === "data"} className={workspaceTab === "data" ? "active" : ""} onClick={() => setWorkspaceTab("data")}><FileJson size={13} /> Dados</button>
                 <button role="tab" aria-selected={workspaceTab === "api"} className={workspaceTab === "api" ? "active" : ""} onClick={() => setWorkspaceTab("api")}><Braces size={13} /> API</button>
-                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.count} exemplos`}</div>
+                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.name} · 1 componente real`}</div>
               </div>
               <div className="workspace-canvas">
                 {workspaceTab === "preview" && <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />}
@@ -956,15 +961,15 @@ export default function Home() {
           <p className="mini-label">ALPHA VALIDADA</p>
           <h2>Os teus dados já têm uma história.<br /><em>Vamos torná-la visível.</em></h2>
           <p>Começa com a comunidade. Cresce com suporte, colaboração e segurança enterprise.</p>
-          <div className="enterprise-actions"><button className="primary-button" onClick={() => scrollTo("integrar")}>Explorar integração <ArrowRight size={16} /></button><button className="secondary-button" onClick={() => scrollTo("arquitetura")}>Ver arquitetura</button></div>
+          <div className="enterprise-actions"><a className="primary-button" href="/docs#installation">Explorar integração <ArrowRight size={16} /></a><a className="secondary-button" href="/docs#architecture">Ver arquitetura</a></div>
           <div className="enterprise-note"><span><Check size={14} /> MIT core</span><span><Check size={14} /> Sem cartão</span><span><Check size={14} /> Suporte TypeScript</span></div>
         </section>
       </main>
 
       <footer>
         <div className="footer-brand"><div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>NODARA</span></div><p>Visual infrastructure for the web.</p></div>
-        <div className="footer-links"><div><strong>PRODUTO</strong><a href="#componentes">Componentes</a><a href="#integrar">Frameworks</a><a href="#arquitetura">Roadmap</a></div><div><strong>RECURSOS</strong><a href="#integrar">Documentação</a><a href="#componentes">Exemplos</a><a href="#arquitetura">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="#enterprise">Segurança</a><a href="#enterprise">Contacto</a></div></div>
-        <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer">GitHub</a><a href="#integrar">Documentação</a><a href="#arquitetura">Arquitetura</a></div></div>
+        <div className="footer-links"><div><strong>PRODUTO</strong><a href="#componentes">4 componentes</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
+        <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer">GitHub</a><a href="/docs">Documentação</a><a href="/docs#architecture">Arquitetura</a></div></div>
       </footer>
 
       {showSearch && (
@@ -982,7 +987,7 @@ export default function Home() {
         </div>
       )}
 
-      {activeDialog && <PortalDialog dialog={activeDialog} feature={activeFeature} onClose={() => setActiveDialog(null)} onNavigate={navigateFromDialog} />}
+      {activeDialog && <PortalDialog dialog={activeDialog} feature={activeFeature} onClose={() => setActiveDialog(null)} />}
     </div>
   );
 }

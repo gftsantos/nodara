@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-async function render() {
+async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(`http://localhost${path}`, {
       headers: { accept: "text/html" },
     }),
     {
@@ -34,4 +34,15 @@ test("renders the Nodara showcase", async () => {
   assert.match(html, /React/);
   assert.doesNotMatch(html, /codex-preview/);
   assert.doesNotMatch(html, /Your site is taking shape/);
+});
+
+test("renders the complete Nodara documentation hub", async () => {
+  const response = await render("/docs");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Documentação — Nodara/);
+  assert.match(html, /Quatro componentes\. Um contrato visual/);
+  assert.match(html, /21<!-- --> guias · 4 componentes reais/);
+  assert.match(html, /Gantt/);
+  assert.match(html, /Web Components/);
 });
