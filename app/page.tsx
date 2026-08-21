@@ -37,6 +37,7 @@ import {
 
 type FeatureId = "gantt" | "charts" | "topology" | "calendar";
 type FrameworkId = "react" | "angular" | "vue" | "vanilla";
+type DialogId = "example" | "schemas" | "tokens" | "accessibility" | "help" | "architecture";
 
 const featureItems: Array<{
   id: FeatureId;
@@ -138,6 +139,82 @@ const gantt = createGantt('#roadmap', {
 
 gantt.on('task:change', syncTask);`,
 };
+
+const featureSnippets: Record<FeatureId, string> = {
+  gantt: `<Gantt
+  data={roadmap}
+  start="2026-01-01"
+  end="2026-04-30"
+  zoom="month"
+  onTaskChange={syncTask}
+/>`,
+  charts: `<Chart
+  series={revenue}
+  type="area"
+  stacked
+  showTooltip
+  valueFormatter={formatCurrency}
+/>`,
+  topology: `<Topology
+  data={services}
+  layout="hierarchical"
+  renderer="auto"
+  interactive={{ pan: true, zoom: true }}
+/>`,
+  calendar: `<Calendar
+  events={schedule}
+  date="2026-08-20"
+  view="workweek"
+  expandRecurrence
+  onEventChange={syncEvent}
+/>`,
+};
+
+const foundationDetails = {
+  schemas: {
+    eyebrow: "CONTRATO DE DADOS",
+    title: "Tipos & schemas",
+    description: "Contratos TypeScript exportados por cada pacote e validação em runtime antes de qualquer renderização.",
+    items: ["Erros com código, caminho e sugestão de correção", "Normalização imutável em todas as atualizações", "Tipos partilhados entre React, Angular, Vue e JavaScript"],
+    code: `import type { GanttTask } from '@nodara/core';
+
+const task: GanttTask = {
+  id: 'ND-104',
+  label: 'Motor de permissões',
+  start: '2026-02-03',
+  end: '2026-03-18',
+  progress: 72,
+};`,
+  },
+  tokens: {
+    eyebrow: "DESIGN SYSTEM",
+    title: "Temas & tokens",
+    description: "Personaliza cores, tipografia, espaçamento e estados sem alterar a lógica do componente.",
+    items: ["Temas dark e light incluídos", "Tokens globais ou por instância", "Contraste validado para estados críticos"],
+    code: `const theme = {
+  background: '#0b0e0f',
+  surface: '#121617',
+  foreground: '#f3f4ef',
+  primary: '#c8fa63',
+  radius: 8,
+};
+
+<Topology data={services} theme={theme} />`,
+  },
+  accessibility: {
+    eyebrow: "INCLUSÃO POR DEFEITO",
+    title: "Acessibilidade",
+    description: "Cada visualização mantém uma representação semântica paralela ao Canvas ou WebGL.",
+    items: ["Navegação e seleção por teclado", "Rótulos para leitores de ecrã", "Modo de movimento reduzido", "Contraste e foco visível testados"],
+    code: `interactive={{
+  keyboard: true,
+  pointer: true,
+  pan: true,
+  zoom: true,
+}}
+ariaLabel="Topologia dos serviços de produção"`,
+  },
+} as const;
 
 const payloads: Record<FeatureId, string> = {
   gantt: `{
@@ -280,34 +357,120 @@ const baseCalendarEvents: CalendarEvent[] = [
   { id: "release", title: "Release 1.0", start: "2026-08-21T12:00:00", durationMinutes: 120, allDay: false, color: "#f5c451" },
 ];
 
-function GanttPreview({ theme }: { theme: VisualTheme }) {
+function GanttPreview({ theme, liveTick }: { theme: VisualTheme; liveTick: number }) {
   const [tasks, setTasks] = useState(initialGanttTasks);
-  return <div className="real-preview gantt-shell"><Gantt data={tasks} theme={theme} locale="pt-PT" start="2026-01-01" end="2026-04-30" zoom="month" snap="day" rowHeight={54} dependencyRouting="orthogonal" onTaskChange={({ task }) => setTasks((current) => current.map((item) => item.id === task.id ? task : item))} style={{ height: 420 }} /></div>;
+  const displayedTasks = useMemo(() => tasks.map((task, index) => ({
+    ...task,
+    progress: Math.min(100, (task.progress ?? 0) + (liveTick > 0 ? (liveTick + index) % 6 : 0)),
+  })), [liveTick, tasks]);
+
+  return <div className="real-preview gantt-shell"><Gantt data={displayedTasks} theme={theme} locale="pt-PT" start="2026-01-01" end="2026-04-30" zoom="month" snap="day" rowHeight={54} dependencyRouting="orthogonal" onTaskChange={({ task }) => setTasks((current) => current.map((item) => item.id === task.id ? task : item))} style={{ height: 420 }} /></div>;
 }
 
-function ChartsPreview({ dense, theme }: { dense: boolean; theme: VisualTheme }) {
-  const series = dense ? baseChartSeries.map((entry) => ({ ...entry, data: Array.from({ length: 1_200 }, (_, index) => ({ x: index, y: Math.round((Math.sin(index / 18) + 2.2) * 120_000 + index * 45) })) })) : baseChartSeries;
-  return <div className="real-preview charts-shell"><Chart series={series} theme={theme} locale="pt-PT" type={dense ? "line" : "area"} stacked={!dense} showTooltip valueFormatter={(value) => new Intl.NumberFormat("pt-PT", { notation: "compact", style: "currency", currency: "EUR" }).format(value)} performance={{ canvasThreshold: 500, webglThreshold: 1_000 }} style={{ height: 420 }} /></div>;
+function ChartsPreview({ liveTick, theme }: { liveTick: number; theme: VisualTheme }) {
+  const series = useMemo(() => baseChartSeries.map((entry, seriesIndex) => ({
+    ...entry,
+    data: entry.data.map((point, pointIndex) => ({
+      ...point,
+      y: Math.max(0, point.y + (((liveTick + pointIndex * 3 + seriesIndex) % 7) - 3) * 1_250),
+    })),
+  })), [liveTick]);
+  return <div className="real-preview charts-shell"><Chart series={series} theme={theme} locale="pt-PT" type="area" stacked showTooltip valueFormatter={(value) => new Intl.NumberFormat("pt-PT", { notation: "compact", style: "currency", currency: "EUR" }).format(value)} performance={{ canvasThreshold: 500, webglThreshold: 1_000 }} style={{ height: 420 }} /></div>;
 }
 
-function TopologyPreview({ dense, theme }: { dense: boolean; theme: VisualTheme }) {
-  const data = dense ? {
-    nodes: Array.from({ length: 180 }, (_, index) => ({ id: `node-${index}`, label: `Serviço ${index + 1}`, status: index % 19 === 0 ? "warning" as const : "healthy" as const, value: `${(index * 17) % 900} req/s` })),
-    edges: Array.from({ length: 300 }, (_, index) => ({ from: `node-${index % 180}`, to: `node-${(index * 7 + 11) % 180}`, directed: true })),
-  } : baseTopology;
-  return <div className="real-preview topology-shell"><Topology data={data} theme={theme} layout={dense ? "grid" : "force"} renderer="auto" performance={{ canvasThreshold: 80, webglThreshold: 150 }} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} style={{ height: 420 }} /></div>;
+function TopologyPreview({ liveTick, theme }: { liveTick: number; theme: VisualTheme }) {
+  const data = useMemo<TopologyData>(() => ({
+    nodes: baseTopology.nodes.map((node, index) => ({
+      ...node,
+      status: liveTick > 0 && index === liveTick % baseTopology.nodes.length && liveTick % 4 === 0 ? "warning" : node.status,
+      value: node.id === "gateway" ? `${2.4 + (liveTick % 5) * 0.1}k/s`
+        : node.id === "events" ? `${8.1 + (liveTick % 4) * 0.2}k/s`
+          : node.value,
+    })),
+    edges: baseTopology.edges,
+  }), [liveTick]);
+  return <div className="real-preview topology-shell"><Topology data={data} theme={theme} layout="hierarchical" renderer="auto" performance={{ canvasThreshold: 80, webglThreshold: 150 }} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} style={{ height: 420 }} /></div>;
 }
 
-function CalendarPreview({ theme }: { theme: VisualTheme }) {
+function CalendarPreview({ theme, liveTick }: { theme: VisualTheme; liveTick: number }) {
   const [events, setEvents] = useState(baseCalendarEvents);
-  return <div className="real-preview calendar-shell"><Calendar events={events} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => setEvents((current) => current.map((item) => item.id === event.id ? event : item))} style={{ height: 420 }} /></div>;
+  const displayedEvents = useMemo(() => events.map((event, index) => ({
+    ...event,
+    durationMinutes: Math.max(30, (event.durationMinutes ?? 60) + (liveTick > 0 && index === liveTick % events.length ? (liveTick % 2 === 0 ? 5 : -5) : 0)),
+  })), [events, liveTick]);
+
+  return <div className="real-preview calendar-shell"><Calendar events={displayedEvents} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => setEvents((current) => current.map((item) => item.id === event.id ? event : item))} style={{ height: 420 }} /></div>;
 }
 
-function FeaturePreview({ feature, dense, theme }: { feature: FeatureId; dense: boolean; theme: VisualTheme }) {
-  if (feature === "charts") return <ChartsPreview dense={dense} theme={theme} />;
-  if (feature === "topology") return <TopologyPreview dense={dense} theme={theme} />;
-  if (feature === "calendar") return <CalendarPreview theme={theme} />;
-  return <GanttPreview theme={theme} />;
+function FeaturePreview({ feature, liveTick, theme }: { feature: FeatureId; liveTick: number; theme: VisualTheme }) {
+  if (feature === "charts") return <ChartsPreview liveTick={liveTick} theme={theme} />;
+  if (feature === "topology") return <TopologyPreview liveTick={liveTick} theme={theme} />;
+  if (feature === "calendar") return <CalendarPreview liveTick={liveTick} theme={theme} />;
+  return <GanttPreview liveTick={liveTick} theme={theme} />;
+}
+
+function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: DialogId; feature: FeatureId; onClose: () => void; onNavigate: (id: string) => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const featureData = featureItems.find((item) => item.id === feature)!;
+
+  useEffect(() => { closeRef.current?.focus(); }, []);
+
+  if (dialog === "example") {
+    return (
+      <div className="info-overlay">
+        <button type="button" className="info-backdrop" aria-label="Fechar exemplo" onClick={onClose} />
+        <section className="info-dialog info-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+          <div className="info-dialog-head"><div><span>EXEMPLO EXECUTÁVEL</span><h2 id="dialog-title">{featureData.name}</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+          <p>Este é o mesmo componente real do preview. Copia os dados e a integração para começares com um contrato funcional.</p>
+          <div className="example-dialog-grid">
+            <article><div className="dialog-code-head"><span>DADOS DE ENTRADA</span><CopyButton value={payloads[feature]} /></div><pre><code>{payloads[feature]}</code></pre></article>
+            <article><div className="dialog-code-head"><span>INTEGRAÇÃO REACT</span><CopyButton value={featureSnippets[feature]} /></div><pre><code>{featureSnippets[feature]}</code></pre></article>
+          </div>
+          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><button className="primary-button" onClick={() => onNavigate("integrar")}>Ver guia de integração <ArrowRight size={15} /></button></div>
+        </section>
+      </div>
+    );
+  }
+
+  if (dialog === "help") {
+    return (
+      <div className="info-overlay">
+        <button type="button" className="info-backdrop" aria-label="Fechar ajuda" onClick={onClose} />
+        <section className="info-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+          <div className="info-dialog-head"><div><span>SUPORTE DE ENGENHARIA</span><h2 id="dialog-title">Precisas de ajuda?</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+          <p>Partilha o caso de uso, volume de dados, framework e resultado esperado. Assim conseguimos responder com um exemplo reproduzível.</p>
+          <div className="support-options"><a className="primary-button" href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer"><ExternalLink size={15} /> Abrir pedido no GitHub</a><button className="secondary-button" onClick={() => onNavigate("integrar")}>Ver documentação</button></div>
+        </section>
+      </div>
+    );
+  }
+
+  if (dialog === "architecture") {
+    return (
+      <div className="info-overlay">
+        <button type="button" className="info-backdrop" aria-label="Fechar arquitetura" onClick={onClose} />
+        <section className="info-dialog info-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+          <div className="info-dialog-head"><div><span>ARQUITETURA NODARA</span><h2 id="dialog-title">Um core, três motores.</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+          <p>A API mantém-se estável enquanto o motor escolhe a estratégia adequada ao volume e às capacidades do browser.</p>
+          <div className="architecture-dialog-grid"><article><b>DOM</b><strong>Semântica primeiro</strong><span>Listas pequenas, edição e acessibilidade nativa.</span></article><article><b>CANVAS</b><strong>Interação fluida</strong><span>Centenas a milhares de elementos visuais.</span></article><article><b>WEBGL</b><strong>Grandes volumes</strong><span>Buffers compactos e renderização acelerada.</span></article></div>
+          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><button className="primary-button" onClick={() => onNavigate("integrar")}>Integrar agora <ArrowRight size={15} /></button></div>
+        </section>
+      </div>
+    );
+  }
+
+  const details = foundationDetails[dialog];
+  return (
+    <div className="info-overlay">
+      <button type="button" className="info-backdrop" aria-label={`Fechar ${details.title}`} onClick={onClose} />
+      <section className="info-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div className="info-dialog-head"><div><span>{details.eyebrow}</span><h2 id="dialog-title">{details.title}</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+        <p>{details.description}</p>
+        <ul className="foundation-list">{details.items.map((item) => <li key={item}><CheckCircle2 size={16} />{item}</li>)}</ul>
+        <div className="foundation-code"><div className="dialog-code-head"><span>EXEMPLO</span><CopyButton value={details.code} /></div><pre><code>{details.code}</code></pre></div>
+      </section>
+    </div>
+  );
 }
 
 export default function Home() {
@@ -315,11 +478,16 @@ export default function Home() {
   const [activeFramework, setActiveFramework] = useState<FrameworkId>("react");
   const [workspaceTab, setWorkspaceTab] = useState<"preview" | "data" | "api">("preview");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [dense, setDense] = useState(false);
+  const [liveData, setLiveData] = useState(false);
+  const [liveTick, setLiveTick] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
   const [mobileNav, setMobileNav] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeDialog, setActiveDialog] = useState<DialogId | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const siteRef = useRef<HTMLDivElement>(null);
 
   const activeFrameworkData = frameworks.find((item) => item.id === activeFramework)!;
   const activeFeatureData = featureItems.find((item) => item.id === activeFeature)!;
@@ -334,7 +502,16 @@ export default function Home() {
         event.preventDefault();
         setShowSearch((value) => !value);
       }
-      if (event.key === "Escape") setShowSearch(false);
+      const target = event.target as HTMLElement | null;
+      const isEditing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      if (event.key === "/" && !isEditing) {
+        event.preventDefault();
+        setShowSearch(true);
+      }
+      if (event.key === "Escape") {
+        setShowSearch(false);
+        setActiveDialog(null);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -343,6 +520,19 @@ export default function Home() {
   useEffect(() => {
     if (showSearch) searchInputRef.current?.focus();
   }, [showSearch]);
+
+  useEffect(() => {
+    const site = siteRef.current;
+    if (!site) return;
+    site.dataset.ready = "true";
+    return () => { delete site.dataset.ready; };
+  }, []);
+
+  useEffect(() => {
+    if (!liveData) return;
+    const timer = window.setInterval(() => setLiveTick((value) => value + 1), 1500);
+    return () => window.clearInterval(timer);
+  }, [liveData]);
 
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -354,8 +544,39 @@ export default function Home() {
     setWorkspaceTab("preview");
   }
 
+  function openSearchResult(entry: string) {
+    setShowSearch(false);
+    setQuery("");
+    scrollTo(entry.includes("migração") || entry.includes("Tokens") ? "integrar" : "componentes");
+  }
+
+  function navigateFromDialog(id: string) {
+    setActiveDialog(null);
+    window.setTimeout(() => scrollTo(id), 0);
+  }
+
+  function toggleLiveData() {
+    if (!liveData) setLiveTick((value) => value + 1);
+    setLiveData((value) => !value);
+  }
+
+  function onSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSearchIndex((value) => Math.min(filteredSearch.length - 1, value + 1));
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSearchIndex((value) => Math.max(0, value - 1));
+    }
+    if (event.key === "Enter" && filteredSearch[searchIndex]) {
+      event.preventDefault();
+      openSearchResult(filteredSearch[searchIndex]);
+    }
+  }
+
   return (
-    <div className="site" data-theme={theme}>
+    <div ref={siteRef} className="site" data-theme={theme}>
       <header className="site-header">
         <button className="brand" onClick={() => scrollTo("inicio")} aria-label="Nodara, início">
           <span className="brand-mark"><i /><i /><i /><i /></span>
@@ -376,7 +597,7 @@ export default function Home() {
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
           <a className="github-button" href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer"><Code2 size={16} /><span>GitHub</span><b>ALPHA</b></a>
-          <button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Abrir menu">
+          <button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav} aria-label={mobileNav ? "Fechar menu" : "Abrir menu"}>
             {mobileNav ? <X /> : <Menu />}
           </button>
         </div>
@@ -424,14 +645,14 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="float-card float-a"><CheckCircle2 size={17} /><div><strong>181 testes verdes</strong><small>core + adaptadores</small></div></div>
+            <div className="float-card float-a"><CheckCircle2 size={17} /><div><strong>200+ testes verdes</strong><small>core + adaptadores + E2E</small></div></div>
             <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós testados</strong><small>Canvas / WebGL adaptativo</small></div></div>
           </div>
           <div className="hero-foot">
             <div><strong>5</strong><span>pacotes alpha</span></div>
             <div><strong>16.1 kB</strong><span>core completo gzip</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
-            <div><strong>181</strong><span>testes automatizados</span></div>
+            <div><strong>200+</strong><span>testes automatizados</span></div>
           </div>
         </section>
 
@@ -442,10 +663,10 @@ export default function Home() {
             <p>Troca de componente, inspeciona o contrato de dados e leva o código contigo. Tudo sem sair da página.</p>
           </div>
 
-          <div className="product-shell">
+          <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>
             <aside className="component-sidebar">
-              <div className="sidebar-title"><span>EXPLORADOR</span><button aria-label="Recolher menu"><PanelLeftClose size={15} /></button></div>
-              <button className="sidebar-search" onClick={() => setShowSearch(true)}><Search size={14} /> Procurar componente <kbd>/</kbd></button>
+              <div className="sidebar-title"><span>EXPLORADOR</span><button onClick={() => setSidebarCollapsed((value) => !value)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"} title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}><PanelLeftClose size={15} /></button></div>
+              <button className="sidebar-search" onClick={() => setShowSearch(true)}><Search size={14} /><span>Procurar componente</span><kbd>/</kbd></button>
               <p className="sidebar-label">VISUALIZAÇÕES</p>
               <div className="feature-nav">
                 {featureItems.map((item) => {
@@ -460,10 +681,10 @@ export default function Home() {
                 })}
               </div>
               <p className="sidebar-label">FUNDAÇÕES</p>
-              <button className="foundation-link"><Braces size={15} /> Tipos & schemas <ChevronRight size={14} /></button>
-              <button className="foundation-link"><Sparkles size={15} /> Temas & tokens <ChevronRight size={14} /></button>
-              <button className="foundation-link"><ShieldCheck size={15} /> Acessibilidade <ChevronRight size={14} /></button>
-              <div className="sidebar-help"><CircleHelp size={17} /><div><strong>Precisas de ajuda?</strong><small>Fala com um engenheiro</small></div><ArrowRight size={15} /></div>
+              <button className="foundation-link" onClick={() => setActiveDialog("schemas")}><Braces size={15} /><span>Tipos & schemas</span><ChevronRight size={14} /></button>
+              <button className="foundation-link" onClick={() => setActiveDialog("tokens")}><Sparkles size={15} /><span>Temas & tokens</span><ChevronRight size={14} /></button>
+              <button className="foundation-link" onClick={() => setActiveDialog("accessibility")}><ShieldCheck size={15} /><span>Acessibilidade</span><ChevronRight size={14} /></button>
+              <button className="sidebar-help" onClick={() => setActiveDialog("help")}><CircleHelp size={17} /><span><strong>Precisas de ajuda?</strong><small>Fala com um engenheiro</small></span><ArrowRight size={15} /></button>
             </aside>
 
             <div className="workspace">
@@ -473,19 +694,22 @@ export default function Home() {
                   <h3>{featureCopy[activeFeature].title}</h3>
                   <p>{featureCopy[activeFeature].description}</p>
                 </div>
-                <div className="workspace-actions">
-                  <button className={dense ? "active" : ""} onClick={() => setDense(!dense)}><Zap size={14} /> Live data</button>
-                  <button><ExternalLink size={14} /> Abrir exemplo</button>
+                <div className="workspace-action-stack">
+                  <div className="workspace-actions">
+                    <button className={liveData ? "active" : ""} aria-pressed={liveData} aria-describedby="live-data-description" onClick={toggleLiveData} title="Simula atualizações dos dados a cada 1,5 segundos"><Zap size={14} /> Live data</button>
+                    <button onClick={() => setActiveDialog("example")}><ExternalLink size={14} /> Abrir exemplo</button>
+                  </div>
+                  <span className={liveData ? "live-explainer is-live" : "live-explainer"} id="live-data-description">{liveData ? `A simular dados reais · ciclo ${liveTick}` : "Simula atualizações a cada 1,5 s"}</span>
                 </div>
               </div>
               <div className="workspace-tabs" role="tablist">
                 <button role="tab" aria-selected={workspaceTab === "preview"} className={workspaceTab === "preview" ? "active" : ""} onClick={() => setWorkspaceTab("preview")}><Play size={13} /> Preview</button>
                 <button role="tab" aria-selected={workspaceTab === "data"} className={workspaceTab === "data" ? "active" : ""} onClick={() => setWorkspaceTab("data")}><FileJson size={13} /> Dados</button>
                 <button role="tab" aria-selected={workspaceTab === "api"} className={workspaceTab === "api" ? "active" : ""} onClick={() => setWorkspaceTab("api")}><Braces size={13} /> API</button>
-                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {dense ? "streaming" : "1.240 items"}</div>
+                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.count} exemplos`}</div>
               </div>
               <div className="workspace-canvas">
-                {workspaceTab === "preview" && <FeaturePreview feature={activeFeature} dense={dense} theme={theme} />}
+                {workspaceTab === "preview" && <FeaturePreview feature={activeFeature} liveTick={liveTick} theme={theme} />}
                 {workspaceTab === "data" && (
                   <div className="data-inspector">
                     <div className="data-inspector-head"><span><FileJson size={14} /> data.json</span><CopyButton value={payloads[activeFeature]} /></div>
@@ -574,7 +798,7 @@ export default function Home() {
             <p className="mini-label">FEITA PARA ESCALAR</p>
             <h2>Bonita por fora.<br /><em>Séria por dentro.</em></h2>
             <p>Um core independente, renderização adaptativa e contratos públicos estáveis. O tipo de fundação que não obriga a reescrever o produto daqui a dois anos.</p>
-            <button className="secondary-button">Explorar arquitetura <ArrowRight size={15} /></button>
+            <button className="secondary-button" onClick={() => setActiveDialog("architecture")}>Explorar arquitetura <ArrowRight size={15} /></button>
           </div>
           <div className="architecture-grid">
             <article className="arch-card arch-wide">
@@ -586,7 +810,7 @@ export default function Home() {
             </article>
             <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Cinco pacotes independentes e tree-shaking real.</p><strong className="metric">16.1 <small>kB CORE GZIP</small></strong></article>
             <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBLE</span><h3>Acessível de raiz.</h3><p>Teclado, leitores de ecrã e contraste testados.</p><strong className="metric">5.9:1 <small>CONTRASTE CLARO</small></strong></article>
-            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>ENGINEERING</span><h3>Validada de forma contínua.</h3><p>Contratos estáveis, testes automatizados e releases controladas.</p><div className="community-row"><span>181 <small>testes</small></span><span>5 <small>pacotes</small></span><span>4 <small>adaptadores</small></span></div></article>
+            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>ENGINEERING</span><h3>Validada de forma contínua.</h3><p>Contratos estáveis, testes automatizados e releases controladas.</p><div className="community-row"><span>200+ <small>testes</small></span><span>5 <small>pacotes</small></span><span>4 <small>adaptadores</small></span></div></article>
           </div>
         </section>
 
@@ -610,16 +834,18 @@ export default function Home() {
         <div className="search-overlay">
           <button type="button" className="search-backdrop" aria-label="Fechar pesquisa" onClick={() => setShowSearch(false)} />
           <div className="search-dialog" role="dialog" aria-modal="true" aria-label="Pesquisa da documentação">
-            <div className="search-input-wrap"><Search size={19} /><input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar componentes, APIs e guias…" /><kbd>ESC</kbd></div>
+            <div className="search-input-wrap"><Search size={19} /><input ref={searchInputRef} value={query} onChange={(event) => { setQuery(event.target.value); setSearchIndex(0); }} onKeyDown={onSearchKeyDown} placeholder="Pesquisar componentes, APIs e guias…" aria-activedescendant={filteredSearch[searchIndex] ? `search-result-${searchIndex}` : undefined} /><kbd>ESC</kbd></div>
             <p>SUGESTÕES</p>
             <div className="search-results">
-              {filteredSearch.map((entry, index) => <button key={entry} onClick={() => { setShowSearch(false); scrollTo(index < 8 ? "componentes" : "integrar"); }}><span><Command size={14} />{entry}</span><ChevronRight size={14} /></button>)}
+              {filteredSearch.map((entry, index) => <button id={`search-result-${index}`} className={searchIndex === index ? "selected" : ""} key={entry} onMouseEnter={() => setSearchIndex(index)} onClick={() => openSearchResult(entry)}><span><Command size={14} />{entry}</span><ChevronRight size={14} /></button>)}
               {filteredSearch.length === 0 && <div className="no-results">Nenhum resultado. Experimenta “Gantt” ou “schema”.</div>}
             </div>
             <div className="search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>↵</kbd> abrir</span></div>
           </div>
         </div>
       )}
+
+      {activeDialog && <PortalDialog dialog={activeDialog} feature={activeFeature} onClose={() => setActiveDialog(null)} onNavigate={navigateFromDialog} />}
     </div>
   );
 }

@@ -33,7 +33,9 @@ export function createTopology(
     canvas.style.height = `${height}px`;
     canvas.setAttribute("aria-hidden", "true");
     root.append(canvas);
-    const radius = Math.max(4, currentOptions.nodeRadius ?? (data.nodes.length > 300 ? 4 : 25));
+    const availableAreaPerNode = (width * height) / Math.max(data.nodes.length, 1);
+    const adaptiveRadius = Math.min(25, Math.sqrt(availableAreaPerNode) * 0.16);
+    const radius = Math.max(4, currentOptions.nodeRadius ?? adaptiveRadius);
     const positions = calculateTopologyLayout(data, currentOptions.layout, width, height, currentOptions.layoutIterations);
     const minimumZoom = Math.max(0.1, currentOptions.minZoom ?? 0.25);
     const maximumZoom = Math.max(minimumZoom, currentOptions.maxZoom ?? 4);
