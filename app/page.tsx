@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Chart, Gantt, Topology } from "@nodara/react";
+import {
+  normalizeCalendarEvents,
+  normalizeChartSeries,
+  normalizeGanttTasks,
+  normalizeTopology,
+} from "@nodara/core";
 import type { CalendarEvent, ChartSeries, GanttTask, TopologyData, VisualTheme } from "@nodara/core";
 import {
   ArrowRight,
@@ -24,6 +30,7 @@ import {
   PackageCheck,
   PanelLeftClose,
   Play,
+  RotateCcw,
   Rows3,
   Search,
   Settings2,
@@ -216,45 +223,6 @@ ariaLabel="Topologia dos serviços de produção"`,
   },
 } as const;
 
-const payloads: Record<FeatureId, string> = {
-  gantt: `{
-  "id": "ND-104",
-  "label": "Motor de permissões",
-  "start": "2026-02-03",
-  "end": "2026-03-18",
-  "progress": 72,
-  "dependsOn": ["ND-096"],
-  "owner": { "name": "Inês", "color": "#6E7DFF" }
-}`,
-  charts: `{
-  "series": "Receita recorrente",
-  "points": [
-    { "x": "Jan", "y": 128400 },
-    { "x": "Fev", "y": 164200 },
-    { "x": "Mar", "y": 191800 }
-  ],
-  "format": "EUR",
-  "animate": true
-}`,
-  topology: `{
-  "nodes": [
-    { "id": "gateway", "type": "service", "health": 99.99 },
-    { "id": "billing", "type": "service", "health": 99.97 }
-  ],
-  "edges": [
-    { "from": "gateway", "to": "billing", "traffic": 1240 }
-  ]
-}`,
-  calendar: `{
-  "id": "evt_92",
-  "title": "Design critique",
-  "start": "2026-08-20T10:00:00Z",
-  "duration": 45,
-  "resourceId": "studio-01",
-  "recurrence": "FREQ=WEEKLY;COUNT=6"
-}`,
-};
-
 const featureCopy: Record<
   FeatureId,
   { eyebrow: string; title: string; description: string }
@@ -357,56 +325,146 @@ const baseCalendarEvents: CalendarEvent[] = [
   { id: "release", title: "Release 1.0", start: "2026-08-21T12:00:00", durationMinutes: 120, allDay: false, color: "#f5c451" },
 ];
 
-function GanttPreview({ theme, liveTick }: { theme: VisualTheme; liveTick: number }) {
-  const [tasks, setTasks] = useState(initialGanttTasks);
-  const displayedTasks = useMemo(() => tasks.map((task, index) => ({
-    ...task,
-    progress: Math.min(100, (task.progress ?? 0) + (liveTick > 0 ? (liveTick + index) % 6 : 0)),
-  })), [liveTick, tasks]);
+type PlaygroundDataMap = {
+  gantt: GanttTask[];
+  charts: ChartSeries[];
+  topology: TopologyData;
+  calendar: CalendarEvent[];
+};
 
-  return <div className="real-preview gantt-shell"><Gantt data={displayedTasks} theme={theme} locale="pt-PT" start="2026-01-01" end="2026-04-30" zoom="month" snap="day" rowHeight={54} dependencyRouting="orthogonal" onTaskChange={({ task }) => setTasks((current) => current.map((item) => item.id === task.id ? task : item))} style={{ height: 420 }} /></div>;
+const initialPlaygroundData: PlaygroundDataMap = {
+  gantt: initialGanttTasks,
+  charts: baseChartSeries,
+  topology: baseTopology,
+  calendar: baseCalendarEvents,
+};
+
+const payloads: Record<FeatureId, string> = {
+  gantt: JSON.stringify(initialGanttTasks, null, 2),
+  charts: JSON.stringify(baseChartSeries, null, 2),
+  topology: JSON.stringify(baseTopology, null, 2),
+  calendar: JSON.stringify(baseCalendarEvents, null, 2),
+};
+
+function assertEditableCollection(value: unknown, feature: FeatureId): asserts value is Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) throw new Error(`O contrato de ${feature} deve ser um array JSON.`);
+  if (value.some((item) => !item || typeof item !== "object" || Array.isArray(item))) {
+    throw new Error("Cada item deve ser um objeto JSON.");
+  }
+  value.forEach((item, index) => {
+    if (typeof item.id !== "string" || !item.id.trim()) throw new Error(`O item ${index + 1} requer um id de texto não vazio.`);
+  });
 }
 
-function ChartsPreview({ liveTick, theme }: { liveTick: number; theme: VisualTheme }) {
-  const series = useMemo(() => baseChartSeries.map((entry, seriesIndex) => ({
+function assertTextField(item: Record<string, unknown>, field: string, context: string) {
+  if (typeof item[field] !== "string" || !(item[field] as string).trim()) {
+    throw new Error(`${context} requer o campo ${field} como texto não vazio.`);
+  }
+}
+
+function parsePlaygroundData(feature: FeatureId, source: string): PlaygroundDataMap[FeatureId] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "estrutura incompleta";
+    throw new Error(`JSON inválido: ${message}`);
+  }
+
+  if (feature === "topology") {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("A topologia requer um objeto com nodes e edges.");
+    const topology = parsed as Partial<TopologyData>;
+    if (!Array.isArray(topology.nodes) || !Array.isArray(topology.edges)) throw new Error("A topologia requer os arrays nodes e edges.");
+    if (topology.nodes.some((node) => !node || typeof node !== "object") || topology.edges.some((edge) => !edge || typeof edge !== "object")) {
+      throw new Error("Cada node e edge deve ser um objeto JSON.");
+    }
+    topology.nodes.forEach((node, index) => {
+      const record = node as unknown as Record<string, unknown>;
+      assertTextField(record, "id", `O node ${index + 1}`);
+      assertTextField(record, "label", `O node ${index + 1}`);
+    });
+    topology.edges.forEach((edge, index) => {
+      const record = edge as unknown as Record<string, unknown>;
+      assertTextField(record, "from", `O edge ${index + 1}`);
+      assertTextField(record, "to", `O edge ${index + 1}`);
+    });
+    return normalizeTopology(topology as TopologyData);
+  }
+
+  assertEditableCollection(parsed, feature);
+  if (feature === "gantt") {
+    parsed.forEach((task, index) => assertTextField(task, "label", `A task ${index + 1}`));
+    return normalizeGanttTasks(parsed as unknown as GanttTask[]);
+  }
+  if (feature === "charts") {
+    parsed.forEach((series, index) => {
+      assertTextField(series, "label", `A série ${index + 1}`);
+      if (!Array.isArray(series.data)) throw new Error(`A série ${index + 1} requer um array data.`);
+      if (series.data.some((point) => !point || typeof point !== "object" || Array.isArray(point))) {
+        throw new Error(`Cada ponto da série ${index + 1} deve ser um objeto JSON.`);
+      }
+    });
+    return normalizeChartSeries(parsed as unknown as ChartSeries[]);
+  }
+  parsed.forEach((event, index) => assertTextField(event, "title", `O evento ${index + 1}`));
+  return normalizeCalendarEvents(parsed as unknown as CalendarEvent[]);
+}
+
+function GanttPreview({ data, onChange, theme, liveTick }: { data: GanttTask[]; onChange: (data: GanttTask[]) => void; theme: VisualTheme; liveTick: number }) {
+  const displayedTasks = useMemo(() => data.map((task, index) => ({
+    ...task,
+    progress: Math.min(100, (task.progress ?? 0) + (liveTick > 0 ? (liveTick + index) % 6 : 0)),
+  })), [data, liveTick]);
+
+  return <div className="real-preview gantt-shell"><Gantt data={displayedTasks} theme={theme} locale="pt-PT" start="2026-01-01" end="2026-04-30" zoom="month" snap="day" rowHeight={54} dependencyRouting="orthogonal" onTaskChange={({ task }) => onChange(data.map((item) => item.id === task.id ? task : item))} style={{ height: 420 }} /></div>;
+}
+
+function ChartsPreview({ data, liveTick, theme }: { data: ChartSeries[]; liveTick: number; theme: VisualTheme }) {
+  const series = useMemo(() => data.map((entry, seriesIndex) => ({
     ...entry,
     data: entry.data.map((point, pointIndex) => ({
       ...point,
       y: Math.max(0, point.y + (((liveTick + pointIndex * 3 + seriesIndex) % 7) - 3) * 1_250),
     })),
-  })), [liveTick]);
+  })), [data, liveTick]);
   return <div className="real-preview charts-shell"><Chart series={series} theme={theme} locale="pt-PT" type="area" stacked showTooltip valueFormatter={(value) => new Intl.NumberFormat("pt-PT", { notation: "compact", style: "currency", currency: "EUR" }).format(value)} performance={{ canvasThreshold: 500, webglThreshold: 1_000 }} style={{ height: 420 }} /></div>;
 }
 
-function TopologyPreview({ liveTick, theme }: { liveTick: number; theme: VisualTheme }) {
-  const data = useMemo<TopologyData>(() => ({
-    nodes: baseTopology.nodes.map((node, index) => ({
+function TopologyPreview({ data, liveTick, theme }: { data: TopologyData; liveTick: number; theme: VisualTheme }) {
+  const displayedData = useMemo<TopologyData>(() => ({
+    nodes: data.nodes.map((node, index) => ({
       ...node,
-      status: liveTick > 0 && index === liveTick % baseTopology.nodes.length && liveTick % 4 === 0 ? "warning" : node.status,
+      status: liveTick > 0 && index === liveTick % data.nodes.length && liveTick % 4 === 0 ? "warning" : node.status,
       value: node.id === "gateway" ? `${2.4 + (liveTick % 5) * 0.1}k/s`
         : node.id === "events" ? `${8.1 + (liveTick % 4) * 0.2}k/s`
           : node.value,
     })),
-    edges: baseTopology.edges,
-  }), [liveTick]);
-  return <div className="real-preview topology-shell"><Topology data={data} theme={theme} layout="hierarchical" renderer="auto" performance={{ canvasThreshold: 80, webglThreshold: 150 }} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} style={{ height: 420 }} /></div>;
+    edges: data.edges,
+  }), [data, liveTick]);
+  return <div className="real-preview topology-shell"><Topology data={displayedData} theme={theme} layout="hierarchical" renderer="auto" performance={{ canvasThreshold: 80, webglThreshold: 150 }} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} style={{ height: 420 }} /></div>;
 }
 
-function CalendarPreview({ theme, liveTick }: { theme: VisualTheme; liveTick: number }) {
-  const [events, setEvents] = useState(baseCalendarEvents);
-  const displayedEvents = useMemo(() => events.map((event, index) => ({
+function CalendarPreview({ data, onChange, theme, liveTick }: { data: CalendarEvent[]; onChange: (data: CalendarEvent[]) => void; theme: VisualTheme; liveTick: number }) {
+  const displayedEvents = useMemo(() => data.map((event, index) => ({
     ...event,
-    durationMinutes: Math.max(30, (event.durationMinutes ?? 60) + (liveTick > 0 && index === liveTick % events.length ? (liveTick % 2 === 0 ? 5 : -5) : 0)),
-  })), [events, liveTick]);
+    durationMinutes: Math.max(30, (event.durationMinutes ?? 60) + (liveTick > 0 && index === liveTick % data.length ? (liveTick % 2 === 0 ? 5 : -5) : 0)),
+  })), [data, liveTick]);
 
-  return <div className="real-preview calendar-shell"><Calendar events={displayedEvents} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => setEvents((current) => current.map((item) => item.id === event.id ? event : item))} style={{ height: 420 }} /></div>;
+  return <div className="real-preview calendar-shell"><Calendar events={displayedEvents} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => onChange(data.map((item) => item.id === event.id ? event : item))} style={{ height: 420 }} /></div>;
 }
 
-function FeaturePreview({ feature, liveTick, theme }: { feature: FeatureId; liveTick: number; theme: VisualTheme }) {
-  if (feature === "charts") return <ChartsPreview liveTick={liveTick} theme={theme} />;
-  if (feature === "topology") return <TopologyPreview liveTick={liveTick} theme={theme} />;
-  if (feature === "calendar") return <CalendarPreview liveTick={liveTick} theme={theme} />;
-  return <GanttPreview liveTick={liveTick} theme={theme} />;
+function FeaturePreview({ data, feature, liveTick, onCalendarChange, onGanttChange, theme }: {
+  data: PlaygroundDataMap;
+  feature: FeatureId;
+  liveTick: number;
+  onCalendarChange: (data: CalendarEvent[]) => void;
+  onGanttChange: (data: GanttTask[]) => void;
+  theme: VisualTheme;
+}) {
+  if (feature === "charts") return <ChartsPreview data={data.charts} liveTick={liveTick} theme={theme} />;
+  if (feature === "topology") return <TopologyPreview data={data.topology} liveTick={liveTick} theme={theme} />;
+  if (feature === "calendar") return <CalendarPreview data={data.calendar} onChange={onCalendarChange} liveTick={liveTick} theme={theme} />;
+  return <GanttPreview data={data.gantt} onChange={onGanttChange} liveTick={liveTick} theme={theme} />;
 }
 
 function PortalDialog({ dialog, feature, onClose, onNavigate }: { dialog: DialogId; feature: FeatureId; onClose: () => void; onNavigate: (id: string) => void }) {
@@ -480,6 +538,9 @@ export default function Home() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [liveData, setLiveData] = useState(false);
   const [liveTick, setLiveTick] = useState(0);
+  const [playgroundData, setPlaygroundData] = useState<PlaygroundDataMap>(initialPlaygroundData);
+  const [editorValues, setEditorValues] = useState<Record<FeatureId, string>>(payloads);
+  const [editorErrors, setEditorErrors] = useState<Partial<Record<FeatureId, string>>>({});
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
   const [searchIndex, setSearchIndex] = useState(0);
@@ -491,6 +552,7 @@ export default function Home() {
 
   const activeFrameworkData = frameworks.find((item) => item.id === activeFramework)!;
   const activeFeatureData = featureItems.find((item) => item.id === activeFeature)!;
+  const activeEditorError = editorErrors[activeFeature];
   const filteredSearch = useMemo(
     () => searchEntries.filter((entry) => entry.toLowerCase().includes(query.toLowerCase())),
     [query],
@@ -556,8 +618,55 @@ export default function Home() {
   }
 
   function toggleLiveData() {
-    if (!liveData) setLiveTick((value) => value + 1);
-    setLiveData((value) => !value);
+    if (liveData) {
+      setLiveData(false);
+      setLiveTick(0);
+      return;
+    }
+    setLiveTick(1);
+    setLiveData(true);
+  }
+
+  function setFeatureData(feature: "gantt", data: GanttTask[]): void;
+  function setFeatureData(feature: "calendar", data: CalendarEvent[]): void;
+  function setFeatureData(feature: "charts", data: ChartSeries[]): void;
+  function setFeatureData(feature: "topology", data: TopologyData): void;
+  function setFeatureData(feature: FeatureId, data: PlaygroundDataMap[FeatureId]) {
+    setPlaygroundData((current) => ({ ...current, [feature]: data } as PlaygroundDataMap));
+    setEditorValues((current) => ({ ...current, [feature]: JSON.stringify(data, null, 2) }));
+    setEditorErrors((current) => ({ ...current, [feature]: undefined }));
+  }
+
+  function updateEditor(feature: FeatureId, value: string) {
+    setEditorValues((current) => ({ ...current, [feature]: value }));
+    try {
+      const data = parsePlaygroundData(feature, value);
+      setPlaygroundData((current) => ({ ...current, [feature]: data } as PlaygroundDataMap));
+      setEditorErrors((current) => ({ ...current, [feature]: undefined }));
+    } catch (error) {
+      setEditorErrors((current) => ({
+        ...current,
+        [feature]: error instanceof Error ? error.message : "Não foi possível validar estes dados.",
+      }));
+    }
+  }
+
+  function resetEditor(feature: FeatureId) {
+    updateEditor(feature, payloads[feature]);
+  }
+
+  function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    const editor = event.currentTarget;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const nextValue = `${editor.value.slice(0, start)}  ${editor.value.slice(end)}`;
+    updateEditor(activeFeature, nextValue);
+    window.requestAnimationFrame(() => {
+      editor.selectionStart = start + 2;
+      editor.selectionEnd = start + 2;
+    });
   }
 
   function onSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -696,10 +805,10 @@ export default function Home() {
                 </div>
                 <div className="workspace-action-stack">
                   <div className="workspace-actions">
-                    <button className={liveData ? "active" : ""} aria-pressed={liveData} aria-describedby="live-data-description" onClick={toggleLiveData} title="Simula atualizações dos dados a cada 1,5 segundos"><Zap size={14} /> Live data</button>
+                    <button className={liveData ? "active" : ""} aria-pressed={liveData} aria-describedby="live-data-description" onClick={toggleLiveData} title="Simula atualizações dos dados a cada 1,5 segundos"><Zap size={14} /> Simular stream</button>
                     <button onClick={() => setActiveDialog("example")}><ExternalLink size={14} /> Abrir exemplo</button>
                   </div>
-                  <span className={liveData ? "live-explainer is-live" : "live-explainer"} id="live-data-description">{liveData ? `A simular dados reais · ciclo ${liveTick}` : "Simula atualizações a cada 1,5 s"}</span>
+                  <span className={liveData ? "live-explainer is-live" : "live-explainer"} id="live-data-description">{liveData ? `Stream simulado · ciclo ${liveTick} · JSON intacto` : "Varia o preview a cada 1,5 s; não altera o JSON"}</span>
                 </div>
               </div>
               <div className="workspace-tabs" role="tablist">
@@ -709,12 +818,40 @@ export default function Home() {
                 <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.count} exemplos`}</div>
               </div>
               <div className="workspace-canvas">
-                {workspaceTab === "preview" && <FeaturePreview feature={activeFeature} liveTick={liveTick} theme={theme} />}
+                {workspaceTab === "preview" && <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />}
                 {workspaceTab === "data" && (
-                  <div className="data-inspector">
-                    <div className="data-inspector-head"><span><FileJson size={14} /> data.json</span><CopyButton value={payloads[activeFeature]} /></div>
-                    <pre><code>{payloads[activeFeature]}</code></pre>
-                    <div className="schema-success"><CheckCircle2 size={16} /><span><strong>Schema válido</strong><small>Todos os campos obrigatórios estão presentes.</small></span><b>8.4 ms</b></div>
+                  <div className="live-editor-layout">
+                    <section className="data-inspector live-editor" aria-label={`Editor de dados de ${activeFeatureData.name}`}>
+                      <div className="data-inspector-head">
+                        <span><FileJson size={14} /> data.json <i>EDITÁVEL</i></span>
+                        <div className="editor-actions">
+                          <button className="editor-reset" onClick={() => resetEditor(activeFeature)} title="Repor os dados iniciais"><RotateCcw size={13} /> Repor</button>
+                          <CopyButton value={editorValues[activeFeature]} />
+                        </div>
+                      </div>
+                      <textarea
+                        className="json-editor"
+                        value={editorValues[activeFeature]}
+                        onChange={(event) => updateEditor(activeFeature, event.target.value)}
+                        onKeyDown={onEditorKeyDown}
+                        aria-label={`Editar JSON de ${activeFeatureData.name}`}
+                        aria-invalid={Boolean(activeEditorError)}
+                        aria-describedby="editor-validation-status"
+                        spellCheck={false}
+                      />
+                      <div className={activeEditorError ? "schema-success schema-error" : "schema-success"} id="editor-validation-status" role={activeEditorError ? "alert" : "status"}>
+                        {activeEditorError ? <X size={16} /> : <CheckCircle2 size={16} />}
+                        <span>
+                          <strong>{activeEditorError ? "Corrige o JSON" : "Render atualizado automaticamente"}</strong>
+                          <small>{activeEditorError ?? "O componente real está a usar estes dados."}</small>
+                        </span>
+                        <b>{activeEditorError ? "ÚLTIMO VÁLIDO" : "LIVE"}</b>
+                      </div>
+                    </section>
+                    <section className="live-output" aria-label={`Output ao vivo de ${activeFeatureData.name}`}>
+                      <div className="live-output-head"><span><span className="status-dot" /> OUTPUT AO VIVO</span><small>{activeEditorError ? "A mostrar o último JSON válido" : "Sincronizado"}</small></div>
+                      <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />
+                    </section>
                   </div>
                 )}
                 {workspaceTab === "api" && (
@@ -727,7 +864,7 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              <div className="workspace-footer"><span><CheckCircle2 size={14} /> Dados validados</span><span>Motor real Nodara</span><span><ShieldCheck size={14} /> Teclado + leitor de ecrã</span><span>Zoom interativo</span></div>
+              <div className="workspace-footer"><span className={activeEditorError ? "has-error" : ""}>{activeEditorError ? <X size={14} /> : <CheckCircle2 size={14} />} {activeEditorError ? "JSON com erro · último válido preservado" : "Dados validados"}</span><span>Motor real Nodara</span><span><ShieldCheck size={14} /> Teclado + leitor de ecrã</span><span>Zoom interativo</span></div>
             </div>
           </div>
         </section>

@@ -23,7 +23,10 @@ const baseTask: GanttTask = { id: "a", label: "A", start: 0, end: DAY * 2 };
 
 describe("time scale and gantt model", () => {
   it("[I028] resolves a range from tasks", () => expect(resolveGanttRange([baseTask])).toEqual({ start: 0, end: DAY * 2 }));
-  it("[I029] gives empty datasets a safe day range", () => expect(resolveGanttRange([]).end - resolveGanttRange([]).start).toBe(DAY));
+  it("[I029] gives empty datasets a safe day range", () => {
+    const range = resolveGanttRange([]);
+    expect(range.end - range.start).toBe(DAY);
+  });
   it("[I030] respects explicit gantt range", () => expect(resolveGanttRange([baseTask], 10, 20)).toEqual({ start: 10, end: 20 }));
   it("[I031] creates 24 day ticks", () => expect(buildTimeScale(0, DAY, "day").ticks).toHaveLength(25));
   it("[I032] creates 14 week ticks", () => expect(buildTimeScale(0, DAY * 7, "week").ticks).toHaveLength(15));

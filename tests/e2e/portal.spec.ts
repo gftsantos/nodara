@@ -38,15 +38,15 @@ test("switches every real visualization and keeps topology legible", async ({ pa
   await expect(page.locator(".nd-root.nd-calendar")).toBeVisible();
 });
 
-test("Live data explains itself and performs observable updates", async ({ page }) => {
+test("stream simulation explains itself and performs observable updates", async ({ page }) => {
   await page.locator("#componentes").scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: /Grafos & topologias/ }).click();
-  const live = page.getByRole("button", { name: "Live data" });
+  const live = page.getByRole("button", { name: "Simular stream" });
   await expect(live).toHaveAttribute("aria-pressed", "false");
-  await expect(page.locator("#live-data-description")).toContainText("Simula atualizações");
+  await expect(page.locator("#live-data-description")).toContainText("não altera o JSON");
   await live.click();
   await expect(live).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator("#live-data-description")).toContainText("ciclo 1");
+  await expect(page.locator("#live-data-description")).toContainText("JSON intacto");
   await expect(page.locator("#live-data-description")).toContainText("ciclo 2", { timeout: 3_000 });
   await expect(page.locator(".nd-root.nd-topology")).toHaveAttribute("data-nd-accessible-items", "5");
   await live.click();
@@ -56,7 +56,25 @@ test("Live data explains itself and performs observable updates", async ({ page 
 test("workspace tabs and open example expose usable integration details", async ({ page }) => {
   await page.locator("#componentes").scrollIntoViewIfNeeded();
   await page.getByRole("tab", { name: "Dados" }).click();
-  await expect(page.locator(".data-inspector")).toContainText("Schema válido");
+  const editor = page.getByRole("textbox", { name: "Editar JSON de Gantt" });
+  const original = await editor.inputValue();
+  await expect(page.locator(".live-output .nd-root.nd-gantt")).toBeVisible();
+  await expect(page.getByRole("status")).toContainText("Render atualizado automaticamente");
+
+  await editor.fill(original.replace("Discovery", "Discovery editada"));
+  await expect(page.locator(".live-output .nd-gantt__label-text strong").first()).toHaveText("Discovery editada");
+
+  await editor.fill("{");
+  await expect(page.getByRole("alert")).toContainText("JSON inválido");
+  await expect(page.locator(".live-output .nd-gantt__label-text strong").first()).toHaveText("Discovery editada");
+
+  await editor.fill(original.replace('"id": "design"', '"id": "discovery"'));
+  await expect(page.getByRole("alert")).toContainText("Duplicate task id");
+  await expect(page.locator(".live-output .nd-gantt__bar")).toHaveCount(5);
+
+  await page.getByRole("button", { name: "Repor" }).click();
+  await expect(editor).toHaveValue(original);
+  await expect(page.locator(".live-output .nd-gantt__label-text strong").first()).toHaveText("Discovery");
   await page.getByRole("tab", { name: "API" }).click();
   await expect(page.locator(".api-table")).toContainText("interactive");
   await page.getByRole("button", { name: "Abrir exemplo" }).click();
@@ -68,6 +86,28 @@ test("workspace tabs and open example expose usable integration details", async 
   await expect(dialog.locator(".dialog-code-head .copy-button").first()).toContainText("Copiado");
   await dialog.getByRole("button", { name: "Fechar", exact: true }).click();
   await expect(dialog).toBeHidden();
+});
+
+test("editable data drives charts, topology and calendar renderers", async ({ page }) => {
+  await page.locator("#componentes").scrollIntoViewIfNeeded();
+
+  await page.getByRole("button", { name: /Gráficos/ }).click();
+  await page.getByRole("tab", { name: "Dados" }).click();
+  const chartEditor = page.getByRole("textbox", { name: "Editar JSON de Gráficos" });
+  await chartEditor.fill((await chartEditor.inputValue()).replace('"label": "MRR"', '"label": "Receita editada"'));
+  await expect(page.locator(".live-output .nd-chart")).toContainText("Receita editada");
+
+  await page.getByRole("button", { name: /Grafos & topologias/ }).click();
+  await page.getByRole("tab", { name: "Dados" }).click();
+  const topologyEditor = page.getByRole("textbox", { name: "Editar JSON de Grafos & topologias" });
+  await topologyEditor.fill((await topologyEditor.inputValue()).replace("API Gateway", "Gateway editado"));
+  await expect(page.locator(".live-output .nd-topology")).toContainText("Gateway editado");
+
+  await page.getByRole("button", { name: /Calendários/ }).click();
+  await page.getByRole("tab", { name: "Dados" }).click();
+  const calendarEditor = page.getByRole("textbox", { name: "Editar JSON de Calendários" });
+  await calendarEditor.fill((await calendarEditor.inputValue()).replace('"title": "Planning"', '"title": "Planning editado"'));
+  await expect(page.locator(".live-output .nd-calendar")).toContainText("Planning editado");
 });
 
 test("explorer sidebar can be collapsed and restored", async ({ page }, testInfo) => {
