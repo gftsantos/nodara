@@ -2190,3 +2190,117 @@ footer {
   --nd-positive: #416700;
   --nd-warning: #765500;
 }
+
+/* Legible type scale: preserve the compact visual language without microcopy. */
+.site small {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.site :is(
+  .brand sup,
+  .header-search kbd,
+  .sidebar-search kbd,
+  .eyebrow b,
+  .mini-gantt-months,
+  .avatar-stack span,
+  .task-avatar,
+  .today-line span,
+  .chart-axis,
+  .bar-tooltip,
+  .time-column,
+  .calendar-day > strong,
+  .framework-tabs button b,
+  .feature-nav b
+) {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.site :is(
+  .window-bar,
+  .visual-title > span,
+  .framework-proof > span,
+  .hero-foot span,
+  .section-number,
+  .section-heading > div p,
+  .mini-label,
+  .sidebar-title,
+  .sidebar-label,
+  .workspace-eyebrow,
+  .tab-meta,
+  .workspace-footer,
+  .gantt-label-head,
+  .gantt-months,
+  .topology-legend,
+  .data-inspector-head > span,
+  .api-row.api-head,
+  .type-pill,
+  .step-number,
+  .step-block p,
+  .code-window-head p,
+  .code-status,
+  .flow-card > span,
+  .arch-card > span,
+  .performance-labels,
+  .enterprise-note,
+  .footer-links strong,
+  .footer-bottom,
+  .search-input-wrap kbd,
+  .search-dialog > p,
+  .search-footer
+) {
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.site :is(
+  .copy-button,
+  .sidebar-search,
+  .foundation-link,
+  .sidebar-help strong,
+  .workspace-actions button,
+  .workspace-tabs button,
+  .gantt-toolbar button,
+  .calendar-heading button,
+  .topology-node strong,
+  .calendar-heading strong,
+  .calendar-event strong,
+  .schema-success strong,
+  .api-row,
+  .api-row code,
+  .install-command code,
+  .integration-checks span,
+  .flow-card strong,
+  .search-results button,
+  .no-results
+) {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.site :is(
+  .feature-nav strong,
+  .workspace-header p,
+  .contract-copy a,
+  .arch-card > p,
+  .footer-links a
+) {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .site :is(.copy-button, .workspace-tabs button, .workspace-actions button, .feature-nav strong) {
+    font-size: 13px;
+  }
+
+  .site :is(.workspace-header p, .arch-card > p, .footer-links a) {
+    font-size: 14px;
+  }
+
+  .code-window pre {
+    font-size: 12px;
+    line-height: 1.75;
+  }
+}

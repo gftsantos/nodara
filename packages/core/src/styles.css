@@ -44,7 +44,7 @@
 .nd-gantt__header span,
 .nd-calendar__header span {
   color: var(--nd-muted);
-  font-size: 10px;
+  font-size: 12px;
   text-transform: capitalize;
 }
 
@@ -70,7 +70,7 @@
   align-items: center;
   border-bottom: 1px solid var(--nd-border);
   color: var(--nd-muted);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -97,7 +97,7 @@
   border-radius: calc(var(--nd-radius) - 1px);
   background: var(--nd-primary);
   color: #111;
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -116,7 +116,7 @@
 
 .nd-gantt__label-text small {
   color: var(--nd-muted);
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .nd-gantt__timeline {
@@ -231,7 +231,7 @@
   background: var(--nd-surface);
   color: var(--nd-fg);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .22);
-  font-size: 10px;
+  font-size: 12px;
   pointer-events: none;
 }
 
@@ -247,7 +247,7 @@
   border-bottom: 1px solid var(--nd-border);
   background: var(--nd-surface);
   color: var(--nd-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .nd-chart__legend span {
@@ -298,13 +298,13 @@
   align-items: center;
   justify-content: space-between;
   color: var(--nd-muted);
-  font-size: 9px;
+  font-size: 11px;
   text-transform: uppercase;
 }
 
 .nd-calendar__day-head strong {
   color: var(--nd-fg);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .nd-calendar__event {
@@ -333,14 +333,14 @@
 
 .nd-calendar__event strong {
   overflow: hidden;
-  font-size: 10px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .nd-calendar__event small {
   color: var(--nd-muted);
-  font-size: 8px;
+  font-size: 10px;
 }
 
 @media (prefers-reduced-motion: reduce) {
