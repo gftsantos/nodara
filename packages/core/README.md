@@ -20,7 +20,8 @@ const gantt = createGantt("#roadmap", {
 The core includes DOM, Canvas and WebGL strategies, recurrence and topology
 layout engines, accessible fallbacks and no runtime framework dependency.
 
-`Chart` supports 14 geometries: line, area, bar, scatter, bubble, pie, donut,
-radar, polar area, heatmap, waterfall, funnel, gauge and candlestick. The public
-`visualCatalog` registry exposes 48 documented recipes across Gantt, charts,
-topologies and calendars, with stable IDs and typed family metadata.
+`Chart` supports 26 geometries, including cartesian, radial, scientific and
+financial charts. `GeoMap` adds three projections and five geographic modes;
+`Diagram` adds 14 flow, hierarchy and relationship diagrams. The public
+`visualCatalog` exposes 100 documented recipes across six engines with stable
+IDs and typed family metadata.

@@ -11,7 +11,9 @@ import type { AfterViewInit, OnChanges, OnDestroy, SimpleChanges } from "@angula
 import {
   createCalendar,
   createChart,
+  createDiagram,
   createGantt,
+  createGeoMap,
   createTopology,
   type CalendarEvent,
   type CalendarEventSelectEvent,
@@ -19,9 +21,15 @@ import {
   type ChartOptions,
   type ChartPointEvent,
   type ChartSeries,
+  type DiagramData,
+  type DiagramNodeEvent,
+  type DiagramOptions,
   type GanttOptions,
   type GanttTask,
   type GanttTaskEvent,
+  type GeoMapData,
+  type GeoMapOptions,
+  type GeoPointEvent,
   type NodaraController,
   type TopologyData,
   type TopologyNodeEvent,
@@ -117,13 +125,59 @@ export class NodaraCalendarComponent implements AfterViewInit, OnChanges, OnDest
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
+@Component({ selector: "nd-geo-map", standalone: true, template, styles, encapsulation: ViewEncapsulation.None })
+export class NodaraGeoMapComponent implements AfterViewInit, OnChanges, OnDestroy {
+  @ViewChild("host", { static: true }) host!: ElementRef<HTMLElement>;
+  @Input({ required: true }) data: GeoMapData = { points: [], routes: [], regions: [] };
+  @Input() options: Omit<GeoMapOptions, "data"> = {};
+  @Output() ready = new EventEmitter<NodaraController<GeoMapData>>();
+  @Output() pointSelect = new EventEmitter<GeoPointEvent>();
+  private controller?: NodaraController<GeoMapData>;
+
+  ngAfterViewInit() {
+    this.controller = createGeoMap(this.host.nativeElement, { ...this.options, data: this.data });
+    this.controller.on<GeoPointEvent>("point:select", (event) => this.pointSelect.emit(event));
+    this.ready.emit(this.controller);
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["options"] && this.controller) this.controller.setOptions(this.options);
+    if (changes["data"] && this.controller) this.controller.update(this.data);
+  }
+  ngOnDestroy() { this.controller?.destroy(); }
+}
+
+@Component({ selector: "nd-diagram", standalone: true, template, styles, encapsulation: ViewEncapsulation.None })
+export class NodaraDiagramComponent implements AfterViewInit, OnChanges, OnDestroy {
+  @ViewChild("host", { static: true }) host!: ElementRef<HTMLElement>;
+  @Input({ required: true }) data: DiagramData = { nodes: [], links: [] };
+  @Input() options: Omit<DiagramOptions, "data"> = {};
+  @Output() ready = new EventEmitter<NodaraController<DiagramData>>();
+  @Output() nodeSelect = new EventEmitter<DiagramNodeEvent>();
+  private controller?: NodaraController<DiagramData>;
+
+  ngAfterViewInit() {
+    this.controller = createDiagram(this.host.nativeElement, { ...this.options, data: this.data });
+    this.controller.on<DiagramNodeEvent>("node:select", (event) => this.nodeSelect.emit(event));
+    this.ready.emit(this.controller);
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes["options"] && this.controller) this.controller.setOptions(this.options);
+    if (changes["data"] && this.controller) this.controller.update(this.data);
+  }
+  ngOnDestroy() { this.controller?.destroy(); }
+}
+
 export type {
   CalendarEvent,
   CalendarOptions,
   ChartOptions,
   ChartSeries,
+  DiagramData,
+  DiagramOptions,
   GanttOptions,
   GanttTask,
+  GeoMapData,
+  GeoMapOptions,
   NodaraController,
   TopologyData,
   TopologyOptions,

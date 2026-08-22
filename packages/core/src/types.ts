@@ -129,7 +129,19 @@ export type ChartType =
   | "waterfall"
   | "funnel"
   | "gauge"
-  | "candlestick";
+  | "candlestick"
+  | "histogram"
+  | "boxplot"
+  | "error-bar"
+  | "range-area"
+  | "step-line"
+  | "spline"
+  | "lollipop"
+  | "bullet"
+  | "radial-bar"
+  | "ohlc"
+  | "violin"
+  | "contour";
 
 export interface ChartOptions extends BaseOptions {
   series: ChartSeries[];
@@ -204,6 +216,117 @@ export interface TopologyViewportEvent {
   source: InteractionSource;
 }
 
+export interface GeoCoordinate {
+  longitude: number;
+  latitude: number;
+}
+
+export interface GeoPoint extends GeoCoordinate {
+  id: string;
+  label: string;
+  value?: number;
+  color?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface GeoRoute {
+  id?: string;
+  from: string | GeoCoordinate;
+  to: string | GeoCoordinate;
+  label?: string;
+  value?: number;
+  color?: string;
+  directed?: boolean;
+  meta?: Record<string, unknown>;
+}
+
+export interface GeoRegion {
+  id: string;
+  label: string;
+  coordinates: GeoCoordinate[];
+  value?: number;
+  color?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface GeoMapData {
+  points: GeoPoint[];
+  routes?: GeoRoute[];
+  regions?: GeoRegion[];
+}
+
+export type GeoProjection = "mercator" | "equirectangular" | "orthographic";
+export type GeoMapMode = "points" | "bubbles" | "routes" | "heatmap" | "choropleth";
+
+export interface GeoMapOptions extends BaseOptions {
+  data: GeoMapData;
+  projection?: GeoProjection;
+  mode?: GeoMapMode;
+  center?: GeoCoordinate;
+  initialZoom?: number;
+  minZoom?: number;
+  maxZoom?: number;
+  pointRadius?: number;
+  showGraticule?: boolean;
+  onPointSelect?: (event: GeoPointEvent) => void;
+  onViewportChange?: (event: GeoViewportEvent) => void;
+}
+
+export interface GeoPointEvent {
+  point: GeoPoint;
+  source: InteractionSource;
+}
+
+export interface GeoViewportEvent {
+  zoom: number;
+  x: number;
+  y: number;
+  source: InteractionSource;
+}
+
+export interface DiagramNode {
+  id: string;
+  label: string;
+  parentId?: string;
+  value?: number;
+  color?: string;
+  kind?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface DiagramLink {
+  id?: string;
+  from: string;
+  to: string;
+  label?: string;
+  value?: number;
+  color?: string;
+  directed?: boolean;
+  meta?: Record<string, unknown>;
+}
+
+export interface DiagramData {
+  nodes: DiagramNode[];
+  links: DiagramLink[];
+}
+
+export type DiagramType = "sankey" | "alluvial" | "treemap" | "sunburst" | "icicle" | "circle-pack" | "tree" | "radial-tree" | "mindmap" | "flowchart" | "org-chart" | "er" | "state" | "chord";
+
+export interface DiagramOptions extends BaseOptions {
+  data: DiagramData;
+  type?: DiagramType;
+  orientation?: "horizontal" | "vertical";
+  nodeWidth?: number;
+  nodeGap?: number;
+  linkOpacity?: number;
+  onNodeSelect?: (event: DiagramNodeEvent) => void;
+}
+
+export interface DiagramNodeEvent {
+  node: DiagramNode;
+  source: InteractionSource;
+}
+
 export interface CalendarResource {
   id: string;
   label: string;
@@ -224,7 +347,7 @@ export interface CalendarEvent {
   meta?: Record<string, unknown>;
 }
 
-export type CalendarView = "day" | "week" | "workweek" | "month";
+export type CalendarView = "day" | "week" | "workweek" | "month" | "agenda" | "timeline-day" | "timeline-week" | "resource-day" | "resource-week" | "year";
 
 export interface CalendarOptions extends BaseOptions {
   events: CalendarEvent[];

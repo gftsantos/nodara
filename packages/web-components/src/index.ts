@@ -1,24 +1,30 @@
 import {
   createCalendar,
   createChart,
+  createDiagram,
   createGantt,
+  createGeoMap,
   createTopology,
   type BaseOptions,
   type CalendarEvent,
   type CalendarOptions,
   type ChartOptions,
   type ChartSeries,
+  type DiagramData,
+  type DiagramOptions,
   type GanttOptions,
   type GanttTask,
+  type GeoMapData,
+  type GeoMapOptions,
   type NodaraController,
   type TopologyData,
   type TopologyOptions,
   type VisualTheme,
 } from "@nodara/core";
 
-type ElementKind = "gantt" | "chart" | "topology" | "calendar";
-type ElementData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[];
-type ElementOptions = Omit<GanttOptions, "data"> | Omit<ChartOptions, "series"> | Omit<TopologyOptions, "data"> | Omit<CalendarOptions, "events">;
+type ElementKind = "gantt" | "chart" | "topology" | "calendar" | "geo-map" | "diagram";
+type ElementData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
+type ElementOptions = Omit<GanttOptions, "data"> | Omit<ChartOptions, "series"> | Omit<TopologyOptions, "data"> | Omit<CalendarOptions, "events"> | Omit<GeoMapOptions, "data"> | Omit<DiagramOptions, "data">;
 
 export interface NodaraElement extends HTMLElement {
   data: ElementData;
@@ -28,7 +34,13 @@ export interface NodaraElement extends HTMLElement {
 
 function createElementClass(kind: ElementKind): CustomElementConstructor {
   return class extends HTMLElement {
-    #data: ElementData = kind === "topology" ? { nodes: [], edges: [] } : [];
+    #data: ElementData = kind === "topology"
+      ? { nodes: [], edges: [] }
+      : kind === "geo-map"
+        ? { points: [], routes: [], regions: [] }
+        : kind === "diagram"
+          ? { nodes: [], links: [] }
+          : [];
     #options: ElementOptions = {};
     #controller: NodaraController<ElementData, BaseOptions> | undefined;
 
@@ -78,7 +90,17 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
     }
 
     #forward(controller: NodaraController<ElementData, BaseOptions>) {
-      const events = kind === "gantt" ? ["task:select", "task:change"] : kind === "chart" ? ["point:select"] : kind === "topology" ? ["node:select", "viewport:change"] : ["event:select", "event:change"];
+      const events = kind === "gantt"
+        ? ["task:select", "task:change"]
+        : kind === "chart"
+          ? ["point:select"]
+          : kind === "topology"
+            ? ["node:select", "viewport:change"]
+            : kind === "geo-map"
+              ? ["point:select", "viewport:change"]
+              : kind === "diagram"
+                ? ["node:select"]
+                : ["event:select", "event:change"];
       events.forEach((event) => controller.on(event, (detail) => this.dispatchEvent(new CustomEvent(`nodara:${event.replace(":", "-")}`, { detail }))));
     }
 
@@ -88,6 +110,8 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
       if (kind === "gantt") this.#controller = createGantt(this, { ...(options as Omit<GanttOptions, "data">), data: this.#data as GanttTask[] }) as NodaraController<ElementData, BaseOptions>;
       else if (kind === "chart") this.#controller = createChart(this, { ...(options as Omit<ChartOptions, "series">), series: this.#data as ChartSeries[] }) as NodaraController<ElementData, BaseOptions>;
       else if (kind === "topology") this.#controller = createTopology(this, { ...(options as Omit<TopologyOptions, "data">), data: this.#data as TopologyData }) as NodaraController<ElementData, BaseOptions>;
+      else if (kind === "geo-map") this.#controller = createGeoMap(this, { ...(options as Omit<GeoMapOptions, "data">), data: this.#data as GeoMapData }) as NodaraController<ElementData, BaseOptions>;
+      else if (kind === "diagram") this.#controller = createDiagram(this, { ...(options as Omit<DiagramOptions, "data">), data: this.#data as DiagramData }) as NodaraController<ElementData, BaseOptions>;
       else this.#controller = createCalendar(this, { ...(options as Omit<CalendarOptions, "events">), events: this.#data as CalendarEvent[] }) as NodaraController<ElementData, BaseOptions>;
       this.#forward(this.#controller);
       this.dispatchEvent(new CustomEvent("nodara:ready", { detail: this.#controller }));
@@ -97,7 +121,7 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
 
 export function defineNodaraElements(prefix = "nd"): void {
   if (typeof customElements === "undefined") return;
-  (["gantt", "chart", "topology", "calendar"] as ElementKind[]).forEach((kind) => {
+  (["gantt", "chart", "topology", "calendar", "geo-map", "diagram"] as ElementKind[]).forEach((kind) => {
     const name = `${prefix}-${kind}`;
     if (!customElements.get(name)) customElements.define(name, createElementClass(kind));
   });
@@ -108,8 +132,12 @@ export type {
   CalendarOptions,
   ChartOptions,
   ChartSeries,
+  DiagramData,
+  DiagramOptions,
   GanttOptions,
   GanttTask,
+  GeoMapData,
+  GeoMapOptions,
   NodaraController,
   TopologyData,
   TopologyOptions,

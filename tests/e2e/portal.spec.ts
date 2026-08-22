@@ -138,7 +138,7 @@ test("help and architecture actions lead to useful next steps", async ({ page })
   await help.getByRole("button", { name: "Fechar painel" }).click();
   await page.locator("#arquitetura").scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: /Explorar arquitetura/ }).click();
-  const architecture = page.getByRole("dialog", { name: "Um core, três motores." });
+  const architecture = page.getByRole("dialog", { name: "Um core, seis motores." });
   await expect(architecture).toContainText("DOM");
   await expect(architecture).toContainText("CANVAS");
   await expect(architecture).toContainText("WEBGL");
@@ -189,9 +189,9 @@ test("portal links to a complete and honest documentation hub", async ({ page },
   await page.locator(".site-header").getByRole("link", { name: "Documentação", exact: true }).click();
   await expect(page).toHaveURL(/\/docs/);
   await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
-  await expect(page.getByLabel("Navegação da documentação")).toContainText("22 guias · 48 demos · 4 motores");
+  await expect(page.getByLabel("Navegação da documentação")).toContainText("24 guias · 100 demos · 6 motores");
 
-  for (const component of ["Gantt", "Chart", "Topology", "Calendar"]) {
+  for (const component of ["Gantt", "Chart", "Topology", "Calendar", "GeoMap", "Diagram"]) {
     await page.getByLabel("Navegação da documentação").getByRole("link", { name: component, exact: true }).click();
     await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toHaveText(component);
     await expect(page.getByRole("main").getByRole("table").first()).toBeVisible();
@@ -240,15 +240,27 @@ test("documentation typography and width remain readable", async ({ page }) => {
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });
 
-test("catalog exposes all 48 real recipes and accurate family counts", async ({ page }) => {
+test("catalog exposes all 100 real recipes and accurate family counts", async ({ page }) => {
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("48 visualizações reais");
-  await expect(page.getByText("48 resultados", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Gráficos 20", exact: true }).click();
-  await expect(page.getByText("20 resultados", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("100 visualizações reais");
+  await expect(page.getByText("100 resultados", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Gráficos 32", exact: true }).click();
+  await expect(page.getByText("32 resultados", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Abrir demonstração: Line chart/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Abrir demonstração: Candlestick/ })).toBeVisible();
+});
+
+test("catalog opens geographic maps, diagrams and specialized schedulers", async ({ page }) => {
+  await page.goto("/catalog#orthographic-globe");
+  await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
+  await expect(page.locator(".nd-geo-map")).toHaveAttribute("data-nd-projection", "orthographic");
+  await expect(page.locator(".nd-geo-map canvas")).toBeVisible();
+  await page.goto("/catalog#sankey");
+  await expect(page.locator(".nd-diagram")).toHaveAttribute("data-nd-type", "sankey");
+  await page.goto("/catalog#resource-week");
+  await expect(page.locator(".nd-calendar")).toHaveAttribute("data-nd-view", "resource-week");
+  await expect(page.locator(".nd-calendar__timeline-row")).toHaveCount(3);
 });
 
 test("catalog opens real chart geometries and rerenders edited data", async ({ page }) => {

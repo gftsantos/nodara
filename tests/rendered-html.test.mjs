@@ -41,18 +41,20 @@ test("renders the complete Nodara documentation hub", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Documentação — Nodara/);
-  assert.match(html, /48 visualizações\. Quatro motores/);
-  assert.match(html, /22<!-- --> guias · 48 demos · 4 motores/);
+  assert.match(html, /100 visualizações\. Seis motores/);
+  assert.match(html, /24<!-- --> guias · 100 demos · 6 motores/);
   assert.match(html, /Gantt/);
   assert.match(html, /Web Components/);
 });
 
-test("renders the 48-visualization catalog", async () => {
+test("renders the 100-visualization catalog", async () => {
   const response = await render("/catalog");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /48 visualizações reais/);
+  assert.match(html, /100 visualizações reais/);
   assert.match(html, /Line chart/);
   assert.match(html, /Candlestick/);
   assert.match(html, /Calendário multi-timezone/);
+  assert.match(html, /Orthographic globe/);
+  assert.match(html, /Sankey/);
 });

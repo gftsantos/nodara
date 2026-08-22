@@ -1,14 +1,20 @@
 import {
   createCalendar,
   createChart,
+  createDiagram,
   createGantt,
+  createGeoMap,
   createTopology,
   type CalendarEvent,
   type CalendarOptions,
   type ChartOptions,
   type ChartSeries,
+  type DiagramData,
+  type DiagramOptions,
   type GanttOptions,
   type GanttTask,
+  type GeoMapData,
+  type GeoMapOptions,
   type NodaraController,
   type TopologyData,
   type TopologyOptions,
@@ -24,6 +30,8 @@ export type GanttProps = GanttOptions & AdapterProps<GanttTask[], GanttOptions>;
 export type ChartProps = ChartOptions & AdapterProps<ChartSeries[], ChartOptions>;
 export type TopologyProps = TopologyOptions & AdapterProps<TopologyData, TopologyOptions>;
 export type CalendarProps = CalendarOptions & AdapterProps<CalendarEvent[], CalendarOptions>;
+export type GeoMapProps = GeoMapOptions & AdapterProps<GeoMapData, GeoMapOptions>;
+export type DiagramProps = DiagramOptions & AdapterProps<DiagramData, DiagramOptions>;
 
 export function Gantt({ data, onReady, style, ...options }: GanttProps) {
   const host = useRef<HTMLDivElement>(null);
@@ -85,13 +93,47 @@ export function Calendar({ events, onReady, style, ...options }: CalendarProps) 
   return <div ref={host} style={style} />;
 }
 
+export function GeoMap({ data, onReady, style, ...options }: GeoMapProps) {
+  const host = useRef<HTMLDivElement>(null);
+  const controller = useRef<NodaraController<GeoMapData, GeoMapOptions> | undefined>(undefined);
+  const initial = useRef({ data, options });
+  useEffect(() => {
+    if (!host.current) return;
+    controller.current = createGeoMap(host.current, { ...initial.current.options, data: initial.current.data });
+    return () => { controller.current?.destroy(); controller.current = undefined; };
+  }, []);
+  useEffect(() => { controller.current?.update(data); }, [data]);
+  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
+  return <div ref={host} style={style} />;
+}
+
+export function Diagram({ data, onReady, style, ...options }: DiagramProps) {
+  const host = useRef<HTMLDivElement>(null);
+  const controller = useRef<NodaraController<DiagramData, DiagramOptions> | undefined>(undefined);
+  const initial = useRef({ data, options });
+  useEffect(() => {
+    if (!host.current) return;
+    controller.current = createDiagram(host.current, { ...initial.current.options, data: initial.current.data });
+    return () => { controller.current?.destroy(); controller.current = undefined; };
+  }, []);
+  useEffect(() => { controller.current?.update(data); }, [data]);
+  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
+  return <div ref={host} style={style} />;
+}
+
 export type {
   CalendarEvent,
   CalendarOptions,
   ChartOptions,
   ChartSeries,
+  DiagramData,
+  DiagramOptions,
   GanttOptions,
   GanttTask,
+  GeoMapData,
+  GeoMapOptions,
   NodaraController,
   TopologyData,
   TopologyOptions,

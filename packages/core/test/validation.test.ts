@@ -3,6 +3,8 @@ import {
   NodaraError,
   normalizeCalendarEvents,
   normalizeChartSeries,
+  normalizeDiagram,
+  normalizeGeoMap,
   normalizeGanttTasks,
   normalizeTopology,
 } from "../src/index";
@@ -37,4 +39,13 @@ describe("Nodara data contracts", () => {
   it("[I025] normalizes calendar start to timestamp", () => expect(normalizeCalendarEvents([{ id: "e", title: "Review", start: "2026-01-01" }])[0]?.start).toBe(Date.parse("2026-01-01")));
   it("[I026] rejects duplicate calendar ids", () => expect(() => normalizeCalendarEvents([{ id: "e", title: "One", start: 1 }, { id: "e", title: "Two", start: 2 }])).toThrowError(expect.objectContaining({ code: "ND_DUPLICATE_ID" })));
   it("[I027] rejects missing event titles", () => expect(() => normalizeCalendarEvents([{ id: "e", title: "", start: 1 }])).toThrowError(expect.objectContaining({ code: "ND_MISSING_TITLE" })));
+  it("[I201] normalizes geographic datasets without mutation", () => { const source = { points: [{ id: "pt", label: "Lisboa", latitude: 38.72, longitude: -9.14 }], routes: [], regions: [] }; const normalized = normalizeGeoMap(source); expect(normalized.points[0]).not.toBe(source.points[0]); expect(normalized).toEqual(source); });
+  it("[I202] rejects out-of-range latitude", () => expect(() => normalizeGeoMap({ points: [{ id: "x", label: "X", latitude: 91, longitude: 0 }] })).toThrowError(expect.objectContaining({ code: "ND_COORDINATE_RANGE" })));
+  it("[I203] rejects dangling geographic routes", () => expect(() => normalizeGeoMap({ points: [{ id: "a", label: "A", latitude: 0, longitude: 0 }], routes: [{ from: "a", to: "missing" }] })).toThrowError(expect.objectContaining({ code: "ND_DANGLING_ROUTE" })));
+  it("[I204] rejects invalid geographic polygons", () => expect(() => normalizeGeoMap({ points: [], regions: [{ id: "r", label: "R", coordinates: [{ latitude: 0, longitude: 0 }, { latitude: 1, longitude: 1 }] }] })).toThrowError(expect.objectContaining({ code: "ND_INVALID_POLYGON" })));
+  it("[I219] rejects duplicate geographic route ids", () => expect(() => normalizeGeoMap({ points: [{ id: "a", label: "A", latitude: 0, longitude: 0 }, { id: "b", label: "B", latitude: 1, longitude: 1 }], routes: [{ id: "r", from: "a", to: "b" }, { id: "r", from: "b", to: "a" }] })).toThrowError(expect.objectContaining({ code: "ND_DUPLICATE_ROUTE" })));
+  it("[I205] clones diagram nodes and links", () => { const source = { nodes: [{ id: "a", label: "A" }, { id: "b", label: "B" }], links: [{ from: "a", to: "b" }] }; const normalized = normalizeDiagram(source); expect(normalized.nodes[0]).not.toBe(source.nodes[0]); expect(normalized.links[0]).not.toBe(source.links[0]); });
+  it("[I206] rejects dangling diagram links", () => expect(() => normalizeDiagram({ nodes: [{ id: "a", label: "A" }], links: [{ from: "a", to: "missing" }] })).toThrowError(expect.objectContaining({ code: "ND_DANGLING_LINK" })));
+  it("[I207] rejects dangling diagram parents", () => expect(() => normalizeDiagram({ nodes: [{ id: "a", label: "A", parentId: "missing" }], links: [] })).toThrowError(expect.objectContaining({ code: "ND_DANGLING_PARENT" })));
+  it("[I208] rejects duplicate diagram links", () => expect(() => normalizeDiagram({ nodes: [{ id: "a", label: "A" }, { id: "b", label: "B" }], links: [{ id: "l", from: "a", to: "b" }, { id: "l", from: "a", to: "b" }] })).toThrowError(expect.objectContaining({ code: "ND_DUPLICATE_LINK" })));
 });

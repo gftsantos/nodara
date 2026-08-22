@@ -1,0 +1,291 @@
+import { createController } from "./controller";
+import { isInteractionEnabled } from "./render-mode";
+import { applyTheme } from "./theme";
+import type {
+  GeoCoordinate,
+  GeoMapData,
+  GeoMapOptions,
+  GeoPointEvent,
+  GeoViewportEvent,
+  NodaraController,
+} from "./types";
+import { clamp, createElement, empty, resolveElement } from "./utils";
+import { normalizeGeoMap } from "./validation";
+
+interface ProjectedPoint {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
+export function createGeoMap(
+  target: string | Element,
+  options: GeoMapOptions,
+): NodaraController<GeoMapData, GeoMapOptions> {
+  const container = resolveElement(target);
+  return createController(container, options.data, options, ({ container: root, data, options: currentOptions, emit }) => {
+    empty(root);
+    root.className = `nd-root nd-geo-map ${currentOptions.className ?? ""}`.trim();
+    root.setAttribute("role", "figure");
+    root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Geographic map");
+    const tokens = applyTheme(root, currentOptions.theme, currentOptions.tokens);
+    const projection = currentOptions.projection ?? "mercator";
+    const mode = currentOptions.mode ?? "points";
+    root.dataset.ndProjection = projection;
+    root.dataset.ndMode = mode;
+    root.dataset.ndRenderer = "canvas";
+
+    const canvas = createElement("canvas", "nd-geo-map__canvas");
+    const width = Math.max(root.clientWidth, 360);
+    const height = Math.max(root.clientHeight, 300);
+    const pixelRatio = Math.min(globalThis.devicePixelRatio ?? 1, currentOptions.performance?.maxDevicePixelRatio ?? 2);
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    canvas.setAttribute("aria-hidden", "true");
+    root.append(canvas);
+
+    const center = currentOptions.center ?? { longitude: 0, latitude: 12 };
+    const minimumZoom = Math.max(0.2, currentOptions.minZoom ?? 0.6);
+    const maximumZoom = Math.max(minimumZoom, currentOptions.maxZoom ?? 12);
+    const viewport = { zoom: clamp(currentOptions.initialZoom ?? 1, minimumZoom, maximumZoom), x: 0, y: 0 };
+    const pointRadius = Math.max(2, currentOptions.pointRadius ?? 6);
+    const values = data.points.map((point) => point.value ?? 1);
+    const maximumValue = Math.max(1, ...values);
+
+    const projectBase = (coordinate: GeoCoordinate): ProjectedPoint => {
+      const longitude = coordinate.longitude - center.longitude;
+      if (projection === "orthographic") {
+        const lambda = longitude * Math.PI / 180;
+        const phi = coordinate.latitude * Math.PI / 180;
+        const phi0 = center.latitude * Math.PI / 180;
+        const cosine = Math.sin(phi0) * Math.sin(phi) + Math.cos(phi0) * Math.cos(phi) * Math.cos(lambda);
+        const radius = Math.min(width, height) * 0.43;
+        return {
+          x: width / 2 + radius * Math.cos(phi) * Math.sin(lambda),
+          y: height / 2 - radius * (Math.cos(phi0) * Math.sin(phi) - Math.sin(phi0) * Math.cos(phi) * Math.cos(lambda)),
+          visible: cosine >= 0,
+        };
+      }
+      const x = ((longitude + 180) % 360 + 360) % 360 / 360 * width;
+      if (projection === "equirectangular") {
+        return { x, y: (90 - coordinate.latitude) / 180 * height, visible: true };
+      }
+      const latitude = clamp(coordinate.latitude, -85, 85) * Math.PI / 180;
+      const mercator = Math.log(Math.tan(Math.PI / 4 + latitude / 2));
+      return { x, y: height / 2 - mercator * height / (2 * Math.PI), visible: true };
+    };
+    const projectScreen = (coordinate: GeoCoordinate) => {
+      const projected = projectBase(coordinate);
+      return {
+        x: (projected.x - width / 2) * viewport.zoom + width / 2 + viewport.x,
+        y: (projected.y - height / 2) * viewport.zoom + height / 2 + viewport.y,
+        visible: projected.visible,
+      };
+    };
+    const resolveRouteEnd = (value: string | GeoCoordinate) => typeof value === "string"
+      ? data.points.find((point) => point.id === value)
+      : value;
+
+    const draw = () => {
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.clearRect(0, 0, width, height);
+      context.fillStyle = tokens.background;
+      context.fillRect(0, 0, width, height);
+
+      if (projection === "orthographic") {
+        context.beginPath();
+        context.arc(width / 2 + viewport.x, height / 2 + viewport.y, Math.min(width, height) * 0.43 * viewport.zoom, 0, Math.PI * 2);
+        context.fillStyle = tokens.surface;
+        context.fill();
+        context.strokeStyle = tokens.border;
+        context.stroke();
+      }
+      if (currentOptions.showGraticule !== false) {
+        context.strokeStyle = tokens.border;
+        context.lineWidth = 1;
+        for (let longitude = -180; longitude <= 180; longitude += 30) {
+          context.beginPath();
+          let started = false;
+          for (let latitude = -80; latitude <= 80; latitude += 4) {
+            const projected = projectScreen({ longitude, latitude });
+            if (!projected.visible) { started = false; continue; }
+            if (!started) context.moveTo(projected.x, projected.y);
+            else context.lineTo(projected.x, projected.y);
+            started = true;
+          }
+          context.stroke();
+        }
+        for (let latitude = -60; latitude <= 60; latitude += 30) {
+          context.beginPath();
+          let started = false;
+          for (let longitude = -180; longitude <= 180; longitude += 4) {
+            const projected = projectScreen({ longitude, latitude });
+            if (!projected.visible) { started = false; continue; }
+            if (!started) context.moveTo(projected.x, projected.y);
+            else context.lineTo(projected.x, projected.y);
+            started = true;
+          }
+          context.stroke();
+        }
+      }
+
+      data.regions?.forEach((region) => {
+        const coordinates = region.coordinates.map(projectScreen).filter((point) => point.visible);
+        if (coordinates.length < 3) return;
+        context.beginPath();
+        context.moveTo(coordinates[0]!.x, coordinates[0]!.y);
+        coordinates.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+        context.closePath();
+        context.fillStyle = region.color ?? (mode === "choropleth" ? tokens.primary : tokens.surface);
+        context.globalAlpha = mode === "choropleth" ? clamp(0.2 + (region.value ?? 1) / 10, 0.25, 0.85) : 0.45;
+        context.fill();
+        context.globalAlpha = 1;
+        context.strokeStyle = tokens.border;
+        context.stroke();
+      });
+
+      data.routes?.forEach((route) => {
+        const fromValue = resolveRouteEnd(route.from);
+        const toValue = resolveRouteEnd(route.to);
+        if (!fromValue || !toValue) return;
+        const from = projectScreen(fromValue);
+        const to = projectScreen(toValue);
+        if (!from.visible || !to.visible) return;
+        context.beginPath();
+        context.moveTo(from.x, from.y);
+        const lift = Math.min(90, Math.hypot(to.x - from.x, to.y - from.y) * 0.18);
+        context.quadraticCurveTo((from.x + to.x) / 2, (from.y + to.y) / 2 - lift, to.x, to.y);
+        context.strokeStyle = route.color ?? tokens.primary;
+        context.globalAlpha = 0.72;
+        context.lineWidth = Math.max(1.5, Math.sqrt(route.value ?? 1));
+        context.stroke();
+        context.globalAlpha = 1;
+        if (route.directed) {
+          const angle = Math.atan2(to.y - from.y, to.x - from.x);
+          context.beginPath();
+          context.moveTo(to.x, to.y);
+          context.lineTo(to.x - Math.cos(angle - 0.5) * 9, to.y - Math.sin(angle - 0.5) * 9);
+          context.lineTo(to.x - Math.cos(angle + 0.5) * 9, to.y - Math.sin(angle + 0.5) * 9);
+          context.closePath();
+          context.fillStyle = route.color ?? tokens.primary;
+          context.fill();
+        }
+      });
+
+      data.points.forEach((point) => {
+        const screen = projectScreen(point);
+        if (!screen.visible) return;
+        const proportionalRadius = pointRadius + Math.sqrt((point.value ?? 1) / maximumValue) * 14;
+        const radius = mode === "bubbles" ? proportionalRadius : pointRadius;
+        if (mode === "heatmap") {
+          const gradient = context.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, proportionalRadius * 2.5);
+          gradient.addColorStop(0, point.color ?? tokens.danger);
+          gradient.addColorStop(1, "transparent");
+          context.fillStyle = gradient;
+          context.globalAlpha = 0.55;
+          context.beginPath();
+          context.arc(screen.x, screen.y, proportionalRadius * 2.5, 0, Math.PI * 2);
+          context.fill();
+          context.globalAlpha = 1;
+          return;
+        }
+        context.beginPath();
+        context.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+        context.fillStyle = point.color ?? tokens.primary;
+        context.fill();
+        context.strokeStyle = tokens.background;
+        context.lineWidth = 2;
+        context.stroke();
+        if (data.points.length <= 80) {
+          context.font = `600 10px ${tokens.fontFamily}`;
+          context.textAlign = "center";
+          context.fillStyle = tokens.foreground;
+          context.fillText(point.label, screen.x, screen.y - radius - 7);
+        }
+      });
+    };
+    draw();
+
+    const selectPoint = (payload: GeoPointEvent) => {
+      currentOptions.onPointSelect?.(payload);
+      emit("point:select", payload);
+    };
+    const list = createElement("ul", "nd-sr-only");
+    const accessibilityLimit = Math.max(1, Math.floor(currentOptions.performance?.accessibilityLimit ?? 300));
+    data.points.slice(0, accessibilityLimit).forEach((point) => {
+      const item = createElement("li");
+      const button = createElement("button", "", `${point.label}, latitude ${point.latitude}, longitude ${point.longitude}`);
+      button.type = "button";
+      button.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
+      button.addEventListener("click", () => selectPoint({ point, source: "keyboard" }));
+      item.append(button);
+      list.append(item);
+    });
+    if (data.points.length > accessibilityLimit) list.append(createElement("li", "", `${data.points.length - accessibilityLimit} additional geographic points are available through the data API.`));
+    root.dataset.ndAccessibleItems = String(Math.min(data.points.length, accessibilityLimit));
+    root.append(list);
+
+    const pointAt = (clientX: number, clientY: number) => {
+      const rect = canvas.getBoundingClientRect();
+      return data.points.find((point) => {
+        const screen = projectScreen(point);
+        return screen.visible && Math.hypot(screen.x - (clientX - rect.left), screen.y - (clientY - rect.top)) <= pointRadius + 10;
+      });
+    };
+    const emitViewport = () => {
+      const payload = { ...viewport, source: "pointer" } satisfies GeoViewportEvent;
+      currentOptions.onViewportChange?.(payload);
+      emit("viewport:change", payload);
+    };
+    let panning = false;
+    let moved = false;
+    let panOrigin = { x: 0, y: 0, viewportX: 0, viewportY: 0 };
+    const onClick = (event: MouseEvent) => {
+      if (!isInteractionEnabled(currentOptions.interactive, "pointer") || moved) return;
+      const point = pointAt(event.clientX, event.clientY);
+      if (point) selectPoint({ point, source: "pointer" });
+    };
+    const onWheel = (event: WheelEvent) => {
+      if (!isInteractionEnabled(currentOptions.interactive, "zoom")) return;
+      event.preventDefault();
+      viewport.zoom = clamp(viewport.zoom * (event.deltaY > 0 ? 0.9 : 1.1), minimumZoom, maximumZoom);
+      draw();
+      emitViewport();
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (!isInteractionEnabled(currentOptions.interactive, "pan") || pointAt(event.clientX, event.clientY)) return;
+      panning = true;
+      moved = false;
+      panOrigin = { x: event.clientX, y: event.clientY, viewportX: viewport.x, viewportY: viewport.y };
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (!panning) return;
+      moved = Math.abs(event.clientX - panOrigin.x) + Math.abs(event.clientY - panOrigin.y) > 2;
+      viewport.x = panOrigin.viewportX + event.clientX - panOrigin.x;
+      viewport.y = panOrigin.viewportY + event.clientY - panOrigin.y;
+      draw();
+    };
+    const onPointerUp = () => {
+      if (!panning) return;
+      panning = false;
+      if (moved) emitViewport();
+      setTimeout(() => { moved = false; }, 0);
+    };
+    canvas.addEventListener("click", onClick);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    canvas.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("pointermove", onPointerMove);
+    document.addEventListener("pointerup", onPointerUp);
+    return () => {
+      canvas.removeEventListener("click", onClick);
+      canvas.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+    };
+  }, { normalize: normalizeGeoMap });
+}

@@ -22,7 +22,7 @@ export function startOfWeek(input: number, weekStartsOn: 0 | 1): number {
 }
 
 export function calendarRange(anchor: number, view: CalendarView = "week", weekStartsOn: 0 | 1 = 1): CalendarRange {
-  if (view === "day") {
+  if (view === "day" || view === "timeline-day" || view === "resource-day") {
     const start = startOfDay(anchor);
     return { start, end: start + DAY, days: [start] };
   }
@@ -32,6 +32,12 @@ export function calendarRange(anchor: number, view: CalendarView = "week", weekS
     const start = startOfWeek(first.getTime(), weekStartsOn);
     const days = Array.from({ length: 42 }, (_, index) => start + index * DAY);
     return { start, end: start + 42 * DAY, days };
+  }
+  if (view === "year") {
+    const date = new Date(anchor);
+    const start = new Date(date.getFullYear(), 0, 1).getTime();
+    const end = new Date(date.getFullYear() + 1, 0, 1).getTime();
+    return { start, end, days: Array.from({ length: Math.round((end - start) / DAY) }, (_, index) => start + index * DAY) };
   }
   const start = startOfWeek(anchor, weekStartsOn);
   const allDays = Array.from({ length: 7 }, (_, index) => start + index * DAY);

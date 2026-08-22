@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contrastRatio, createCalendar, createChart, createGantt, createTopology } from "../src/index";
+import { contrastRatio, createCalendar, createChart, createDiagram, createGantt, createGeoMap, createTopology } from "../src/index";
 
 function host(): HTMLDivElement {
   const element = document.createElement("div");
@@ -23,4 +23,6 @@ describe("accessibility contract", () => {
   it("[I179] bounds the accessible chart DOM for large datasets", () => { const element = host(); createChart(element, { series: [{ id: "a", label: "A", data: Array.from({ length: 500 }, (_, x) => ({ x, y: x })) }], performance: { accessibilityLimit: 25 } }); expect(element.querySelectorAll("table button")).toHaveLength(25); expect(element.textContent).toContain("475 additional chart points"); });
   it("[I180] bounds the accessible topology DOM for large datasets", () => { const element = host(); createTopology(element, { data: { nodes: Array.from({ length: 500 }, (_, index) => ({ id: String(index), label: `Node ${index}` })), edges: [] }, performance: { accessibilityLimit: 20 } }); expect(element.querySelectorAll("ul button")).toHaveLength(20); expect(element.textContent).toContain("480 additional nodes"); });
   it("[I181] makes the large Gantt accessibility limit configurable", () => { const element = host(); createGantt(element, { data: Array.from({ length: 500 }, (_, index) => ({ id: String(index), label: `Task ${index}`, start: "2026-01-01", end: "2026-01-02" })), performance: { canvasThreshold: 1, accessibilityLimit: 15 } }); expect(element.querySelectorAll("ul button")).toHaveLength(15); expect(element.textContent).toContain("485 additional tasks"); });
+  it("[I220] bounds the accessible geographic DOM", () => { const element = host(); createGeoMap(element, { data: { points: Array.from({ length: 80 }, (_, index) => ({ id: String(index), label: `Point ${index}`, latitude: 0, longitude: index })) }, performance: { accessibilityLimit: 12 } }); expect(element.querySelectorAll("ul button")).toHaveLength(12); expect(element.textContent).toContain("68 additional geographic points"); });
+  it("[I221] bounds the accessible diagram DOM", () => { const element = host(); createDiagram(element, { data: { nodes: Array.from({ length: 80 }, (_, index) => ({ id: String(index), label: `Node ${index}` })), links: [] }, performance: { accessibilityLimit: 14 } }); expect(element.querySelectorAll("ul button")).toHaveLength(14); expect(element.textContent).toContain("66 additional diagram nodes"); });
 });

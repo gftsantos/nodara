@@ -3,10 +3,12 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- plain anchors avoid coupling the Vinext client shell to Next router state */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar, Chart, Gantt, Topology } from "@nodara/react";
+import { Calendar, Chart, Diagram, Gantt, GeoMap, Topology } from "@nodara/react";
 import {
   normalizeCalendarEvents,
   normalizeChartSeries,
+  normalizeDiagram,
+  normalizeGeoMap,
   normalizeGanttTasks,
   normalizeTopology,
   visualCatalog,
@@ -18,8 +20,12 @@ import type {
   ChartOptions,
   ChartSeries,
   ChartType,
+  DiagramData,
+  DiagramOptions,
   GanttOptions,
   GanttTask,
+  GeoMapData,
+  GeoMapOptions,
   TopologyData,
   TopologyOptions,
   VisualCatalogItem,
@@ -29,7 +35,7 @@ import type {
 import { ArrowLeft, BookOpen, Check, ChevronRight, Copy, Database, Moon, Play, RotateCcw, Search, Sun } from "lucide-react";
 import styles from "./catalog.module.css";
 
-type CatalogData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[];
+type CatalogData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
 type FamilyFilter = "all" | VisualFamily;
 
 const familyLabels: Record<VisualFamily, string> = {
@@ -37,6 +43,8 @@ const familyLabels: Record<VisualFamily, string> = {
   charts: "Gráficos",
   topology: "Topologias",
   calendar: "Calendários",
+  maps: "Mapas",
+  diagrams: "Diagramas",
 };
 
 const familyColors: Record<VisualFamily, string> = {
@@ -44,6 +52,8 @@ const familyColors: Record<VisualFamily, string> = {
   charts: "#ff7657",
   topology: "#c8fa63",
   calendar: "#52d6c7",
+  maps: "#43a9ff",
+  diagrams: "#bf7cff",
 };
 
 const ganttData: GanttTask[] = [
@@ -90,18 +100,77 @@ const calendarData: CalendarEvent[] = [
   { id: "retro", title: "Retro", start: "2026-08-21T16:00:00+01:00", durationMinutes: 60, resourceId: "platform" },
 ];
 
+const geoMapData: GeoMapData = {
+  points: [
+    { id: "lisbon", label: "Lisboa", latitude: 38.72, longitude: -9.14, value: 58 },
+    { id: "london", label: "Londres", latitude: 51.51, longitude: -0.13, value: 82 },
+    { id: "paris", label: "Paris", latitude: 48.86, longitude: 2.35, value: 67 },
+    { id: "new-york", label: "Nova Iorque", latitude: 40.71, longitude: -74.01, value: 94 },
+    { id: "sao-paulo", label: "São Paulo", latitude: -23.55, longitude: -46.63, value: 73 },
+    { id: "tokyo", label: "Tóquio", latitude: 35.68, longitude: 139.69, value: 88 },
+  ],
+  routes: [
+    { from: "lisbon", to: "london", value: 3, directed: true },
+    { from: "lisbon", to: "new-york", value: 7, directed: true },
+    { from: "london", to: "tokyo", value: 5, directed: true },
+    { from: "sao-paulo", to: "lisbon", value: 4, directed: true },
+  ],
+  regions: [
+    { id: "iberia", label: "Península Ibérica", value: 3, coordinates: [{ longitude: -10, latitude: 36 }, { longitude: 4, latitude: 36 }, { longitude: 4, latitude: 44 }, { longitude: -10, latitude: 44 }] },
+    { id: "western-europe", label: "Europa ocidental", value: 6, coordinates: [{ longitude: -6, latitude: 44 }, { longitude: 10, latitude: 44 }, { longitude: 10, latitude: 55 }, { longitude: -6, latitude: 55 }] },
+    { id: "east-us", label: "Estados Unidos oriental", value: 8, coordinates: [{ longitude: -84, latitude: 30 }, { longitude: -66, latitude: 30 }, { longitude: -66, latitude: 48 }, { longitude: -84, latitude: 48 }] },
+  ],
+};
+
+const diagramData: DiagramData = {
+  nodes: [
+    { id: "traffic", label: "Tráfego", value: 100 },
+    { id: "organic", label: "Orgânico", parentId: "traffic", value: 46 },
+    { id: "paid", label: "Pago", parentId: "traffic", value: 34 },
+    { id: "referral", label: "Referral", parentId: "traffic", value: 20 },
+    { id: "trial", label: "Trial", parentId: "organic", value: 61 },
+    { id: "customer", label: "Cliente", parentId: "trial", value: 29 },
+  ],
+  links: [
+    { from: "traffic", to: "organic", value: 46, directed: true },
+    { from: "traffic", to: "paid", value: 34, directed: true },
+    { from: "traffic", to: "referral", value: 20, directed: true },
+    { from: "organic", to: "trial", value: 31, directed: true },
+    { from: "paid", to: "trial", value: 21, directed: true },
+    { from: "referral", to: "trial", value: 9, directed: true },
+    { from: "trial", to: "customer", value: 29, directed: true },
+  ],
+};
+
 function chartDataFor(item: VisualCatalogItem): ChartSeries[] {
   const type = item.options.type as ChartType;
   if (type === "gauge") return [{ id: "score", label: "SLA", color: "#c8fa63", data: [{ x: "SLA", y: 87, meta: { min: 0, max: 100 } }] }];
   if (type === "funnel") return [{ id: "funnel", label: "Conversão", data: [{ x: "Visitas", y: 12000 }, { x: "Trials", y: 7200 }, { x: "Ativações", y: 4100 }, { x: "Clientes", y: 1820 }] }];
   if (type === "waterfall") return [{ id: "variance", label: "Variação", data: [{ x: "Base", y: 120 }, { x: "Novos", y: 48 }, { x: "Expansão", y: 25 }, { x: "Churn", y: -31 }, { x: "Custos", y: -18 }] }];
-  if (type === "candlestick") return [{ id: "ohlc", label: "NDR", data: [
+  if (type === "candlestick" || type === "ohlc") return [{ id: "ohlc", label: "NDR", data: [
     { x: "Seg", y: 106, meta: { open: 101, high: 109, low: 98, close: 106 } },
     { x: "Ter", y: 103, meta: { open: 106, high: 111, low: 101, close: 103 } },
     { x: "Qua", y: 112, meta: { open: 103, high: 116, low: 102, close: 112 } },
     { x: "Qui", y: 118, meta: { open: 112, high: 121, low: 109, close: 118 } },
     { x: "Sex", y: 115, meta: { open: 118, high: 120, low: 111, close: 115 } },
   ] }];
+  if (type === "boxplot") return [{ id: "latency", label: "Latência", data: [
+    { x: "API", y: 48, meta: { min: 18, q1: 31, median: 48, q3: 63, max: 91 } },
+    { x: "Web", y: 61, meta: { min: 24, q1: 42, median: 61, q3: 77, max: 108 } },
+    { x: "Worker", y: 37, meta: { min: 12, q1: 25, median: 37, q3: 49, max: 74 } },
+  ] }];
+  if (type === "error-bar") return [{ id: "measure", label: "Medição", data: [42, 55, 49, 72, 63].map((y, index) => ({ x: `A${index + 1}`, y, meta: { error: 5 + index } })) }];
+  if (type === "range-area") return [{ id: "forecast", label: "Previsão", data: [
+    { x: "Jan", y: 52, meta: { low: 41, high: 62 } }, { x: "Fev", y: 61, meta: { low: 48, high: 73 } }, { x: "Mar", y: 67, meta: { low: 54, high: 81 } }, { x: "Abr", y: 78, meta: { low: 65, high: 91 } },
+  ] }];
+  if (type === "bullet") return [{ id: "kpis", label: "KPIs", data: [
+    { x: "SLA", y: 87, meta: { target: 92, max: 100 } }, { x: "NPS", y: 71, meta: { target: 75, max: 100 } }, { x: "Adoção", y: 64, meta: { target: 60, max: 100 } },
+  ] }];
+  if (type === "radial-bar") return [{ id: "health", label: "Saúde", data: [
+    { x: "Core", y: 94, meta: { max: 100 } }, { x: "React", y: 88, meta: { max: 100 } }, { x: "Vue", y: 79, meta: { max: 100 } }, { x: "Angular", y: 73, meta: { max: 100 } },
+  ] }];
+  if (type === "violin") return [{ id: "density", label: "Densidade", data: [8, 18, 37, 62, 84, 96, 89, 68, 42, 21, 9].map((y, index) => ({ x: index, y })) }];
+  if (type === "contour") return ["Norte", "Centro", "Sul"].map((label, row) => ({ id: label, label, data: [18, 35, 67, 89, 54, 27].map((y, column) => ({ x: column, y: y - row * 8 })) }));
   if (type === "heatmap") return ["API", "Web", "Worker", "DB"].map((label, row) => ({ id: label.toLowerCase(), label, data: ["S", "T", "Q", "Q", "S", "S", "D"].map((x, column) => ({ x, y: ((row + 2) * (column + 3) * 13) % 97 })) }));
   if (type === "bubble") return [{ id: "markets", label: "Mercados", data: [
     { x: "PT", y: 34, meta: { size: 10 } }, { x: "ES", y: 51, meta: { size: 18 } }, { x: "FR", y: 45, meta: { size: 14 } }, { x: "DE", y: 68, meta: { size: 25 } }, { x: "UK", y: 57, meta: { size: 20 } },
@@ -120,7 +189,9 @@ function sampleData(item: VisualCatalogItem): CatalogData {
   if (item.family === "gantt") return structuredClone(ganttData);
   if (item.family === "charts") return chartDataFor(item);
   if (item.family === "topology") return structuredClone(topologyData);
-  return structuredClone(calendarData);
+  if (item.family === "calendar") return structuredClone(calendarData);
+  if (item.family === "maps") return structuredClone(geoMapData);
+  return structuredClone(diagramData);
 }
 
 function normalizeData(item: VisualCatalogItem, json: string): CatalogData {
@@ -128,7 +199,9 @@ function normalizeData(item: VisualCatalogItem, json: string): CatalogData {
   if (item.family === "gantt") return normalizeGanttTasks(parsed as GanttTask[]);
   if (item.family === "charts") return normalizeChartSeries(parsed as ChartSeries[]);
   if (item.family === "topology") return normalizeTopology(parsed as TopologyData);
-  return normalizeCalendarEvents(parsed as CalendarEvent[]);
+  if (item.family === "calendar") return normalizeCalendarEvents(parsed as CalendarEvent[]);
+  if (item.family === "maps") return normalizeGeoMap(parsed as GeoMapData);
+  return normalizeDiagram(parsed as DiagramData);
 }
 
 function codeFor(item: VisualCatalogItem): string {
@@ -136,7 +209,9 @@ function codeFor(item: VisualCatalogItem): string {
   if (item.family === "gantt") return `<Gantt data={tasks} ${props}\n  onTaskChange={({ task }) => save(task)} />`;
   if (item.family === "charts") return `<Chart series={series} ${props}\n  showTooltip onPointSelect={({ point }) => inspect(point)} />`;
   if (item.family === "topology") return `<Topology data={network} ${props}\n  interactive={{ pan: true, zoom: true }} />`;
-  return `<Calendar events={events} date="2026-08-20" ${props}\n  onEventChange={({ event }) => save(event)} />`;
+  if (item.family === "calendar") return `<Calendar events={events} date="2026-08-20" ${props}\n  onEventChange={({ event }) => save(event)} />`;
+  if (item.family === "maps") return `<GeoMap data={geoData} ${props}\n  interactive={{ pan: true, zoom: true }} />`;
+  return `<Diagram data={diagramData} ${props}\n  onNodeSelect={({ node }) => inspect(node)} />`;
 }
 
 function CatalogPreview({ data, item, onDataChange, onEvent, theme }: { data: CatalogData; item: VisualCatalogItem; onDataChange: (data: CatalogData) => void; onEvent: (message: string) => void; theme: VisualTheme }) {
@@ -151,6 +226,14 @@ function CatalogPreview({ data, item, onDataChange, onEvent, theme }: { data: Ca
   if (item.family === "topology") {
     const options = item.options as Partial<Omit<TopologyOptions, "data">>;
     return <Topology data={data as TopologyData} {...options} theme={theme} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} onNodeSelect={({ node }) => onEvent(`node:select · ${node.label}`)} onViewportChange={({ zoom }) => onEvent(`viewport:change · ${zoom.toFixed(2)}×`)} style={{ height: 430 }} />;
+  }
+  if (item.family === "maps") {
+    const options = item.options as Partial<Omit<GeoMapOptions, "data">>;
+    return <GeoMap data={data as GeoMapData} {...options} theme={theme} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} onPointSelect={({ point }) => onEvent(`point:select · ${point.label}`)} onViewportChange={({ zoom }) => onEvent(`viewport:change · ${zoom.toFixed(2)}×`)} style={{ height: 430 }} />;
+  }
+  if (item.family === "diagrams") {
+    const options = item.options as Partial<Omit<DiagramOptions, "data">>;
+    return <Diagram data={data as DiagramData} {...options} theme={theme} interactive onNodeSelect={({ node }) => onEvent(`node:select · ${node.label}`)} style={{ height: 430 }} />;
   }
   const options = item.options as Partial<Omit<CalendarOptions, "events">>;
   return <Calendar events={data as CalendarEvent[]} {...options} date="2026-08-20" theme={theme} locale="pt-PT" interactive resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventSelect={({ event }) => onEvent(`event:select · ${event.title}`)} onEventChange={({ event }) => { const next = (data as CalendarEvent[]).map((entry) => entry.id === event.id ? event : entry); onDataChange(next); onEvent(`event:change · ${event.title}`); }} style={{ height: 430 }} />;
@@ -249,13 +332,13 @@ export default function CatalogPage() {
       </header>
 
       <section className={styles.hero}>
-        <p>CATÁLOGO NODARA · PRIMEIRA COLEÇÃO</p>
-        <h1>48 visualizações reais.<br /><span>Não quatro screenshots.</span></h1>
+        <p>CATÁLOGO NODARA · COLEÇÃO EXPANDIDA</p>
+        <h1>100 visualizações reais.<br /><span>Seis motores, dados teus.</span></h1>
         <div className={styles.heroBottom}>
-          <p>Quatro motores partilhados, 48 receitas utilizáveis e 14 geometrias de gráfico. Cada item abre uma instância real com dados editáveis, eventos e código de integração.</p>
-          <div className={styles.metric}><strong>48</strong><span>demos funcionais</span></div>
-          <div className={styles.metric}><strong>14</strong><span>tipos de gráfico</span></div>
-          <div className={styles.metric}><strong>4</strong><span>motores</span></div>
+          <p>Seis motores partilhados, 100 receitas utilizáveis e 26 geometrias de gráfico. Mapas geográficos, diagramas, schedulers, Gantt, topologias e gráficos abrem com dados editáveis, eventos e código de integração.</p>
+          <div className={styles.metric}><strong>100</strong><span>demos funcionais</span></div>
+          <div className={styles.metric}><strong>26</strong><span>tipos de gráfico</span></div>
+          <div className={styles.metric}><strong>6</strong><span>motores</span></div>
         </div>
       </section>
 
@@ -264,7 +347,7 @@ export default function CatalogPage() {
           <div className={styles.toolbar}>
             <label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Procurar visualização…" aria-label="Procurar no catálogo" /></label>
             <div className={styles.filters} role="group" aria-label="Filtrar por família">
-              <button type="button" className={filter === "all" ? styles.activeFilter : ""} onClick={() => setFilter("all")}>Todas <span>48</span></button>
+              <button type="button" className={filter === "all" ? styles.activeFilter : ""} onClick={() => setFilter("all")}>Todas <span>100</span></button>
               {(Object.keys(familyLabels) as VisualFamily[]).map((family) => <button type="button" className={filter === family ? styles.activeFilter : ""} onClick={() => setFilter(family)} key={family}>{familyLabels[family]} <span>{visualCatalogCounts[family]}</span></button>)}
             </div>
           </div>
@@ -305,9 +388,9 @@ export default function CatalogPage() {
               <dl className={styles.reference}>
                 <div><dt>Dados</dt><dd>{activeItem.dataContract}</dd></div>
                 <div><dt>Opções ativas</dt><dd>{Object.entries(activeItem.options).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</dd></div>
-                <div><dt>Eventos</dt><dd>{activeItem.family === "gantt" ? "task:select · task:change" : activeItem.family === "charts" ? "point:select" : activeItem.family === "topology" ? "node:select · viewport:change" : "event:select · event:change"}</dd></div>
+                <div><dt>Eventos</dt><dd>{activeItem.family === "gantt" ? "task:select · task:change" : activeItem.family === "charts" ? "point:select" : activeItem.family === "maps" ? "point:select · viewport:change" : activeItem.family === "topology" ? "node:select · viewport:change" : activeItem.family === "diagrams" ? "node:select" : "event:select · event:change"}</dd></div>
               </dl>
-              <a className={styles.docsLink} href={`/docs#${activeItem.family === "charts" ? "charts" : activeItem.family}`}><BookOpen size={14} /> Abrir referência completa da API <ChevronRight size={14} /></a>
+              <a className={styles.docsLink} href={`/docs#${activeItem.family === "charts" ? "charts" : activeItem.family === "maps" ? "geo-map" : activeItem.family === "diagrams" ? "diagram" : activeItem.family}`}><BookOpen size={14} /> Abrir referência completa da API <ChevronRight size={14} /></a>
             </section>
           </div>
         </aside>

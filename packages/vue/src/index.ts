@@ -1,14 +1,20 @@
 import {
   createCalendar,
   createChart,
+  createDiagram,
   createGantt,
+  createGeoMap,
   createTopology,
   type CalendarEvent,
   type CalendarOptions,
   type ChartOptions,
   type ChartSeries,
+  type DiagramData,
+  type DiagramOptions,
   type GanttOptions,
   type GanttTask,
+  type GeoMapData,
+  type GeoMapOptions,
   type NodaraController,
   type TopologyData,
   type TopologyOptions,
@@ -108,13 +114,64 @@ export const NodaraCalendar = defineComponent({
   },
 });
 
+export const NodaraGeoMap = defineComponent({
+  name: "NodaraGeoMap",
+  props: {
+    data: { type: Object as PropType<GeoMapData>, required: true },
+    options: { type: Object as PropType<Omit<GeoMapOptions, "data">>, default: () => ({}) },
+  },
+  emits: ["ready", "point-select", "viewport-change"],
+  setup(props, { emit }) {
+    const host = ref<HTMLElement>();
+    let controller: NodaraController<GeoMapData> | undefined;
+    onMounted(() => {
+      if (!host.value) return;
+      controller = createGeoMap(host.value, { ...props.options, data: props.data });
+      controller.on("point:select", (event) => emit("point-select", event));
+      controller.on("viewport:change", (event) => emit("viewport-change", event));
+      emit("ready", controller);
+    });
+    watch(() => props.data, (data) => controller?.update(data), { deep: true });
+    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    onBeforeUnmount(() => controller?.destroy());
+    return () => h("div", { ref: host });
+  },
+});
+
+export const NodaraDiagram = defineComponent({
+  name: "NodaraDiagram",
+  props: {
+    data: { type: Object as PropType<DiagramData>, required: true },
+    options: { type: Object as PropType<Omit<DiagramOptions, "data">>, default: () => ({}) },
+  },
+  emits: ["ready", "node-select"],
+  setup(props, { emit }) {
+    const host = ref<HTMLElement>();
+    let controller: NodaraController<DiagramData> | undefined;
+    onMounted(() => {
+      if (!host.value) return;
+      controller = createDiagram(host.value, { ...props.options, data: props.data });
+      controller.on("node:select", (event) => emit("node-select", event));
+      emit("ready", controller);
+    });
+    watch(() => props.data, (data) => controller?.update(data), { deep: true });
+    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    onBeforeUnmount(() => controller?.destroy());
+    return () => h("div", { ref: host });
+  },
+});
+
 export type {
   CalendarEvent,
   CalendarOptions,
   ChartOptions,
   ChartSeries,
+  DiagramData,
+  DiagramOptions,
   GanttOptions,
   GanttTask,
+  GeoMapData,
+  GeoMapOptions,
   NodaraController,
   TopologyData,
   TopologyOptions,

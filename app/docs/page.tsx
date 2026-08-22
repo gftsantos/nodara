@@ -19,6 +19,7 @@ import {
   Gauge,
   Layers3,
   Menu,
+  Map,
   Moon,
   Network,
   Palette,
@@ -31,6 +32,7 @@ import {
   TestTube2,
   Webhook,
   Wrench,
+  Workflow,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -46,6 +48,8 @@ const pageIcons: Partial<Record<string, LucideIcon>> = {
   charts: BarChart3,
   topology: Network,
   calendar: CalendarDays,
+  "geo-map": Map,
+  diagram: Workflow,
   react: Component,
   vue: Component,
   angular: Component,
@@ -203,7 +207,7 @@ export default function DocsPage() {
 
       <div className={styles.shell}>
         <aside className={`${styles.sidebar} ${mobileNav ? styles.sidebarOpen : ""}`} aria-label="Navegação da documentação">
-          <div className={styles.sidebarIntro}><span>DOCUMENTAÇÃO</span><strong>Referência completa</strong><small>{docsPages.length} guias · 48 demos · 4 motores</small></div>
+          <div className={styles.sidebarIntro}><span>DOCUMENTAÇÃO</span><strong>Referência completa</strong><small>{docsPages.length} guias · 100 demos · 6 motores</small></div>
           <nav>
             {docGroups.map((group) => (
               <div className={styles.navGroup} key={group.id}>

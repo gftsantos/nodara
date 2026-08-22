@@ -1,7 +1,10 @@
 import type {
   CalendarEvent,
   ChartSeries,
+  DiagramData,
   GanttTask,
+  GeoCoordinate,
+  GeoMapData,
   TopologyData,
 } from "./types";
 import { parseRecurrence } from "./recurrence";
@@ -14,6 +17,16 @@ function assertUniqueIds(items: Array<{ id: string }>, domain: string): void {
     if (ids.has(item.id)) throw new NodaraError("ND_DUPLICATE_ID", `Duplicate ${domain} id: ${item.id}.`);
     ids.add(item.id);
   }
+}
+
+function normalizeCoordinate(coordinate: GeoCoordinate, field: string): GeoCoordinate {
+  if (!Number.isFinite(coordinate.longitude) || !Number.isFinite(coordinate.latitude)) {
+    throw new NodaraError("ND_INVALID_COORDINATE", `${field} requires finite longitude and latitude.`);
+  }
+  if (coordinate.longitude < -180 || coordinate.longitude > 180 || coordinate.latitude < -90 || coordinate.latitude > 90) {
+    throw new NodaraError("ND_COORDINATE_RANGE", `${field} is outside the geographic coordinate range.`);
+  }
+  return { longitude: coordinate.longitude, latitude: coordinate.latitude };
 }
 
 export function normalizeGanttTasks(input: GanttTask[]): GanttTask[] {
@@ -75,4 +88,58 @@ export function normalizeCalendarEvents(input: CalendarEvent[]): CalendarEvent[]
     if (event.recurrence) parseRecurrence(event.recurrence);
     return { ...event, start, end };
   });
+}
+
+export function normalizeGeoMap(input: GeoMapData): GeoMapData {
+  assertUniqueIds(input.points, "geo point");
+  assertUniqueIds(input.regions ?? [], "geo region");
+  const points = input.points.map((point) => {
+    if (!point.label?.trim()) throw new NodaraError("ND_MISSING_LABEL", `Geo point ${point.id} requires a label.`);
+    if (point.value !== undefined && !Number.isFinite(point.value)) throw new NodaraError("ND_INVALID_VALUE", `Geo point ${point.id} contains a non-finite value.`);
+    return { ...point, ...normalizeCoordinate(point, `Point ${point.id}`), ...(point.meta ? { meta: { ...point.meta } } : {}) };
+  });
+  const pointIds = new Set(points.map((point) => point.id));
+  const routeIds = new Set<string>();
+  const routes = (input.routes ?? []).map((route, index) => {
+    const normalizeEnd = (value: string | GeoCoordinate, field: string) => {
+      if (typeof value === "string") {
+        if (!pointIds.has(value)) throw new NodaraError("ND_DANGLING_ROUTE", `Route ${index} references unknown point ${value}.`);
+        return value;
+      }
+      return normalizeCoordinate(value, `Route ${index}.${field}`);
+    };
+    if (route.id && routeIds.has(route.id)) throw new NodaraError("ND_DUPLICATE_ROUTE", `Duplicate geographic route id: ${route.id}.`);
+    if (route.id) routeIds.add(route.id);
+    if (route.value !== undefined && !Number.isFinite(route.value)) throw new NodaraError("ND_INVALID_VALUE", `Route ${index} contains a non-finite value.`);
+    return { ...route, from: normalizeEnd(route.from, "from"), to: normalizeEnd(route.to, "to"), ...(route.meta ? { meta: { ...route.meta } } : {}) };
+  });
+  const regions = (input.regions ?? []).map((region) => {
+    if (!region.label?.trim()) throw new NodaraError("ND_MISSING_LABEL", `Geo region ${region.id} requires a label.`);
+    if (region.coordinates.length < 3) throw new NodaraError("ND_INVALID_POLYGON", `Region ${region.id} requires at least three coordinates.`);
+    if (region.value !== undefined && !Number.isFinite(region.value)) throw new NodaraError("ND_INVALID_VALUE", `Region ${region.id} contains a non-finite value.`);
+    return { ...region, coordinates: region.coordinates.map((coordinate, index) => normalizeCoordinate(coordinate, `Region ${region.id}.coordinates[${index}]`)), ...(region.meta ? { meta: { ...region.meta } } : {}) };
+  });
+  return { points, routes, regions };
+}
+
+export function normalizeDiagram(input: DiagramData): DiagramData {
+  assertUniqueIds(input.nodes, "diagram node");
+  const ids = new Set(input.nodes.map((node) => node.id));
+  const nodes = input.nodes.map((node) => {
+    if (!node.label?.trim()) throw new NodaraError("ND_MISSING_LABEL", `Diagram node ${node.id} requires a label.`);
+    if (node.parentId === node.id) throw new NodaraError("ND_SELF_DEPENDENCY", `Diagram node ${node.id} cannot parent itself.`);
+    if (node.parentId && !ids.has(node.parentId)) throw new NodaraError("ND_DANGLING_PARENT", `Diagram node ${node.id} references unknown parent ${node.parentId}.`);
+    if (node.value !== undefined && !Number.isFinite(node.value)) throw new NodaraError("ND_INVALID_VALUE", `Diagram node ${node.id} contains a non-finite value.`);
+    return { ...node, ...(node.meta ? { meta: { ...node.meta } } : {}) };
+  });
+  const linkIds = new Set<string>();
+  const links = input.links.map((link, index) => {
+    if (!ids.has(link.from) || !ids.has(link.to)) throw new NodaraError("ND_DANGLING_LINK", `Diagram link ${link.from} → ${link.to} references an unknown node.`);
+    const id = link.id ?? `${link.from}:${link.to}:${index}`;
+    if (linkIds.has(id)) throw new NodaraError("ND_DUPLICATE_LINK", `Duplicate diagram link id: ${id}.`);
+    linkIds.add(id);
+    if (link.value !== undefined && !Number.isFinite(link.value)) throw new NodaraError("ND_INVALID_VALUE", `Diagram link ${id} contains a non-finite value.`);
+    return { ...link, ...(link.meta ? { meta: { ...link.meta } } : {}) };
+  });
+  return { nodes, links };
 }

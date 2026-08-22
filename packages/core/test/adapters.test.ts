@@ -3,9 +3,9 @@ import { act, createElement } from "react";
 import { createRoot } from "react-dom/client";
 import { createApp, h, nextTick, reactive, ref } from "vue";
 import { describe, expect, it, vi } from "vitest";
-import { Calendar as ReactCalendar, Chart as ReactChart, Gantt as ReactGantt, Topology as ReactTopology } from "../../react/src/index";
-import { NodaraCalendar, NodaraChart, NodaraGantt, NodaraTopology } from "../../vue/src/index";
-import { NodaraCalendarComponent, NodaraChartComponent, NodaraGanttComponent, NodaraTopologyComponent } from "../../angular/src/index";
+import { Calendar as ReactCalendar, Chart as ReactChart, Diagram as ReactDiagram, Gantt as ReactGantt, GeoMap as ReactGeoMap, Topology as ReactTopology } from "../../react/src/index";
+import { NodaraCalendar, NodaraChart, NodaraDiagram, NodaraGantt, NodaraGeoMap, NodaraTopology } from "../../vue/src/index";
+import { NodaraCalendarComponent, NodaraChartComponent, NodaraDiagramComponent, NodaraGanttComponent, NodaraGeoMapComponent, NodaraTopologyComponent } from "../../angular/src/index";
 import { defineNodaraElements, type NodaraElement } from "../../web-components/src/index";
 import type { GanttTask } from "../src/index";
 
@@ -13,6 +13,8 @@ const tasks: GanttTask[] = [{ id: "a", label: "Alpha", start: "2026-01-01", end:
 const chart = [{ id: "s", label: "Series", data: [{ x: "Jan", y: 1 }] }];
 const topology = { nodes: [{ id: "a", label: "A" }], edges: [] };
 const events = [{ id: "e", title: "Event", start: "2026-01-01" }];
+const geo = { points: [{ id: "pt", label: "Lisboa", latitude: 38.72, longitude: -9.14 }] };
+const diagram = { nodes: [{ id: "a", label: "A" }, { id: "b", label: "B" }], links: [{ from: "a", to: "b" }] };
 
 function mountHost(): HTMLDivElement {
   const element = document.createElement("div");
@@ -29,13 +31,15 @@ describe("React adapter", () => {
   it("[I144] mounts React chart", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactChart, { series: chart }))); expect(element.querySelector(".nd-chart__canvas")).not.toBeNull(); await act(async () => root.unmount()); });
   it("[I145] mounts React topology", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactTopology, { data: topology }))); expect(element.querySelector(".nd-topology__canvas")).not.toBeNull(); await act(async () => root.unmount()); });
   it("[I146] mounts React calendar", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactCalendar, { events, date: "2026-01-01" }))); expect(element.querySelector(".nd-calendar__event")).not.toBeNull(); await act(async () => root.unmount()); });
+  it("[I214] mounts React geographic maps", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactGeoMap, { data: geo }))); expect(element.querySelector(".nd-geo-map__canvas")).not.toBeNull(); await act(async () => root.unmount()); });
+  it("[I215] mounts React diagrams", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactDiagram, { data: diagram, type: "sankey" }))); expect(element.querySelector(".nd-diagram__canvas")).not.toBeNull(); await act(async () => root.unmount()); });
 });
 
 describe("Vue adapter", () => {
   it("[I147] mounts the real Vue gantt renderer", async () => { const element = mountHost(); const app = createApp({ render: () => h(NodaraGantt, { data: tasks }) }); app.mount(element); await nextTick(); expect(element.querySelector(".nd-gantt")).not.toBeNull(); app.unmount(); });
   it("[I148] updates Vue gantt data", async () => { const element = mountHost(); const data = ref(tasks); const app = createApp({ setup: () => () => h(NodaraGantt, { data: data.value }) }); app.mount(element); data.value = [...tasks, { id: "b", label: "Beta", start: "2026-01-05", end: "2026-01-06" }]; await nextTick(); await nextTick(); expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(2); app.unmount(); });
   it("[I149] applies Vue option changes reactively", async () => { const element = mountHost(); const options = reactive({ zoom: "month" as "month" | "day" }); const app = createApp({ setup: () => () => h(NodaraGantt, { data: tasks, options }) }); app.mount(element); options.zoom = "day"; await nextTick(); await nextTick(); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(24); app.unmount(); });
-  it("[I150] mounts every Vue visualization", async () => { const element = mountHost(); const app = createApp({ render: () => h("div", [h(NodaraChart, { series: chart }), h(NodaraTopology, { data: topology }), h(NodaraCalendar, { events, options: { date: "2026-01-01" } })]) }); app.mount(element); await nextTick(); expect(element.querySelector(".nd-chart")).not.toBeNull(); expect(element.querySelector(".nd-topology")).not.toBeNull(); expect(element.querySelector(".nd-calendar")).not.toBeNull(); app.unmount(); });
+  it("[I150] mounts every Vue visualization", async () => { const element = mountHost(); const app = createApp({ render: () => h("div", [h(NodaraChart, { series: chart }), h(NodaraTopology, { data: topology }), h(NodaraCalendar, { events, options: { date: "2026-01-01" } }), h(NodaraGeoMap, { data: geo }), h(NodaraDiagram, { data: diagram })]) }); app.mount(element); await nextTick(); expect(element.querySelector(".nd-chart")).not.toBeNull(); expect(element.querySelector(".nd-topology")).not.toBeNull(); expect(element.querySelector(".nd-calendar")).not.toBeNull(); expect(element.querySelector(".nd-geo-map")).not.toBeNull(); expect(element.querySelector(".nd-diagram")).not.toBeNull(); app.unmount(); });
 });
 
 describe("Angular adapter", () => {
@@ -44,10 +48,13 @@ describe("Angular adapter", () => {
   it("[I153] mounts Angular chart", () => { const element = mountHost(); const component = new NodaraChartComponent(); component.host = new ElementRef(element); component.series = chart; component.ngAfterViewInit(); expect(element.classList.contains("nd-chart")).toBe(true); component.ngOnDestroy(); });
   it("[I154] mounts Angular topology", () => { const element = mountHost(); const component = new NodaraTopologyComponent(); component.host = new ElementRef(element); component.data = topology; component.ngAfterViewInit(); expect(element.classList.contains("nd-topology")).toBe(true); component.ngOnDestroy(); });
   it("[I155] mounts Angular calendar", () => { const element = mountHost(); const component = new NodaraCalendarComponent(); component.host = new ElementRef(element); component.events = events; component.options = { date: "2026-01-01" }; component.ngAfterViewInit(); expect(element.classList.contains("nd-calendar")).toBe(true); component.ngOnDestroy(); });
+  it("[I216] mounts Angular geographic maps", () => { const element = mountHost(); const component = new NodaraGeoMapComponent(); component.host = new ElementRef(element); component.data = geo; component.ngAfterViewInit(); expect(element.classList.contains("nd-geo-map")).toBe(true); component.ngOnDestroy(); });
+  it("[I217] mounts Angular diagrams", () => { const element = mountHost(); const component = new NodaraDiagramComponent(); component.host = new ElementRef(element); component.data = diagram; component.ngAfterViewInit(); expect(element.classList.contains("nd-diagram")).toBe(true); component.ngOnDestroy(); });
 });
 
 describe("Web Components adapter", () => {
-  it("[I156] registers all custom elements", () => { defineNodaraElements("test156"); expect(customElements.get("test156-gantt")).toBeDefined(); expect(customElements.get("test156-chart")).toBeDefined(); expect(customElements.get("test156-topology")).toBeDefined(); expect(customElements.get("test156-calendar")).toBeDefined(); });
+  it("[I156] registers all custom elements", () => { defineNodaraElements("test156"); expect(customElements.get("test156-gantt")).toBeDefined(); expect(customElements.get("test156-chart")).toBeDefined(); expect(customElements.get("test156-topology")).toBeDefined(); expect(customElements.get("test156-calendar")).toBeDefined(); expect(customElements.get("test156-geo-map")).toBeDefined(); expect(customElements.get("test156-diagram")).toBeDefined(); });
+  it("[I218] renders geographic and diagram custom elements", () => { defineNodaraElements("test218"); const map = document.createElement("test218-geo-map") as NodaraElement; map.data = geo; const flow = document.createElement("test218-diagram") as NodaraElement; flow.data = diagram; document.body.append(map, flow); expect(map.querySelector("canvas")).not.toBeNull(); expect(flow.querySelector("canvas")).not.toBeNull(); });
   it("[I157] renders data assigned before connection", () => { defineNodaraElements("test157"); const element = document.createElement("test157-gantt") as NodaraElement; element.data = tasks; document.body.append(element); expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(1); });
   it("[I158] updates custom-element data without recreation", () => { defineNodaraElements("test158"); const element = document.createElement("test158-gantt") as NodaraElement; element.data = tasks; document.body.append(element); const controller = element.controller; element.data = [...tasks, { id: "b", label: "Beta", start: "2026-01-05", end: "2026-01-06" }]; expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(2); expect(element.controller).toBe(controller); });
   it("[I159] applies custom-element options reactively", () => { defineNodaraElements("test159"); const element = document.createElement("test159-gantt") as NodaraElement; element.data = tasks; document.body.append(element); element.options = { zoom: "day" }; expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(24); });

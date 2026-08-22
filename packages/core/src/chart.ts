@@ -8,7 +8,10 @@ import { normalizeChartSeries } from "./validation";
 import { renderWebGLPoints } from "./webgl";
 
 const palette = ["#7884ff", "#ff7657", "#52d6c7", "#c8fa63", "#f5c451", "#bf7cff", "#43a9ff", "#ff5fa2", "#76e38a", "#ff9f43"];
-const canvasOnlyTypes = new Set<ChartType>(["bubble", "pie", "donut", "radar", "polar-area", "heatmap", "waterfall", "funnel", "gauge", "candlestick"]);
+const canvasOnlyTypes = new Set<ChartType>([
+  "bubble", "pie", "donut", "radar", "polar-area", "heatmap", "waterfall", "funnel", "gauge", "candlestick",
+  "histogram", "boxplot", "error-bar", "range-area", "step-line", "spline", "lollipop", "bullet", "radial-bar", "ohlc", "violin", "contour",
+]);
 
 function metaNumber(point: ChartPoint, key: string, fallback: number): number {
   const value = point.meta?.[key];
@@ -107,7 +110,7 @@ export function createChart(
         context.scale(pixelRatio, pixelRatio);
         context.font = `10px ${tokens.fontFamily}`;
         context.lineWidth = 1;
-        const cartesian = chartType === "line" || chartType === "area" || chartType === "bar" || chartType === "scatter" || chartType === "bubble";
+        const cartesian = ["line", "area", "bar", "scatter", "bubble", "histogram", "boxplot", "error-bar", "range-area", "step-line", "spline", "lollipop", "bullet", "ohlc", "violin"].includes(chartType);
 
         if (cartesian && currentOptions.showGrid !== false) {
           context.strokeStyle = tokens.border;
@@ -288,7 +291,7 @@ export function createChart(
             }
             if (series) hitAreas.push({ x: x + groupWidth * 0.34, y: top + Math.abs(localY(previous) - localY(next)) / 2, radius: Math.max(12, groupWidth * 0.34), event: { point, series, source: "pointer" } });
           });
-        } else if (chartType === "candlestick") {
+        } else if (chartType === "candlestick" || chartType === "ohlc") {
           const series = data[0];
           const entries = series?.data ?? [];
           const values = entries.flatMap((point) => [metaNumber(point, "low", point.y), metaNumber(point, "high", point.y), metaNumber(point, "open", point.y), metaNumber(point, "close", point.y)]);
@@ -309,16 +312,141 @@ export function createChart(
             context.moveTo(x, localY(high));
             context.lineTo(x, localY(low));
             context.stroke();
-            context.fillStyle = color;
-            context.fillRect(x - groupWidth * 0.22, Math.min(localY(open), localY(close)), groupWidth * 0.44, Math.max(2, Math.abs(localY(open) - localY(close))));
+            if (chartType === "ohlc") {
+              context.beginPath();
+              context.moveTo(x - groupWidth * 0.22, localY(open));
+              context.lineTo(x, localY(open));
+              context.moveTo(x, localY(close));
+              context.lineTo(x + groupWidth * 0.22, localY(close));
+              context.stroke();
+            } else {
+              context.fillStyle = color;
+              context.fillRect(x - groupWidth * 0.22, Math.min(localY(open), localY(close)), groupWidth * 0.44, Math.max(2, Math.abs(localY(open) - localY(close))));
+            }
             if (series) hitAreas.push({ x, y: (localY(open) + localY(close)) / 2, radius: Math.max(12, groupWidth * 0.3), event: { point, series, source: "pointer" } });
+          });
+        } else if (chartType === "boxplot") {
+          const series = data[0];
+          const entries = series?.data ?? [];
+          const values = entries.flatMap((point) => [metaNumber(point, "min", point.y), metaNumber(point, "q1", point.y), metaNumber(point, "median", point.y), metaNumber(point, "q3", point.y), metaNumber(point, "max", point.y)]);
+          const localMinimum = Math.min(...values, 0);
+          const localMaximum = Math.max(...values, 1);
+          const localRange = localMaximum - localMinimum || 1;
+          const localY = (value: number) => padding.top + plotHeight - ((value - localMinimum) / localRange) * plotHeight;
+          const groupWidth = plotWidth / Math.max(entries.length, 1);
+          entries.forEach((point, index) => {
+            const minimum = metaNumber(point, "min", point.y);
+            const q1 = metaNumber(point, "q1", point.y);
+            const median = metaNumber(point, "median", point.y);
+            const q3 = metaNumber(point, "q3", point.y);
+            const maximum = metaNumber(point, "max", point.y);
+            const x = padding.left + index * groupWidth + groupWidth / 2;
+            const boxWidth = groupWidth * 0.5;
+            context.strokeStyle = series?.color ?? tokens.primary;
+            context.fillStyle = series?.color ?? tokens.primary;
+            context.globalAlpha = 0.22;
+            context.fillRect(x - boxWidth / 2, localY(q3), boxWidth, Math.max(2, localY(q1) - localY(q3)));
+            context.globalAlpha = 1;
+            context.strokeRect(x - boxWidth / 2, localY(q3), boxWidth, Math.max(2, localY(q1) - localY(q3)));
+            context.beginPath();
+            context.moveTo(x, localY(maximum));
+            context.lineTo(x, localY(q3));
+            context.moveTo(x, localY(q1));
+            context.lineTo(x, localY(minimum));
+            context.moveTo(x - boxWidth / 2, localY(median));
+            context.lineTo(x + boxWidth / 2, localY(median));
+            context.stroke();
+            if (series) hitAreas.push({ x, y: localY(median), radius: Math.max(14, boxWidth / 2), event: { point, series, source: "pointer" } });
+          });
+        } else if (chartType === "bullet") {
+          const series = data[0];
+          const entries = series?.data ?? [];
+          const maximum = Math.max(...entries.map((point) => metaNumber(point, "max", Math.max(100, point.y))), 1);
+          const rowHeight = plotHeight / Math.max(entries.length, 1);
+          entries.forEach((point, index) => {
+            const y = padding.top + index * rowHeight;
+            const target = metaNumber(point, "target", point.y);
+            context.fillStyle = tokens.border;
+            context.fillRect(padding.left, y + rowHeight * 0.18, plotWidth, rowHeight * 0.64);
+            context.fillStyle = series?.color ?? tokens.primary;
+            context.fillRect(padding.left, y + rowHeight * 0.32, plotWidth * clamp(point.y / maximum, 0, 1), rowHeight * 0.36);
+            context.strokeStyle = tokens.foreground;
+            context.lineWidth = 2;
+            context.beginPath();
+            context.moveTo(padding.left + plotWidth * clamp(target / maximum, 0, 1), y + rowHeight * 0.2);
+            context.lineTo(padding.left + plotWidth * clamp(target / maximum, 0, 1), y + rowHeight * 0.8);
+            context.stroke();
+            if (series) hitAreas.push({ x: padding.left + plotWidth * clamp(point.y / maximum, 0, 1), y: y + rowHeight / 2, radius: Math.max(14, rowHeight / 2), event: { point, series, source: "pointer" } });
+          });
+        } else if (chartType === "radial-bar") {
+          const series = data[0];
+          const entries = series?.data ?? [];
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const availableRadius = Math.min(plotWidth, plotHeight) * 0.46;
+          const ringWidth = Math.max(5, availableRadius / Math.max(entries.length * 1.65, 1));
+          entries.forEach((point, index) => {
+            const maximum = Math.max(1, metaNumber(point, "max", 100));
+            const radius = availableRadius - index * ringWidth * 1.55;
+            context.lineWidth = ringWidth;
+            context.strokeStyle = tokens.border;
+            context.beginPath();
+            context.arc(centerX, centerY, radius, -Math.PI / 2, Math.PI * 1.5);
+            context.stroke();
+            context.strokeStyle = palette[index % palette.length] ?? tokens.primary;
+            context.beginPath();
+            context.arc(centerX, centerY, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(point.y / maximum, 0, 1));
+            context.stroke();
+            if (series) hitAreas.push({ x: centerX, y: centerY - radius, radius: Math.max(12, ringWidth), event: { point, series, source: "pointer" } });
+          });
+        } else if (chartType === "violin") {
+          const series = data[0];
+          const entries = series?.data ?? [];
+          const maximum = Math.max(...entries.map((point) => Math.abs(point.y)), 1);
+          const centerX = width / 2;
+          const band = plotHeight / Math.max(entries.length, 1);
+          context.beginPath();
+          entries.forEach((point, index) => {
+            const x = centerX - plotWidth * 0.4 * Math.abs(point.y) / maximum;
+            const y = padding.top + (index + 0.5) * band;
+            if (index === 0) context.moveTo(x, y); else context.lineTo(x, y);
+          });
+          [...entries].reverse().forEach((point, reverseIndex) => {
+            const index = entries.length - reverseIndex - 1;
+            context.lineTo(centerX + plotWidth * 0.4 * Math.abs(point.y) / maximum, padding.top + (index + 0.5) * band);
+          });
+          context.closePath();
+          context.fillStyle = series?.color ?? tokens.primary;
+          context.globalAlpha = 0.36;
+          context.fill();
+          context.globalAlpha = 1;
+          context.strokeStyle = series?.color ?? tokens.primary;
+          context.stroke();
+          entries.forEach((point, index) => {
+            if (series) hitAreas.push({ x: centerX, y: padding.top + (index + 0.5) * band, radius: Math.max(12, band / 2), event: { point, series, source: "pointer" } });
+          });
+        } else if (chartType === "contour") {
+          const entries = data.flatMap((series, seriesIndex) => series.data.map((point, pointIndex) => ({ series, seriesIndex, point, pointIndex })));
+          const maximum = Math.max(...entries.map((entry) => Math.abs(entry.point.y)), 1);
+          entries.forEach((entry, index) => {
+            const x = padding.left + (entry.pointIndex + 0.5) / maxPoints * plotWidth;
+            const y = padding.top + (entry.seriesIndex + 0.5) / Math.max(data.length, 1) * plotHeight;
+            const radius = 8 + Math.abs(entry.point.y) / maximum * Math.min(plotWidth / maxPoints, plotHeight / Math.max(data.length, 1)) * 0.55;
+            for (let ring = 3; ring >= 1; ring -= 1) {
+              context.beginPath();
+              context.arc(x, y, radius * ring / 3, 0, Math.PI * 2);
+              context.strokeStyle = entry.series.color ?? palette[index % palette.length] ?? tokens.primary;
+              context.globalAlpha = 0.25 + ring * 0.18;
+              context.stroke();
+            }
+            hitAreas.push({ x, y, radius: Math.max(14, radius), event: { point: entry.point, series: entry.series, source: "pointer" } });
           });
         } else {
           data.forEach((series, seriesIndex) => {
             const color = series.color ?? palette[seriesIndex % palette.length] ?? tokens.primary;
             const entries = chartData.filter((item) => item.seriesIndex === seriesIndex);
             const coordinates = entries.map((item) => ({ ...item, x: xFor(item.pointIndex), y: yFor(item.value), baselineY: yFor(item.baseline) }));
-            if (chartType === "bar") {
+            if (chartType === "bar" || chartType === "histogram") {
               const groupWidth = plotWidth / maxPoints;
               const barWidth = currentOptions.stacked ? groupWidth * 0.64 : (groupWidth * 0.72) / Math.max(data.length, 1);
               coordinates.forEach((item) => {
@@ -330,25 +458,62 @@ export function createChart(
                 hitAreas.push({ x: x + barWidth / 2, y: item.y, radius: Math.max(12, barWidth), event: { point: item.series.data[item.pointIndex]!, series, source: "pointer" } });
               });
             } else {
-              if (chartType === "area" && coordinates.length > 0) {
+              if ((chartType === "area" || chartType === "range-area") && coordinates.length > 0) {
                 context.beginPath();
-                coordinates.forEach((item, index) => index === 0 ? context.moveTo(item.x, item.y) : context.lineTo(item.x, item.y));
-                [...coordinates].reverse().forEach((item) => context.lineTo(item.x, item.baselineY));
+                coordinates.forEach((item, index) => {
+                  const point = item.series.data[item.pointIndex]!;
+                  const y = chartType === "range-area" ? yFor(metaNumber(point, "high", point.y)) : item.y;
+                  if (index === 0) context.moveTo(item.x, y); else context.lineTo(item.x, y);
+                });
+                [...coordinates].reverse().forEach((item) => {
+                  const point = item.series.data[item.pointIndex]!;
+                  context.lineTo(item.x, chartType === "range-area" ? yFor(metaNumber(point, "low", 0)) : item.baselineY);
+                });
                 context.closePath();
                 context.globalAlpha = 0.18;
                 context.fillStyle = color;
                 context.fill();
               }
-              if (chartType !== "scatter" && chartType !== "bubble") {
+              if (chartType !== "scatter" && chartType !== "bubble" && chartType !== "lollipop" && chartType !== "error-bar") {
                 context.globalAlpha = 1;
                 context.beginPath();
-                coordinates.forEach((item, index) => index === 0 ? context.moveTo(item.x, item.y) : context.lineTo(item.x, item.y));
+                coordinates.forEach((item, index) => {
+                  if (index === 0) context.moveTo(item.x, item.y);
+                  else if (chartType === "step-line") {
+                    const previous = coordinates[index - 1]!;
+                    context.lineTo(item.x, previous.y);
+                    context.lineTo(item.x, item.y);
+                  } else if (chartType === "spline") {
+                    const previous = coordinates[index - 1]!;
+                    context.quadraticCurveTo((previous.x + item.x) / 2, previous.y, item.x, item.y);
+                  } else context.lineTo(item.x, item.y);
+                });
                 context.strokeStyle = color;
                 context.lineWidth = 2;
                 context.stroke();
               }
               coordinates.forEach((item) => {
                 const point = item.series.data[item.pointIndex]!;
+                if (chartType === "lollipop") {
+                  context.strokeStyle = color;
+                  context.beginPath();
+                  context.moveTo(item.x, yFor(0));
+                  context.lineTo(item.x, item.y);
+                  context.stroke();
+                }
+                if (chartType === "error-bar") {
+                  const low = yFor(metaNumber(point, "low", point.y - metaNumber(point, "error", 1)));
+                  const high = yFor(metaNumber(point, "high", point.y + metaNumber(point, "error", 1)));
+                  context.strokeStyle = color;
+                  context.beginPath();
+                  context.moveTo(item.x, low);
+                  context.lineTo(item.x, high);
+                  context.moveTo(item.x - 5, low);
+                  context.lineTo(item.x + 5, low);
+                  context.moveTo(item.x - 5, high);
+                  context.lineTo(item.x + 5, high);
+                  context.stroke();
+                }
                 const pointRadius = chartType === "bubble" ? clamp(metaNumber(point, "size", Math.abs(point.y) / 8), 4, 28) : chartType === "scatter" ? 5 : 3.5;
                 context.beginPath();
                 context.fillStyle = chartType === "bubble" ? color : tokens.surface;

@@ -75,12 +75,12 @@ export const docsPages: DocPage[] = [
     group: "start",
     label: "Visão geral",
     eyebrow: "NODARA DOCS",
-    title: "48 visualizações. Quatro motores.",
-    description: "A Nodara disponibiliza 48 visualizações e receitas reais sobre quatro motores públicos: Gantt, Chart, Topology e Calendar. A distinção é explícita: os motores definem o contrato; o catálogo fornece configurações prontas, demos e padrões de integração.",
+    title: "100 visualizações. Seis motores.",
+    description: "A Nodara disponibiliza 100 visualizações e receitas reais sobre seis motores públicos: Gantt, Chart, Topology, Calendar, GeoMap e Diagram. Os motores definem o contrato; o catálogo fornece configurações prontas, demos e padrões de integração.",
     badges: ["v0.1 alpha", "TypeScript strict", "MIT core"],
-    facts: [{ value: "48", label: "visualizações" }, { value: "4", label: "motores" }, { value: "14", label: "tipos de gráfico" }, { value: "5", label: "pacotes" }],
+    facts: [{ value: "100", label: "visualizações" }, { value: "6", label: "motores" }, { value: "26", label: "tipos de gráfico" }, { value: "5", label: "pacotes" }],
     sections: [
-      { id: "model", title: "O modelo do produto", body: "Quatro motores partilham contratos de dados, temas, renderização adaptativa, acessibilidade, lifecycle e erros. Sobre eles vivem 48 receitas documentadas, sem duplicar lógica nem criar APIs incompatíveis.", bullets: ["10 receitas Gantt para planeamento temporal e dependências.", "20 gráficos para comparação, composição, distribuição e análise.", "10 topologias para sistemas, redes e relações.", "8 calendários para agenda, recursos e recorrência."] },
+      { id: "model", title: "O modelo do produto", body: "Seis motores partilham contratos de dados, temas, renderização adaptativa, acessibilidade, lifecycle e erros. Sobre eles vivem 100 receitas documentadas, sem duplicar lógica nem criar APIs incompatíveis.", bullets: ["12 receitas Gantt para planeamento temporal e dependências.", "32 gráficos, incluindo famílias científicas e financeiras.", "12 topologias para sistemas, redes e relações.", "16 calendários e schedulers especializados.", "14 mapas geográficos com projeções, rotas e regiões.", "14 diagramas de fluxo, hierarquia e relações."] },
       { id: "status", title: "O que significa alpha", body: "A implementação é funcional e testada, mas a API ainda pode receber alterações aditivas antes da versão 1.0. Os pacotes continuam versionados em conjunto e mudanças incompatíveis devem ter guia de migração." },
       { id: "path", title: "Percurso recomendado", body: "Começa pela instalação, abre a página do componente, copia o schema mínimo e só depois ajusta renderer, interações e performance. A referência do controller é comum a todas as stacks." },
     ],
@@ -90,19 +90,19 @@ export const docsPages: DocPage[] = [
   {
     id: "catalog",
     group: "start",
-    label: "Catálogo de 48",
+    label: "Catálogo de 100",
     eyebrow: "COLEÇÃO",
     title: "Todas as visualizações",
-    description: "O catálogo reúne 48 demos funcionais. Cada item abre o motor real, permite reescrever os dados, valida o schema e mostra opções, eventos e código React.",
-    badges: ["48 demos reais", "dados editáveis", "deep links"],
-    facts: [{ value: "10", label: "Gantt" }, { value: "20", label: "gráficos" }, { value: "10", label: "topologias" }, { value: "8", label: "calendários" }],
+    description: "O catálogo reúne 100 demos funcionais. Cada item abre o motor real, permite reescrever os dados, valida o schema e mostra opções, eventos e código React.",
+    badges: ["100 demos reais", "dados editáveis", "deep links"],
+    facts: [{ value: "12", label: "Gantt" }, { value: "32", label: "gráficos" }, { value: "14", label: "mapas" }, { value: "14", label: "diagramas" }],
     sections: [
-      { id: "honesty", title: "Motores e receitas", body: "Nodara não finge que 48 receitas são 48 implementações isoladas. Existem quatro motores públicos e consistentes; cada receita combina geometria, layout, dados e opções para um caso de uso distinto." },
+      { id: "honesty", title: "Motores e receitas", body: "Nodara não finge que 100 receitas são 100 implementações isoladas. Existem seis motores públicos e consistentes; cada receita combina geometria, layout, dados e opções para um caso de uso distinto." },
       { id: "live", title: "Uma demo real por item", body: "Seleciona qualquer receita, interage com o resultado e observa os eventos. O editor JSON volta a passar pela normalização pública antes de atualizar a visualização." },
-      { id: "coverage", title: "Cobertura atual", body: "A primeira coleção inclui 14 geometrias de gráfico, quatro escalas Gantt, seis layouts de topologia e quatro vistas de calendário, além de padrões de composição, recursos, recorrência e performance." },
+      { id: "coverage", title: "Cobertura atual", body: "A coleção inclui 26 geometrias de gráfico, quatro escalas Gantt, seis layouts de topologia, dez vistas de calendário, três projeções geográficas e catorze tipos de diagrama." },
     ],
     code: [{ label: "ABRIR CATÁLOGO", language: "text", code: "https://nodara-visual.gftsantos.chatgpt.site/catalog" }],
-    keywords: ["catalog", "catálogo", "48", "visualizações", "presets", "receitas", "demos"],
+    keywords: ["catalog", "catálogo", "100", "visualizações", "presets", "receitas", "demos"],
   },
   {
     id: "installation",
@@ -141,7 +141,7 @@ export const docsPages: DocPage[] = [
     code: [{ label: "FLUXO", language: "text", code: `Application data
   → TypeScript contracts + runtime normalization
   → Reactive controller + plugin lifecycle
-  → Gantt | Chart | Topology | Calendar
+  → Gantt | Chart | Topology | Calendar | GeoMap | Diagram
   → DOM | Canvas | WebGL
   → React | Vue | Angular | Web Components | JavaScript` }],
     keywords: ["architecture", "layers", "core", "adapters", "dom", "canvas", "webgl"],
@@ -198,10 +198,10 @@ const tasks: GanttTask[] = [{
     label: "Chart",
     eyebrow: "ANALYTICS",
     title: "Chart",
-    description: "Catorze geometrias: line, area, bar, scatter, bubble, pie, donut, radar, polar-area, heatmap, waterfall, funnel, gauge e candlestick.",
+    description: "Vinte e seis geometrias para análise operacional, científica e financeira, de line e bar a boxplot, contour, candlestick e OHLC.",
     packageName: "@nodara/react · Chart",
-    badges: ["Canvas + WebGL", "14 tipos", "stacked"],
-    facts: [{ value: "14", label: "tipos" }, { value: "20", label: "receitas" }, { value: "10k", label: "pontos testados" }, { value: "1", label: "evento tipado" }],
+    badges: ["Canvas + WebGL", "26 tipos", "stacked"],
+    facts: [{ value: "26", label: "tipos" }, { value: "32", label: "receitas" }, { value: "10k", label: "pontos testados" }, { value: "1", label: "evento tipado" }],
     sections: [
       { id: "data", title: "ChartSeries e ChartPoint", body: "Cada série tem id, label, cor opcional e pontos. x aceita texto, número ou Date; y tem de ser finito. IDs duplicados e valores NaN/Infinity são rejeitados." },
       { id: "stacking", title: "Stacking", body: "stacked calcula baselines por índice e trata valores positivos e negativos separadamente para evitar domínios incorretos." },
@@ -219,7 +219,7 @@ const tasks: GanttTask[] = [{
     api: [
       { title: "ChartOptions", rows: [
         { name: "series", type: "ChartSeries[]", defaultValue: "obrigatório", description: "Séries e pontos do gráfico." },
-        { name: "type", type: "ChartType (14 geometrias)", defaultValue: "line", description: "Line, area, bar, scatter, bubble, pie, donut, radar, polar-area, heatmap, waterfall, funnel, gauge ou candlestick." },
+        { name: "type", type: "ChartType (26 geometrias)", defaultValue: "line", description: "Inclui séries cartesianas, radiais, distribuição, forecast, estatística e OHLC; consulta o catálogo para as 26 opções." },
         { name: "stacked", type: "boolean", defaultValue: "false", description: "Empilha séries por índice." },
         { name: "showLegend", type: "boolean", defaultValue: "true", description: "Legenda visual das séries." },
         { name: "showGrid", type: "boolean", defaultValue: "true", description: "Linhas horizontais e valores do domínio." },
@@ -287,10 +287,10 @@ const tasks: GanttTask[] = [{
     label: "Calendar",
     eyebrow: "OPERAÇÕES",
     title: "Calendar",
-    description: "Calendário day, week, workweek e month com recursos, filtros, recorrência limitada e edição por ponteiro ou teclado.",
+    description: "Calendário e scheduler com dez vistas: dia, semana, mês, agenda, timeline, recursos e planeamento anual.",
     packageName: "@nodara/react · Calendar",
-    badges: ["4 vistas", "recorrência", "recursos"],
-    facts: [{ value: "4", label: "vistas" }, { value: "3", label: "frequências RRULE" }, { value: "500", label: "ocorrências default" }, { value: "2", label: "eventos" }],
+    badges: ["10 vistas", "recorrência", "recursos"],
+    facts: [{ value: "10", label: "vistas" }, { value: "3", label: "frequências RRULE" }, { value: "500", label: "ocorrências default" }, { value: "2", label: "eventos" }],
     sections: [
       { id: "events", title: "CalendarEvent", body: "Um evento precisa de id, title e start. Define end ou durationMinutes; pode ainda indicar recurso, cor, allDay, disabled, recurrence e meta." },
       { id: "recurrence", title: "Recorrência", body: "O subset RRULE suporta DAILY, WEEKLY e MONTHLY, além de INTERVAL, COUNT, UNTIL e BYDAY. A expansão é limitada por maxOccurrences." },
@@ -309,7 +309,7 @@ const tasks: GanttTask[] = [{
     api: [
       { title: "CalendarOptions", rows: [
         { name: "events", type: "CalendarEvent[]", defaultValue: "obrigatório", description: "Eventos de origem; recorrências são expandidas na vista." },
-        { name: "view", type: "day | week | workweek | month", defaultValue: "week", description: "Intervalo e grelha visível." },
+        { name: "view", type: "CalendarView (10 vistas)", defaultValue: "week", description: "Day, week, workweek, month, agenda, timeline-day/week, resource-day/week ou year." },
         { name: "date", type: "DateInput", defaultValue: "agora", description: "Âncora temporal da vista." },
         { name: "weekStartsOn", type: "0 | 1", defaultValue: "1", description: "Domingo ou segunda-feira." },
         { name: "timeZone", type: "string", defaultValue: "local", description: "Identificador de fuso horário para apresentação." },
@@ -329,6 +329,88 @@ const tasks: GanttTask[] = [{
     keywords: ["calendar", "agenda", "rrule", "recurrence", "resources", "month", "week", "event"],
   },
   {
+    id: "geo-map",
+    group: "components",
+    label: "GeoMap",
+    eyebrow: "GEOSPATIAL",
+    title: "GeoMap",
+    description: "Mapas geográficos Canvas com pontos, bolhas, rotas, heatmaps, regiões, três projeções e viewport interativo.",
+    packageName: "@nodara/react · GeoMap",
+    badges: ["3 projeções", "5 modos", "pan + zoom"],
+    facts: [{ value: "14", label: "receitas" }, { value: "3", label: "projeções" }, { value: "5", label: "modos" }, { value: "2", label: "eventos" }],
+    sections: [
+      { id: "geo-data", title: "GeoMapData", body: "points usa latitude e longitude; routes liga ids de pontos ou coordenadas diretas; regions recebe polígonos com pelo menos três coordenadas. O normalizer valida limites geográficos e referências." },
+      { id: "projections", title: "Projeções", body: "Mercator é adequada a mapas navegáveis, equirectangular preserva uma grelha linear e orthographic apresenta um hemisfério. center define a origem e viewport controla zoom e deslocamento." },
+      { id: "modes", title: "Camadas e modos", body: "points desenha marcadores, bubbles dimensiona por value, routes desenha fluxos dirigidos, heatmap representa concentração e choropleth preenche regiões por valor." },
+    ],
+    code: [{ label: "REACT", language: "tsx", code: `const geoData = {
+  points: [{ id: 'lisbon', label: 'Lisboa', latitude: 38.72, longitude: -9.14, value: 58 }],
+  routes: [{ from: 'lisbon', to: { latitude: 51.51, longitude: -0.13 }, directed: true }],
+  regions: []
+};
+
+<GeoMap data={geoData} mode="routes" projection="mercator"
+  interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }}
+  onPointSelect={({ point }) => inspect(point)} style={{ height: 520 }} />` }],
+    api: [
+      { title: "GeoMapOptions", rows: [
+        { name: "data", type: "GeoMapData", defaultValue: "obrigatório", description: "Pontos, rotas e regiões geográficas." },
+        { name: "projection", type: "mercator | equirectangular | orthographic", defaultValue: "mercator", description: "Transformação de longitude/latitude para o Canvas." },
+        { name: "mode", type: "points | bubbles | routes | heatmap | choropleth", defaultValue: "points", description: "Camada visual principal." },
+        { name: "center", type: "GeoCoordinate", defaultValue: "0°, 12°", description: "Centro longitudinal e latitudinal da projeção." },
+        { name: "initialZoom / minZoom / maxZoom", type: "number", defaultValue: "1 / 0.6 / 12", description: "Limites do viewport." },
+        { name: "pointRadius", type: "number", defaultValue: "6", description: "Raio base dos marcadores." },
+        { name: "showGraticule", type: "boolean", defaultValue: "true", description: "Mostra a grelha geográfica." },
+        { name: "onPointSelect", type: "(event) => void", defaultValue: "—", description: "Seleção de ponto por ponteiro ou teclado." },
+        { name: "onViewportChange", type: "(event) => void", defaultValue: "—", description: "Emite zoom e pan atuais." },
+      ] },
+      { title: "Opções partilhadas", rows: baseOptions },
+    ],
+    events: [
+      { name: "point:select", type: "GeoPointEvent", defaultValue: "pointer | keyboard", description: "Ponto selecionado e origem." },
+      { name: "viewport:change", type: "GeoViewportEvent", defaultValue: "pointer", description: "zoom, x, y e source." },
+    ],
+    keywords: ["map", "geo", "mercator", "orthographic", "routes", "choropleth", "heatmap"],
+  },
+  {
+    id: "diagram",
+    group: "components",
+    label: "Diagram",
+    eyebrow: "FLOWS & HIERARCHIES",
+    title: "Diagram",
+    description: "Catorze diagramas para fluxo, hierarquia, processos, estados, dados e organizações, incluindo Sankey e treemap.",
+    packageName: "@nodara/react · Diagram",
+    badges: ["14 tipos", "links ponderados", "teclado"],
+    facts: [{ value: "14", label: "tipos" }, { value: "14", label: "receitas" }, { value: "2", label: "orientações" }, { value: "1", label: "evento" }],
+    sections: [
+      { id: "diagram-data", title: "DiagramData", body: "nodes pode declarar value, parentId, kind e meta; links liga ids existentes e pode transportar value, direção, cor e label. IDs e referências são validados antes de desenhar." },
+      { id: "flows", title: "Fluxos ponderados", body: "Sankey e alluvial atribuem níveis aos nós e espessura proporcional a link.value. Chord distribui grupos em círculo e representa relações curvas." },
+      { id: "hierarchies", title: "Hierarquias e processos", body: "Treemap, sunburst, icicle e circle-pack representam magnitude; tree, radial-tree, mindmap, flowchart, org-chart, ER e state organizam relações e níveis." },
+    ],
+    code: [{ label: "REACT", language: "tsx", code: `const flow = {
+  nodes: [{ id: 'traffic', label: 'Tráfego', value: 100 }, { id: 'trial', label: 'Trial', value: 42 }],
+  links: [{ from: 'traffic', to: 'trial', value: 42, directed: true }]
+};
+
+<Diagram data={flow} type="sankey"
+  onNodeSelect={({ node }) => inspect(node)}
+  style={{ height: 520 }} />` }],
+    api: [
+      { title: "DiagramOptions", rows: [
+        { name: "data", type: "DiagramData", defaultValue: "obrigatório", description: "Nós e links validados." },
+        { name: "type", type: "DiagramType (14 tipos)", defaultValue: "flowchart", description: "Sankey, alluvial, treemap, sunburst, icicle, circle-pack, árvores, processos, ER, state e chord." },
+        { name: "orientation", type: "horizontal | vertical", defaultValue: "horizontal", description: "Direção principal de layouts hierárquicos." },
+        { name: "nodeWidth", type: "number", defaultValue: "92", description: "Largura base dos nós retangulares." },
+        { name: "nodeGap", type: "number", defaultValue: "18", description: "Espaçamento entre nós e fluxos." },
+        { name: "linkOpacity", type: "number", defaultValue: "por tipo", description: "Opacidade das relações." },
+        { name: "onNodeSelect", type: "(event) => void", defaultValue: "—", description: "Seleção por ponteiro ou teclado." },
+      ] },
+      { title: "Opções partilhadas", rows: baseOptions },
+    ],
+    events: [{ name: "node:select", type: "DiagramNodeEvent", defaultValue: "pointer | keyboard", description: "Nó selecionado e origem." }],
+    keywords: ["diagram", "sankey", "treemap", "sunburst", "flowchart", "org chart", "ER", "state", "chord"],
+  },
+  {
     id: "react",
     group: "frameworks",
     label: "React",
@@ -337,11 +419,11 @@ const tasks: GanttTask[] = [{
     description: "Componentes funcionais que atualizam dados e opções no controller sem destruir a visualização.",
     packageName: "@nodara/react",
     badges: ["React 18+", "hooks", "tipos reexportados"],
-    facts: [{ value: "4", label: "componentes" }, { value: "1", label: "prop onReady" }, { value: "0", label: "providers" }, { value: "100%", label: "typed" }],
+    facts: [{ value: "6", label: "componentes" }, { value: "1", label: "prop onReady" }, { value: "0", label: "providers" }, { value: "100%", label: "typed" }],
     sections: [
       { id: "lifecycle", title: "Lifecycle", body: "A instância é criada no mount, data e options são observados separadamente, e destroy corre no unmount. onReady entrega o controller quando precisas da API imperativa." },
       { id: "state", title: "Estado controlado", body: "Mantém data ou series no estado da aplicação. Nos callbacks de edição, substitui o item emitido e passa o novo array de volta ao componente." },
-      { id: "exports", title: "Exports", body: "Gantt, Chart, Topology e Calendar, respetivas Props e todos os contratos públicos do core." },
+      { id: "exports", title: "Exports", body: "Gantt, Chart, Topology, Calendar, GeoMap e Diagram, respetivas Props e todos os contratos públicos do core." },
     ],
     code: [{ label: "COMPONENTE CONTROLADO", language: "tsx", code: `import { Gantt, type GanttTask } from '@nodara/react';
 
@@ -368,9 +450,9 @@ function Roadmap() {
     description: "Componentes Vue com props reativas profundas, eventos kebab-case e controller disponível em ready.",
     packageName: "@nodara/vue",
     badges: ["Vue 3.3+", "Composition API", "deep watch"],
-    facts: [{ value: "4", label: "componentes" }, { value: "deep", label: "watch" }, { value: "ready", label: "controller" }, { value: "typed", label: "emits" }],
+    facts: [{ value: "6", label: "componentes" }, { value: "deep", label: "watch" }, { value: "ready", label: "controller" }, { value: "typed", label: "emits" }],
     sections: [
-      { id: "components", title: "Componentes", body: "NodaraGantt, NodaraChart, NodaraTopology e NodaraCalendar recebem data/series/events e um objeto options." },
+      { id: "components", title: "Componentes", body: "NodaraGantt, NodaraChart, NodaraTopology, NodaraCalendar, NodaraGeoMap e NodaraDiagram recebem dados e um objeto options." },
       { id: "reactivity", title: "Reatividade", body: "Alterações profundas aos dados e opções chamam update() e setOptions(). A instância é destruída em onBeforeUnmount." },
       { id: "events", title: "Eventos Vue", body: "Usa @task-select, @task-change, @point-select, @node-select e @event-select. @ready recebe o controller." },
     ],
@@ -396,9 +478,9 @@ import '@nodara/core/styles.css';
     description: "Standalone components com Inputs reativos, Outputs tipados e lifecycle Angular completo.",
     packageName: "@nodara/angular",
     badges: ["Angular 17+", "standalone", "EventEmitter"],
-    facts: [{ value: "4", label: "standalone components" }, { value: "2", label: "inputs padrão" }, { value: "typed", label: "outputs" }, { value: "OnDestroy", label: "cleanup" }],
+    facts: [{ value: "6", label: "standalone components" }, { value: "2", label: "inputs padrão" }, { value: "typed", label: "outputs" }, { value: "OnDestroy", label: "cleanup" }],
     sections: [
-      { id: "imports", title: "Imports standalone", body: "Importa apenas NodaraGanttComponent, NodaraChartComponent, NodaraTopologyComponent ou NodaraCalendarComponent no componente consumidor." },
+      { id: "imports", title: "Imports standalone", body: "Importa apenas o componente necessário, incluindo NodaraGeoMapComponent e NodaraDiagramComponent nas novas famílias." },
       { id: "changes", title: "Mudanças dinâmicas", body: "ngOnChanges encaminha data para update e options para setOptions depois de a view estar pronta." },
       { id: "outputs", title: "Outputs", body: "ready e os eventos específicos usam EventEmitter com payloads do core." },
     ],
@@ -423,9 +505,9 @@ export class TeamSchedule {}` }],
     description: "Custom elements nativos para aplicações sem framework ou stacks que interoperam melhor com o DOM.",
     packageName: "@nodara/web-components",
     badges: ["Custom Elements", "prefix configurável", "eventos DOM"],
-    facts: [{ value: "4", label: "custom elements" }, { value: "nd", label: "prefix default" }, { value: "DOM", label: "CustomEvent" }, { value: "native", label: "lifecycle" }],
+    facts: [{ value: "6", label: "custom elements" }, { value: "nd", label: "prefix default" }, { value: "DOM", label: "CustomEvent" }, { value: "native", label: "lifecycle" }],
     sections: [
-      { id: "define", title: "Registo", body: "defineNodaraElements() regista nd-gantt, nd-chart, nd-topology e nd-calendar. Passa outro prefixo se os nomes já existirem." },
+      { id: "define", title: "Registo", body: "defineNodaraElements() regista nd-gantt, nd-chart, nd-topology, nd-calendar, nd-geo-map e nd-diagram. Passa outro prefixo se os nomes já existirem." },
       { id: "properties", title: "Properties e attributes", body: "Atribui data e options como propriedades JavaScript. theme, aria-label e options JSON também são observados como attributes." },
       { id: "dom-events", title: "Eventos", body: "Os eventos recebem o prefixo nodara:, por exemplo nodara:task-change, nodara:point-select e nodara:viewport-change." },
     ],
@@ -448,9 +530,9 @@ gantt.addEventListener('nodara:task-change', event => save(event.detail.task));`
     description: "Factories diretas do core para controlo total do lifecycle e integração com qualquer arquitetura.",
     packageName: "@nodara/core",
     badges: ["framework agnostic", "controller", "TypeScript"],
-    facts: [{ value: "4", label: "factories" }, { value: "1", label: "controller comum" }, { value: "0", label: "runtime de framework" }, { value: "strict", label: "tipagem" }],
+    facts: [{ value: "6", label: "factories" }, { value: "1", label: "controller comum" }, { value: "0", label: "runtime de framework" }, { value: "strict", label: "tipagem" }],
     sections: [
-      { id: "factories", title: "Factories", body: "createGantt, createChart, createTopology e createCalendar aceitam um seletor CSS ou Element e devolvem NodaraController." },
+      { id: "factories", title: "Factories", body: "createGantt, createChart, createTopology, createCalendar, createGeoMap e createDiagram aceitam um seletor CSS ou Element e devolvem NodaraController." },
       { id: "ownership", title: "Responsabilidade de lifecycle", body: "Sem adaptador, a aplicação deve chamar destroy ao remover o host. Usa update e setOptions para alterações incrementais." },
       { id: "errors", title: "Erros", body: "Apanha falhas com onError ou controller.on('error'). Dados inválidos lançam NodaraError com código estável." },
     ],
@@ -477,9 +559,9 @@ chart.setOptions({ stacked: true });
     description: "Contratos TypeScript e normalização runtime partilhados por todos os renderers e adaptadores.",
     packageName: "@nodara/core",
     badges: ["imutável", "runtime", "erros estáveis"],
-    facts: [{ value: "4", label: "normalizers" }, { value: "100%", label: "updates validados" }, { value: "0–100", label: "progress clamp" }, { value: "unique", label: "ids" }],
+    facts: [{ value: "6", label: "normalizers" }, { value: "100%", label: "updates validados" }, { value: "0–100", label: "progress clamp" }, { value: "unique", label: "ids" }],
     sections: [
-      { id: "normalizers", title: "Normalização pública", body: "normalizeGanttTasks, normalizeChartSeries, normalizeTopology e normalizeCalendarEvents podem ser chamados antes de persistir ou enviar dados." },
+      { id: "normalizers", title: "Normalização pública", body: "Os seis normalizers públicos incluem normalizeGeoMap e normalizeDiagram e podem ser chamados antes de persistir ou enviar dados." },
       { id: "rules", title: "Regras principais", body: "IDs são obrigatórios e únicos; ranges não podem estar invertidos; referências têm de existir; valores numéricos têm de ser finitos; recorrências são analisadas antes do render." },
       { id: "updates", title: "Todos os updates passam aqui", body: "controller.update() volta sempre a normalizar. O input não é mutado; o controller mantém um snapshot clonado e seguro." },
     ],
@@ -606,7 +688,7 @@ createTopology('#map', { data, plugins: [metricsPlugin] });` }],
     label: "Controller",
     eyebrow: "API IMPERATIVA",
     title: "NodaraController",
-    description: "Uma superfície de lifecycle idêntica para os quatro componentes e todas as stacks.",
+    description: "Uma superfície de lifecycle idêntica para os seis componentes e todas as stacks.",
     badges: ["reactive", "normalized", "unsubscribe"],
     facts: [{ value: "8", label: "membros públicos" }, { value: "1", label: "contrato" }, { value: "0", label: "recriações necessárias" }, { value: "typed", label: "generics" }],
     sections: [
@@ -693,7 +775,7 @@ const visible = expandCalendarEvents(events, rangeStart, rangeEnd, 250);` }],
     title: "Testar integrações Nodara",
     description: "Estratégia para contratos, renderers, eventos, acessibilidade, performance e browsers.",
     badges: ["Vitest", "Playwright", "TypeScript"],
-    facts: [{ value: "197", label: "testes core" }, { value: "34", label: "E2E ativos" }, { value: "2", label: "viewports" }, { value: "10k", label: "volume" }],
+    facts: [{ value: "247", label: "testes core" }, { value: "36", label: "E2E ativos" }, { value: "2", label: "viewports" }, { value: "10k", label: "volume" }],
     sections: [
       { id: "unit", title: "Unitários", body: "Testa normalizers e utilities com dados inválidos, limites, imutabilidade e casos vazios. Não uses screenshots para regras de negócio." },
       { id: "integration", title: "Integração", body: "Monta o adaptador, altera dados e opções, observa atributos data-nd-* e confirma eventos. Verifica destroy para evitar listeners residuais." },

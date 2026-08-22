@@ -6,7 +6,9 @@ import {
   contrastRatio,
   createCalendar,
   createChart,
+  createDiagram,
   createGantt,
+  createGeoMap,
   createTopology,
   defaultDarkTokens,
   defaultLightTokens,
@@ -20,7 +22,7 @@ import {
   visualCatalogCounts,
 } from "../src/index";
 import { createController } from "../src/controller";
-import type { BaseOptions, ChartType, GanttTask, NodaraPlugin } from "../src/index";
+import type { BaseOptions, ChartType, DiagramType, GanttTask, NodaraPlugin } from "../src/index";
 import { createCanvas2DContext } from "./setup";
 
 function host(width = 900, height = 500): HTMLDivElement {
@@ -90,17 +92,17 @@ describe("real renderers and interactions", () => {
   it("[I127] renders accessible chart point controls", () => { const element = host(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }] }); expect(element.querySelector("table button")?.textContent).toContain("Jan"); });
   it("[I128] emits chart keyboard selection", () => { const element = host(); const onPointSelect = vi.fn(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }], onPointSelect }); element.querySelector<HTMLButtonElement>("table button")!.click(); expect(onPointSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });
   it("[I129] renders chart tooltips", () => { const element = host(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }], showTooltip: true }); expect(element.querySelector(".nd-chart__tooltip")).not.toBeNull(); });
-  it.each<ChartType>(["line", "area", "bar", "scatter", "bubble", "pie", "donut", "radar", "polar-area", "heatmap", "waterfall", "funnel", "gauge", "candlestick"])("[collection] renders the %s chart geometry", (type) => {
+  it.each<ChartType>(["line", "area", "bar", "scatter", "bubble", "pie", "donut", "radar", "polar-area", "heatmap", "waterfall", "funnel", "gauge", "candlestick", "histogram", "boxplot", "error-bar", "range-area", "step-line", "spline", "lollipop", "bullet", "radial-bar", "ohlc", "violin", "contour"])("[collection] renders the %s chart geometry", (type) => {
     const element = host();
     createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 24, meta: { size: 12, min: 0, max: 100, open: 18, high: 28, low: 15, close: 24 } }, { x: "Fev", y: 36 }] }], type });
     expect(element.dataset.ndType).toBe(type);
     expect(element.dataset.ndRenderer).toBe("canvas");
     expect(element.querySelector("canvas")).not.toBeNull();
   });
-  it("[collection] exposes exactly 48 documented visual recipes", () => {
-    expect(visualCatalog).toHaveLength(48);
-    expect(visualCatalogCounts).toEqual({ gantt: 10, charts: 20, topology: 10, calendar: 8 });
-    expect(new Set(visualCatalog.map((item) => item.id)).size).toBe(48);
+  it("[collection] exposes exactly 100 documented visual recipes", () => {
+    expect(visualCatalog).toHaveLength(100);
+    expect(visualCatalogCounts).toEqual({ gantt: 12, charts: 32, topology: 12, calendar: 16, maps: 14, diagrams: 14 });
+    expect(new Set(visualCatalog.map((item) => item.id)).size).toBe(100);
   });
   it("[I130] records topology layout and renderer", () => { const element = host(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, layout: "grid" }); expect(element.dataset.ndLayout).toBe("grid"); expect(element.dataset.ndRenderer).toBe("canvas"); });
   it("[I131] exposes topology nodes to keyboards", () => { const element = host(); const onNodeSelect = vi.fn(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, onNodeSelect }); element.querySelector<HTMLButtonElement>("ul button")!.click(); expect(onNodeSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });
@@ -115,6 +117,18 @@ describe("real renderers and interactions", () => {
   it("[I166] moves calendar events with pointer drag", () => { const element = host(); const onEventChange = vi.fn(); createCalendar(element, { events: [{ id: "a", title: "A", start: "2026-08-17" }], date: "2026-08-17", onEventChange }); const grid = element.querySelector<HTMLElement>(".nd-calendar__grid")!; vi.spyOn(grid, "getBoundingClientRect").mockReturnValue({ x: 0, y: 0, left: 0, top: 0, width: 700, height: 400, right: 700, bottom: 400, toJSON() {} }); const event = element.querySelector<HTMLElement>(".nd-calendar__event")!; event.dispatchEvent(new PointerEvent("pointerdown", { clientX: 100, button: 0, bubbles: true })); document.dispatchEvent(new PointerEvent("pointerup", { clientX: 200, bubbles: true })); expect(onEventChange).toHaveBeenCalledWith(expect.objectContaining({ change: "move", source: "pointer" })); });
   it("[I167] zooms topology with the wheel", () => { const element = host(); const onViewportChange = vi.fn(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, onViewportChange }); element.querySelector<HTMLCanvasElement>("canvas")!.dispatchEvent(new WheelEvent("wheel", { clientX: 10, clientY: 10, deltaY: -10, bubbles: true, cancelable: true })); expect(onViewportChange).toHaveBeenCalledWith(expect.objectContaining({ zoom: 1.1, source: "pointer" })); });
   it("[I168] pans topology with pointer movement", () => { const element = host(); const onViewportChange = vi.fn(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, onViewportChange }); const canvas = element.querySelector<HTMLCanvasElement>("canvas")!; canvas.dispatchEvent(new PointerEvent("pointerdown", { clientX: 0, clientY: 0, button: 0, bubbles: true })); document.dispatchEvent(new PointerEvent("pointermove", { clientX: 30, clientY: 20, bubbles: true })); document.dispatchEvent(new PointerEvent("pointerup", { clientX: 30, clientY: 20, bubbles: true })); expect(onViewportChange).toHaveBeenCalledWith(expect.objectContaining({ x: 30, y: 20, source: "pointer" })); });
+  it.each<DiagramType>(["sankey", "alluvial", "treemap", "sunburst", "icicle", "circle-pack", "tree", "radial-tree", "mindmap", "flowchart", "org-chart", "er", "state", "chord"])("[collection] renders the %s diagram", (type) => {
+    const element = host();
+    createDiagram(element, { type, data: { nodes: [{ id: "a", label: "A", value: 10 }, { id: "b", label: "B", value: 5 }], links: [{ from: "a", to: "b", value: 5 }] } });
+    expect(element.dataset.ndType).toBe(type);
+    expect(element.querySelector("canvas")).not.toBeNull();
+  });
+  it("[I209] exposes map points to the keyboard", () => { const element = host(); const onPointSelect = vi.fn(); createGeoMap(element, { data: { points: [{ id: "pt", label: "Lisboa", latitude: 38.72, longitude: -9.14 }] }, onPointSelect }); element.querySelector<HTMLButtonElement>("ul button")!.click(); expect(onPointSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });
+  it.each(["mercator", "equirectangular", "orthographic"] as const)("[collection] renders the %s geographic projection", (projection) => { const element = host(); createGeoMap(element, { projection, data: { points: [{ id: "pt", label: "Lisboa", latitude: 38.72, longitude: -9.14 }] } }); expect(element.dataset.ndProjection).toBe(projection); });
+  it("[I210] zooms the geographic viewport", () => { const element = host(); const onViewportChange = vi.fn(); createGeoMap(element, { data: { points: [] }, onViewportChange }); element.querySelector<HTMLCanvasElement>("canvas")!.dispatchEvent(new WheelEvent("wheel", { deltaY: -10, bubbles: true, cancelable: true })); expect(onViewportChange).toHaveBeenCalledWith(expect.objectContaining({ zoom: 1.1 })); });
+  it("[I211] renders the agenda calendar view", () => { const element = host(); createCalendar(element, { date: "2026-08-17", view: "agenda", events: [{ id: "a", title: "A", start: "2026-08-17" }] }); expect(element.querySelectorAll(".nd-calendar__agenda-event")).toHaveLength(1); });
+  it("[I212] renders resource scheduler rows", () => { const element = host(); createCalendar(element, { date: "2026-08-17", view: "resource-week", resources: [{ id: "r", label: "Room" }], events: [{ id: "a", title: "A", resourceId: "r", start: "2026-08-17" }] }); expect(element.querySelectorAll(".nd-calendar__timeline-row")).toHaveLength(1); expect(element.querySelectorAll(".nd-calendar__timeline-event")).toHaveLength(1); });
+  it("[I213] renders twelve months in the year planner", () => { const element = host(); createCalendar(element, { date: "2026-08-17", view: "year", events: [] }); expect(element.querySelectorAll(".nd-calendar__month-card")).toHaveLength(12); });
 });
 
 describe("WebGL and large-volume primitives", () => {
