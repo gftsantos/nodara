@@ -207,7 +207,7 @@ export default function DocsPage() {
 
       <div className={styles.shell}>
         <aside className={`${styles.sidebar} ${mobileNav ? styles.sidebarOpen : ""}`} aria-label="Navegação da documentação">
-          <div className={styles.sidebarIntro}><span>DOCUMENTAÇÃO</span><strong>Referência completa</strong><small>{docsPages.length} guias · 100 demos · 6 motores</small></div>
+          <div className={styles.sidebarIntro}><span>DOCUMENTAÇÃO</span><strong>Referência completa</strong><small>{docsPages.length} guias · 100 receitas · 6 componentes</small></div>
           <nav>
             {docGroups.map((group) => (
               <div className={styles.navGroup} key={group.id}>

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { visualCatalog } from "@nodara/core";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -189,7 +190,7 @@ test("portal links to a complete and honest documentation hub", async ({ page },
   await page.locator(".site-header").getByRole("link", { name: "Documentação", exact: true }).click();
   await expect(page).toHaveURL(/\/docs/);
   await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
-  await expect(page.getByLabel("Navegação da documentação")).toContainText("24 guias · 100 demos · 6 motores");
+  await expect(page.getByLabel("Navegação da documentação")).toContainText("24 guias · 100 receitas · 6 componentes");
 
   for (const component of ["Gantt", "Chart", "Topology", "Calendar", "GeoMap", "Diagram"]) {
     await page.getByLabel("Navegação da documentação").getByRole("link", { name: component, exact: true }).click();
@@ -240,15 +241,57 @@ test("documentation typography and width remain readable", async ({ page }) => {
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });
 
-test("catalog exposes all 100 real recipes and accurate family counts", async ({ page }) => {
+test("catalog separates unique visual types from all recipes", async ({ page }) => {
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("100 visualizações reais");
-  await expect(page.getByText("100 resultados", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("6 componentes. 69 tipos visuais.");
+  await expect(page.getByText("69 tipos visuais", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Tipos únicos/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /Todas as receitas/ }).click();
+  await expect(page.getByText("100 receitas", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Gráficos 32", exact: true }).click();
-  await expect(page.getByText("32 resultados", { exact: true })).toBeVisible();
+  await expect(page.getByText("32 receitas", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Abrir demonstração: Line chart/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Abrir demonstração: Candlestick/ })).toBeVisible();
+});
+
+test("catalog groups presets and lets users switch recipe inside one visual type", async ({ page }) => {
+  await page.goto("/catalog#bar-chart");
+  await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
+  const picker = page.getByRole("combobox", { name: "Escolher receita deste tipo visual" });
+  await expect(picker.locator("option")).toHaveCount(4);
+  await picker.selectOption("stacked-bars");
+  await expect(page.locator("aside[data-active-id='stacked-bars'] .nd-chart")).toHaveAttribute("data-nd-stacked", "true");
+  await expect(page.getByRole("textbox", { name: "Editar dados da demonstração" })).toHaveValue(/Stacked bars/);
+});
+
+test("all 100 catalog recipes mount a real renderer without runtime errors", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium", "One complete catalog sweep is sufficient");
+  test.setTimeout(180_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/catalog");
+  await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
+  await page.getByRole("button", { name: /Todas as receitas/ }).click();
+  await expect(page.locator('[data-catalog-id="resource-plan"]')).toBeAttached();
+  const rootByFamily = { gantt: ".nd-gantt", charts: ".nd-chart", topology: ".nd-topology", calendar: ".nd-calendar", maps: ".nd-geo-map", diagrams: ".nd-diagram" } as const;
+  for (const item of visualCatalog) {
+    await page.locator(`[data-catalog-id="${item.id}"]`).evaluate((element) => (element as HTMLButtonElement).click());
+    const demo = page.locator(`aside[data-active-id="${item.id}"]`);
+    const root = demo.locator(rootByFamily[item.family]);
+    await expect(root).toBeVisible();
+    if (item.family === "gantt") await expect(root).toHaveAttribute("data-nd-zoom", String(item.options.zoom));
+    if (item.family === "charts") await expect(root).toHaveAttribute("data-nd-type", String(item.options.type));
+    if (item.family === "topology") await expect(root).toHaveAttribute("data-nd-layout", String(item.options.layout));
+    if (item.family === "calendar") await expect(root).toHaveAttribute("data-nd-view", String(item.options.view));
+    if (item.family === "maps") {
+      await expect(root).toHaveAttribute("data-nd-mode", String(item.options.mode));
+      await expect(root).toHaveAttribute("data-nd-projection", String(item.options.projection));
+    }
+    if (item.family === "diagrams") await expect(root).toHaveAttribute("data-nd-type", String(item.options.type));
+    expect(await demo.getByRole("textbox", { name: "Editar dados da demonstração" }).inputValue()).toContain(item.name);
+  }
+  expect(errors).toEqual([]);
 });
 
 test("catalog opens geographic maps, diagrams and specialized schedulers", async ({ page }) => {
@@ -280,7 +323,7 @@ test("catalog search, typography and responsive width remain usable", async ({ p
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
   await page.getByRole("textbox", { name: "Procurar no catálogo" }).fill("recorrentes");
-  await expect(page.getByText("1 resultados", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 tipos visuais", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Eventos recorrentes/ })).toBeVisible();
   const audit = await page.evaluate(() => {
     const sizes = [...document.body.querySelectorAll("*")].filter((element) => {
@@ -290,6 +333,34 @@ test("catalog search, typography and responsive width remain usable", async ({ p
     }).map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
     return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
   });
-  expect(audit.minimum).toBeGreaterThanOrEqual(9);
+  expect(audit.minimum).toBeGreaterThanOrEqual(11);
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
+});
+
+test("catalog light theme keeps accents and actions readable", async ({ page }) => {
+  await page.goto("/catalog");
+  await page.getByRole("button", { name: "Ativar modo claro" }).click();
+  const ratios = await page.evaluate(() => {
+    const parse = (value: string) => value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [0, 0, 0];
+    const luminance = (value: string) => {
+      const channels = parse(value).map((channel) => {
+        const normalized = channel / 255;
+        return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+    };
+    const contrast = (foreground: string, background: string) => {
+      const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+      return (values[0]! + 0.05) / (values[1]! + 0.05);
+    };
+    const metric = document.querySelector("[data-contrast-sample='accent']")!;
+    const pageRoot = document.querySelector("main")!;
+    const action = document.querySelector("[data-contrast-sample='action']")!;
+    return {
+      accentText: contrast(getComputedStyle(metric).color, getComputedStyle(pageRoot).backgroundColor),
+      primaryAction: contrast(getComputedStyle(action).color, getComputedStyle(action).backgroundColor),
+    };
+  });
+  expect(ratios.accentText).toBeGreaterThanOrEqual(4.5);
+  expect(ratios.primaryAction).toBeGreaterThanOrEqual(4.5);
 });

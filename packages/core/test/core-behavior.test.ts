@@ -14,12 +14,16 @@ import {
   defaultLightTokens,
   hexToRgb,
   isInteractionEnabled,
+  getVisualCatalogGroupKey,
   readableTextColor,
   relativeLuminance,
   renderWebGLPoints,
   resolveRenderMode,
   visualCatalog,
   visualCatalogCounts,
+  visualCatalogGroups,
+  visualCatalogStats,
+  visualCatalogUniqueCounts,
 } from "../src/index";
 import { createController } from "../src/controller";
 import type { BaseOptions, ChartType, DiagramType, GanttTask, NodaraPlugin } from "../src/index";
@@ -103,6 +107,17 @@ describe("real renderers and interactions", () => {
     expect(visualCatalog).toHaveLength(100);
     expect(visualCatalogCounts).toEqual({ gantt: 12, charts: 32, topology: 12, calendar: 16, maps: 14, diagrams: 14 });
     expect(new Set(visualCatalog.map((item) => item.id)).size).toBe(100);
+  });
+  it("[collection] distinguishes 69 visual types from their 100 recipes", () => {
+    expect(visualCatalogStats).toEqual({ components: 6, visualTypes: 69, recipes: 100, additionalPresets: 31 });
+    expect(visualCatalogGroups).toHaveLength(69);
+    expect(visualCatalogUniqueCounts).toEqual({ gantt: 4, charts: 26, topology: 5, calendar: 10, maps: 10, diagrams: 14 });
+    expect(visualCatalogGroups.flatMap((group) => group.items.map((item) => item.id))).toHaveLength(100);
+    for (const group of visualCatalogGroups) {
+      expect(group.items.length).toBeGreaterThan(0);
+      expect(group.items.every((item) => item.family === group.family && item.dataContract === group.dataContract)).toBe(true);
+      expect(new Set(group.items.map(getVisualCatalogGroupKey))).toEqual(new Set([group.id]));
+    }
   });
   it("[I130] records topology layout and renderer", () => { const element = host(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, layout: "grid" }); expect(element.dataset.ndLayout).toBe("grid"); expect(element.dataset.ndRenderer).toBe("canvas"); });
   it("[I131] exposes topology nodes to keyboards", () => { const element = host(); const onNodeSelect = vi.fn(); createTopology(element, { data: { nodes: [{ id: "a", label: "A" }], edges: [] }, onNodeSelect }); element.querySelector<HTMLButtonElement>("ul button")!.click(); expect(onNodeSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });

@@ -11,8 +11,12 @@ import {
   normalizeGeoMap,
   normalizeGanttTasks,
   normalizeTopology,
+  groupVisualCatalog,
   visualCatalog,
   visualCatalogCounts,
+  visualCatalogGroups,
+  visualCatalogStats,
+  visualCatalogUniqueCounts,
 } from "@nodara/core";
 import type {
   CalendarEvent,
@@ -37,6 +41,7 @@ import styles from "./catalog.module.css";
 
 type CatalogData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
 type FamilyFilter = "all" | VisualFamily;
+type CatalogView = "types" | "recipes";
 
 const familyLabels: Record<VisualFamily, string> = {
   gantt: "Gantt",
@@ -186,12 +191,22 @@ function chartDataFor(item: VisualCatalogItem): ChartSeries[] {
 }
 
 function sampleData(item: VisualCatalogItem): CatalogData {
-  if (item.family === "gantt") return structuredClone(ganttData);
-  if (item.family === "charts") return chartDataFor(item);
-  if (item.family === "topology") return structuredClone(topologyData);
-  if (item.family === "calendar") return structuredClone(calendarData);
-  if (item.family === "maps") return structuredClone(geoMapData);
-  return structuredClone(diagramData);
+  if (item.family === "gantt") return structuredClone(ganttData).map((task, index) => index === 0 ? { ...task, label: item.name } : task);
+  if (item.family === "charts") return chartDataFor(item).map((series, index) => index === 0 ? { ...series, label: item.name } : series);
+  if (item.family === "topology") {
+    const sample = structuredClone(topologyData);
+    sample.nodes[0] = { ...sample.nodes[0]!, label: item.name };
+    return sample;
+  }
+  if (item.family === "calendar") return structuredClone(calendarData).map((event, index) => index === 0 ? { ...event, title: item.name } : event);
+  if (item.family === "maps") {
+    const sample = structuredClone(geoMapData);
+    sample.points[0] = { ...sample.points[0]!, label: item.name };
+    return sample;
+  }
+  const sample = structuredClone(diagramData);
+  sample.nodes[0] = { ...sample.nodes[0]!, label: item.name };
+  return sample;
 }
 
 function normalizeData(item: VisualCatalogItem, json: string): CatalogData {
@@ -241,6 +256,7 @@ function CatalogPreview({ data, item, onDataChange, onEvent, theme }: { data: Ca
 
 export default function CatalogPage() {
   const [activeId, setActiveId] = useState(visualCatalog[0]!.id);
+  const [catalogView, setCatalogView] = useState<CatalogView>("types");
   const [filter, setFilter] = useState<FamilyFilter>("all");
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<VisualTheme>("dark");
@@ -257,6 +273,9 @@ export default function CatalogPage() {
     const normalized = query.trim().toLocaleLowerCase("pt-PT");
     return visualCatalog.filter((item) => (filter === "all" || item.family === filter) && (!normalized || `${item.name} ${item.description} ${item.tags.join(" ")}`.toLocaleLowerCase("pt-PT").includes(normalized)));
   }, [filter, query]);
+  const filteredGroups = useMemo(() => groupVisualCatalog(filtered), [filtered]);
+  const activeGroup = visualCatalogGroups.find((group) => group.items.some((item) => item.id === activeItem.id)) ?? visualCatalogGroups[0]!;
+  const resultCount = catalogView === "types" ? filteredGroups.length : filtered.length;
 
   useEffect(() => {
     const selectHash = () => {
@@ -332,13 +351,20 @@ export default function CatalogPage() {
       </header>
 
       <section className={styles.hero}>
-        <p>CATÁLOGO NODARA · COLEÇÃO EXPANDIDA</p>
-        <h1>100 visualizações reais.<br /><span>Seis motores, dados teus.</span></h1>
+        <p>CATÁLOGO NODARA · ARQUITETURA EXPLICADA</p>
+        <h1>6 componentes. 69 tipos visuais.<br /><span>100 receitas prontas.</span></h1>
         <div className={styles.heroBottom}>
-          <p>Seis motores partilhados, 100 receitas utilizáveis e 26 geometrias de gráfico. Mapas geográficos, diagramas, schedulers, Gantt, topologias e gráficos abrem com dados editáveis, eventos e código de integração.</p>
-          <div className={styles.metric}><strong>100</strong><span>demos funcionais</span></div>
-          <div className={styles.metric}><strong>26</strong><span>tipos de gráfico</span></div>
-          <div className={styles.metric}><strong>6</strong><span>motores</span></div>
+          <p>Um componente é a API que integras. Um tipo visual é uma geometria, vista ou layout distinto. Uma receita combina esse tipo com opções e dados para um caso de uso. Assim sabes exatamente o que é único e o que é um preset reutilizável.</p>
+          <div className={styles.metric}><strong>{visualCatalogStats.components}</strong><span>componentes públicos</span></div>
+          <div className={styles.metric}><strong data-contrast-sample="accent">{visualCatalogStats.visualTypes}</strong><span>tipos visuais únicos</span></div>
+          <div className={styles.metric}><strong>{visualCatalogStats.recipes}</strong><span>receitas testáveis</span></div>
+        </div>
+        <div className={styles.modelStrip} aria-label="Modelo do catálogo">
+          <div><span>01</span><strong>Componente</strong><small>API e contrato estáveis</small></div>
+          <ChevronRight aria-hidden="true" />
+          <div><span>02</span><strong>Tipo visual</strong><small>Geometria, vista ou layout</small></div>
+          <ChevronRight aria-hidden="true" />
+          <div><span>03</span><strong>Receita</strong><small>Dados e opções de um caso real</small></div>
         </div>
       </section>
 
@@ -346,30 +372,36 @@ export default function CatalogPage() {
         <div className={styles.collection}>
           <div className={styles.toolbar}>
             <label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Procurar visualização…" aria-label="Procurar no catálogo" /></label>
+            <div className={styles.viewSwitch} role="group" aria-label="Nível de detalhe do catálogo">
+              <button type="button" aria-pressed={catalogView === "types"} className={catalogView === "types" ? styles.activeView : ""} onClick={() => setCatalogView("types")}><strong>Tipos únicos</strong><span>69 agrupados, sem ruído</span></button>
+              <button type="button" aria-pressed={catalogView === "recipes"} className={catalogView === "recipes" ? styles.activeView : ""} onClick={() => setCatalogView("recipes")}><strong>Todas as receitas</strong><span>100 casos de uso</span></button>
+            </div>
             <div className={styles.filters} role="group" aria-label="Filtrar por família">
-              <button type="button" className={filter === "all" ? styles.activeFilter : ""} onClick={() => setFilter("all")}>Todas <span>100</span></button>
-              {(Object.keys(familyLabels) as VisualFamily[]).map((family) => <button type="button" className={filter === family ? styles.activeFilter : ""} onClick={() => setFilter(family)} key={family}>{familyLabels[family]} <span>{visualCatalogCounts[family]}</span></button>)}
+              <button type="button" className={filter === "all" ? styles.activeFilter : ""} onClick={() => setFilter("all")}>Todas <span>{catalogView === "types" ? visualCatalogStats.visualTypes : visualCatalogStats.recipes}</span></button>
+              {(Object.keys(familyLabels) as VisualFamily[]).map((family) => <button type="button" className={filter === family ? styles.activeFilter : ""} onClick={() => setFilter(family)} key={family}>{familyLabels[family]} <span>{catalogView === "types" ? visualCatalogUniqueCounts[family] : visualCatalogCounts[family]}</span></button>)}
             </div>
           </div>
-          <div className={styles.resultLine}><span>{filtered.length} resultados</span><span>Todos ligados ao core público</span></div>
+          <div className={styles.resultLine}><span>{resultCount} {catalogView === "types" ? "tipos visuais" : "receitas"}</span><span>{catalogView === "types" ? `${filtered.length - filteredGroups.length} presets agrupados` : "Todos ligados ao core público"}</span></div>
           <div className={styles.grid}>
-            {filtered.map((item, index) => (
-              <button type="button" className={`${styles.card} ${activeItem.id === item.id ? styles.activeCard : ""}`} onClick={() => choose(item)} key={item.id} style={{ "--family": familyColors[item.family] } as React.CSSProperties} aria-label={`Abrir demonstração: ${item.name}`}>
+            {(catalogView === "types" ? filteredGroups.map((group) => ({ item: group.items[0]!, recipes: group.items })) : filtered.map((item) => ({ item, recipes: [item] }))).map(({ item, recipes }, index) => (
+              <button type="button" data-catalog-id={item.id} className={`${styles.card} ${recipes.some((recipe) => recipe.id === activeItem.id) ? styles.activeCard : ""}`} onClick={() => choose(item)} key={catalogView === "types" ? `${item.family}-${recipes.map((recipe) => recipe.id).join("-")}` : item.id} style={{ "--family": familyColors[item.family] } as React.CSSProperties} aria-label={`Abrir demonstração: ${item.name}`}>
                 <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.cardFamily}>{familyLabels[item.family]}</span>
+                <span className={styles.cardFamily}>{familyLabels[item.family]} · {catalogView === "types" ? "TIPO VISUAL" : "RECEITA"}</span>
                 <strong>{item.name}</strong>
                 <span className={styles.cardDescription}>{item.description}</span>
                 <span className={styles.tags}>{item.tags.slice(0, 3).map((tag, tagIndex) => <i key={`${tag}-${tagIndex}`}>{tag}</i>)}</span>
-                <span className={styles.open}>Abrir demo real <ChevronRight size={15} /></span>
+                <span className={styles.open}>{recipes.length > 1 ? `${recipes.length} receitas · abrir grupo` : "Abrir demo real"} <ChevronRight size={15} /></span>
               </button>
             ))}
           </div>
-          {filtered.length === 0 && <div className={styles.empty}>Nenhuma visualização corresponde à pesquisa.</div>}
+          {resultCount === 0 && <div className={styles.empty}>Nenhuma visualização corresponde à pesquisa.</div>}
         </div>
 
-        <aside className={styles.demo} ref={demoRef} aria-label={`Demonstração de ${activeItem.name}`}>
+        <aside className={styles.demo} data-active-id={activeItem.id} ref={demoRef} aria-label={`Demonstração de ${activeItem.name}`}>
           <div className={styles.demoHead}>
-            <div><span style={{ color: familyColors[activeItem.family] }}>{familyLabels[activeItem.family]}</span><h2>{activeItem.name}</h2><p>{activeItem.description}</p></div>
+            <div><span style={{ color: familyColors[activeItem.family] }}>{familyLabels[activeItem.family]} · {activeGroup.variant}</span><h2>{activeItem.name}</h2><p>{activeItem.description}</p>
+              {activeGroup.items.length > 1 && <label className={styles.recipePicker}>Receita deste tipo<select aria-label="Escolher receita deste tipo visual" value={activeItem.id} onChange={(event) => { const item = visualCatalog.find((entry) => entry.id === event.target.value); if (item) choose(item); }}>{activeGroup.items.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>}
+            </div>
             <span className={styles.realBadge}><Play size={12} fill="currentColor" /> MOTOR REAL</span>
           </div>
           <div className={styles.preview}>
@@ -380,7 +412,7 @@ export default function CatalogPage() {
             <section>
               <div className={styles.sectionTitle}><span><Database size={14} /> Dados editáveis</span><button type="button" onClick={reset}><RotateCcw size={13} /> Repor</button></div>
               <textarea value={editor} onChange={(event) => setEditor(event.target.value)} spellCheck={false} aria-label="Editar dados da demonstração" />
-              <div className={styles.editorFooter}><span>{editorStatus}</span><button type="button" onClick={applyEditor}><Play size={13} fill="currentColor" /> Validar e renderizar</button></div>
+              <div className={styles.editorFooter}><span role="status" aria-live="polite">{editorStatus}</span><button type="button" data-contrast-sample="action" onClick={applyEditor}><Play size={13} fill="currentColor" /> Validar e renderizar</button></div>
             </section>
             <section>
               <div className={styles.sectionTitle}><span>Integração React</span><button type="button" onClick={copyCode}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? "Copiado" : "Copiar"}</button></div>

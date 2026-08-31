@@ -723,9 +723,9 @@ export default function Home() {
           <div className="hero-copy">
             <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.2 alpha</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
-            <p>Uma biblioteca TypeScript com 100 visualizações prontas, construídas sobre seis motores consistentes para produtos ambiciosos.</p>
+            <p>Uma biblioteca TypeScript com 6 componentes, 69 tipos visuais únicos e 100 receitas prontas para produtos ambiciosos.</p>
             <div className="hero-actions">
-              <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar 100 visualizações</a>
+              <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar o catálogo</a>
               <CopyButton value="npm i @nodara/react" label="npm i @nodara/react" />
             </div>
             <div className="framework-proof">
@@ -764,7 +764,7 @@ export default function Home() {
           </div>
           <div className="hero-foot">
             <div><strong>5</strong><span>pacotes alpha</span></div>
-            <div><strong>100</strong><span>demos reais no catálogo</span></div>
+            <div><strong>69</strong><span>tipos visuais únicos</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
             <div><strong>200+</strong><span>testes automatizados</span></div>
           </div>
@@ -774,7 +774,7 @@ export default function Home() {
           <div className="section-heading">
             <div><span className="section-number">01</span><p>O MESMO MOTOR. TODAS AS FORMAS.</p></div>
             <h2>Um playground para<br />dados do mundo real.</h2>
-            <p>Experimenta aqui quatro workspaces centrais ou abre o catálogo para explorar os seis motores e 100 receitas com demo, dados e integração próprias.</p>
+            <p>Experimenta aqui quatro workspaces centrais ou abre o catálogo organizado por 69 tipos visuais e 100 receitas, todos com demo, dados e integração próprios.</p>
           </div>
 
           <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>
@@ -968,7 +968,7 @@ export default function Home() {
 
       <footer>
         <div className="footer-brand"><div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>NODARA</span></div><p>Visual infrastructure for the web.</p></div>
-          <div className="footer-links"><div><strong>PRODUTO</strong><a href="/catalog">100 visualizações</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
+        <div className="footer-links"><div><strong>PRODUTO</strong><a href="/catalog">Catálogo visual</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
         <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer">GitHub</a><a href="/docs">Documentação</a><a href="/docs#architecture">Arquitetura</a></div></div>
       </footer>
 

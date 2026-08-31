@@ -5,8 +5,17 @@ export { createTopology } from "./topology";
 export { createCalendar } from "./calendar";
 export { createGeoMap } from "./geo-map";
 export { createDiagram } from "./diagram";
-export { getVisualCatalogItem, visualCatalog, visualCatalogCounts } from "./catalog";
-export type { VisualCatalogItem, VisualFamily } from "./catalog";
+export {
+  getVisualCatalogGroupKey,
+  getVisualCatalogItem,
+  groupVisualCatalog,
+  visualCatalog,
+  visualCatalogCounts,
+  visualCatalogGroups,
+  visualCatalogStats,
+  visualCatalogUniqueCounts,
+} from "./catalog";
+export type { VisualCatalogGroup, VisualCatalogItem, VisualFamily } from "./catalog";
 export { calendarRange, moveCalendarEvent, replaceCalendarEvent, resizeCalendarEvent, startOfDay, startOfWeek } from "./calendar-model";
 export { applyTheme, defaultDarkTokens, defaultLightTokens, resolveTheme } from "./theme";
 export { contrastRatio, hexToRgb, readableTextColor, relativeLuminance } from "./color";

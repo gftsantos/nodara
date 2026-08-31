@@ -12,6 +12,14 @@ export interface VisualCatalogItem {
   options: Readonly<Record<string, string | number | boolean>>;
 }
 
+export interface VisualCatalogGroup {
+  id: string;
+  family: VisualFamily;
+  variant: string;
+  dataContract: VisualCatalogItem["dataContract"];
+  items: readonly VisualCatalogItem[];
+}
+
 const chart = (id: string, name: string, description: string, type: ChartType, options: Readonly<Record<string, string | number | boolean>> = {}, tags: readonly string[] = []): VisualCatalogItem => ({
   id, family: "charts", name, description, dataContract: "ChartSeries[]", tags: [type, ...tags], options: { type, ...options },
 });
@@ -143,6 +151,50 @@ export const visualCatalogCounts: Readonly<Record<VisualFamily, number>> = visua
   counts[item.family] += 1;
   return counts;
 }, { gantt: 0, charts: 0, topology: 0, calendar: 0, maps: 0, diagrams: 0 });
+
+/**
+ * Returns the public visual primitive used by a recipe. Recipes with the same
+ * key share a renderer geometry/view while keeping their own domain defaults.
+ */
+export function getVisualCatalogGroupKey(item: VisualCatalogItem): string {
+  if (item.family === "gantt") return `${item.family}:${String(item.options.zoom)}`;
+  if (item.family === "charts") return `${item.family}:${String(item.options.type)}`;
+  if (item.family === "topology") return `${item.family}:${String(item.options.layout)}`;
+  if (item.family === "calendar") return `${item.family}:${String(item.options.view)}`;
+  if (item.family === "maps") return `${item.family}:${String(item.options.mode)}:${String(item.options.projection)}`;
+  return `${item.family}:${String(item.options.type)}`;
+}
+
+export function groupVisualCatalog(items: readonly VisualCatalogItem[] = visualCatalog): readonly VisualCatalogGroup[] {
+  const groups = new Map<string, VisualCatalogItem[]>();
+  for (const item of items) {
+    const key = getVisualCatalogGroupKey(item);
+    const current = groups.get(key);
+    if (current) current.push(item);
+    else groups.set(key, [item]);
+  }
+  return [...groups.entries()].map(([id, groupItems]) => ({
+    id,
+    family: groupItems[0]!.family,
+    variant: id.slice(id.indexOf(":") + 1).replaceAll(":", " · "),
+    dataContract: groupItems[0]!.dataContract,
+    items: groupItems,
+  }));
+}
+
+export const visualCatalogGroups = groupVisualCatalog();
+
+export const visualCatalogUniqueCounts: Readonly<Record<VisualFamily, number>> = visualCatalogGroups.reduce<Record<VisualFamily, number>>((counts, group) => {
+  counts[group.family] += 1;
+  return counts;
+}, { gantt: 0, charts: 0, topology: 0, calendar: 0, maps: 0, diagrams: 0 });
+
+export const visualCatalogStats = Object.freeze({
+  components: 6,
+  visualTypes: visualCatalogGroups.length,
+  recipes: visualCatalog.length,
+  additionalPresets: visualCatalog.length - visualCatalogGroups.length,
+});
 
 export function getVisualCatalogItem(id: string): VisualCatalogItem | undefined {
   return visualCatalog.find((item) => item.id === id);
