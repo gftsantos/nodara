@@ -60,16 +60,78 @@ const baseOptions: ApiRow[] = [
 
 const controllerRows: ApiRow[] = [
   { name: "element", type: "HTMLElement", defaultValue: "readonly", description: "Elemento host controlado pela instância." },
-  { name: "getData()", type: "TData", defaultValue: "—", description: "Devolve o snapshot normalizado atual." },
+  { name: "getData()", type: "TData", defaultValue: "—", description: "Devolve os dados normalizados atuais. Não os alteres diretamente; usa update/setState." },
   { name: "getOptions()", type: "TOptions", defaultValue: "—", description: "Devolve as opções efetivas atuais." },
   { name: "update(data)", type: "void", defaultValue: "—", description: "Normaliza novamente os dados e redesenha sem recriar o controller." },
   { name: "setOptions(options)", type: "void", defaultValue: "—", description: "Faz merge parcial e aplica opções dinamicamente." },
+  { name: "setState(data, options)", type: "void", defaultValue: "—", description: "Valida os dados e opções em conjunto e faz um único render. Usa ao mudar para um tipo com schema diferente." },
   { name: "resize()", type: "void", defaultValue: "—", description: "Força nova medição e renderização." },
   { name: "on(event, listener)", type: "() => void", defaultValue: "—", description: "Subscreve um evento e devolve a função de unsubscribe." },
   { name: "destroy()", type: "void", defaultValue: "—", description: "Remove listeners, observers, conteúdo e plugins." },
 ];
 
 export const docsPages: DocPage[] = [
+  {
+    id: "statistics", group: "reference", label: "Estatística e isolinhas", eyebrow: "MATH CONTRACTS", title: "Resultados numéricos antes da aparência.",
+    description: "Histogramas com limites explícitos, densidade gaussiana e isolinhas de grelhas escalares. Funções TypeScript puras, sem DOM, usadas pelos componentes reais.",
+    packageName: "@nodara/core", badges: ["Fixtures numéricos", "Sem DOM", "Limites explícitos"],
+    facts: [{ value: "KDE", label: "gaussiano" }, { value: "n−1", label: "Scott · SD amostral" }, { value: "[a,b)", label: "bins" }, { value: "x,y,z", label: "grelha escalar" }],
+    sections: [
+      { id: "histogram", title: "Amostras → bins → componente", body: "histogram(samples,{edges}) calcula bins, includedCount, underflowCount e overflowCount. Os edges são estritamente crescentes. Cada bin inclui o limite esquerdo e exclui o direito, exceto o último que o inclui. density=count/(includedCount×largura); a integral é 1 se existirem amostras incluídas. histogramSeries conserva binStart/binEnd/count/density em meta, permitindo larguras numéricas desiguais.", bullets: ["Com samples=[0,0.5,1,2,4] e edges=[0,1,4], counts=[2,3] e densities=[0.4,0.2].", "Sem amostras: contagens e densidades zero. Não inventa uma distribuição.", "Chart type=histogram continua a aceitar x/y pré-agregados sem limites. Não interpreta esses dados antigos como amostras brutas."] },
+      { id: "kde", title: "Violin e Gaussian KDE", body: "gaussianKDE(samples,{bandwidth,evaluationPoints}) devolve bandwidth, sampleCount e points[{value,density}]. Um bandwidth numérico é uma largura absoluta na unidade dos dados. Scott usa desvio-padrão amostral × n^(-1/5). A densidade não é renormalizada quando a janela de avaliação é truncada.", bullets: ["Chart type=violin interpreta data[].y como amostras brutas; cada série produz um violino. A largura usa uma escala comum de densidade entre séries, não um valor arbitrário por índice.", "A curva visual usa 128 avaliações entre min−3h e max+3h. Há marcas nas observações reais; selecionar a curva identifica a observação mais próxima, não uma nova amostra.", "Scott exige variância finita e diferente de zero. O helper rejeita dados degenerados sem bandwidth explícito; o renderer mostra apenas marcas nesses casos, com data-nd-density=samples-only.", "Para samples=[0], h=1, f(0)=0.3989422804014327. Com samples=[0,2], Scott devolve h≈1.2311444133449163."] },
+      { id: "contour", title: "Contornos: grelha explícita, não pontos dispersos", body: "ScalarGrid={x,y,values}: eixos estritamente crescentes; values é row-major, index=row*x.length+column. marchingSquares(grid,levels) devolve segmentos com level,a{x,y},b{x,y}. Interpola nos edges e resolve células de sela pelo determinante bilinear, normalizado para evitar overflow. Uma sela exata produz quatro braços até ao ponto de sela.", bullets: ["scalarGridSeries converte a grelha para o schema editável: ChartSeries.gridY é a coordenada Y da linha; point.x é a coordenada X; point.y é o valor escalar. seriesScalarGrid faz o caminho inverso e valida todas as linhas.", "Chart type=contour desenha as isolinhas; contourLevels controla os níveis, por defeito cinco interiores ao intervalo de valores. Tooltip e seleção referem-se aos pontos amostrados da grelha.", "Não calcula KDE 2D, interpolação de observações dispersas, isolinhas geográficas com projeção, polígonos preenchidos ou stitching em polígonos fechados.", "Uma grelha vazia, constante ou unidimensional não recebe círculos decorativos para simular contornos."] },
+      { id: "limits", title: "Precisão, limites e erros", body: "NaN/Infinity, limites invertidos, grelhas irregulares e bandwidth inválido são rejeitados. KDE limita samples×avaliações e marching squares limita células×níveis a 10 milhões de operações de referência por chamada. Reescala dados que excedam a precisão numérica; não trates a biblioteca como um pacote de inferência estatística.", bullets: ["Os helpers não inferem causalidade, significância estatística ou decisões financeiras.", "Fixtures verificam valores conhecidos, invariantes de escala, integral, todos os 16 masks de contorno e casos extremos. Não existe certificação de todos os possíveis inputs numéricos."] },
+    ],
+    code: [
+      { label: "HISTOGRAMA · JAVASCRIPT", language: "ts", code: "import { createChart, histogram, histogramSeries } from '@nodara/core';\nimport '@nodara/core/styles.css';\nconst result = histogram([0, 0.5, 1, 2, 4], { edges: [0, 1, 4] });\nconst chart = createChart('#chart', {\n  type: 'histogram',\n  series: [histogramSeries(result, { id: 'h', label: 'Densidade', measure: 'density' })]\n});\n// HTML: <div id=\"chart\" style=\"height:420px\"></div>\n// Ao desmontar: chart.destroy();" },
+      { label: "CONTORNO · JAVASCRIPT", language: "ts", code: "import { createChart, scalarGridSeries } from '@nodara/core';\nimport '@nodara/core/styles.css';\nconst grid = { x: [0, 2], y: [10, 14], values: [0, 2, 0, 2] };\nconst chart = createChart('#chart', {\n  type: 'contour', series: scalarGridSeries(grid), contourLevels: [1]\n});\n// A isolinha é x=1, desde y=10 até y=14.\n// Ao mudar simultaneamente os dados/tipo: chart.setState(nextSeries, nextOptions);" },
+    ],
+    keywords: ["statistics", "histogram", "KDE", "violin", "contour", "Scott", "gaussian", "isolines", "grelha", "bins"],
+  },
+  {
+    id: "operations", group: "components", label: "Planeamento integrado", eyebrow: "OPERATIONAL CORE", title: "Um plano operacional. Cinco projeções sincronizadas.",
+    description: "Modelo TypeScript independente do DOM, transações atómicas, dependências FS, capacidade, caminho crítico e histórico. Experimenta o workspace em /operations e exporta os dados para a tua integração.",
+    packageName: "@nodara/core", badges: ["Schema 1", "Elapsed time", "API alpha"],
+    facts: [{ value: "5", label: "projeções" }, { value: "FS", label: "dependências" }, { value: "CPM", label: "precedências" }, { value: "UTC", label: "timestamps" }],
+    sections: [
+      { id: "model", title: "Um estado autoritativo", body: "OperationalPlan contém schemaVersion:1, timeBasis:'elapsed', projectStartMs, tasks, resources, assignments, dependencies e locations. Os identificadores são estáveis; todas as referências são validadas antes da publicação. normalizeOperationalPlan aceita JSON não confiável, remove campos desconhecidos e devolve uma cópia canónica.", bullets: ["Tarefa: id, label, startMs, durationMs, progress; opcionais notBeforeMs, locked e locationId. Duração zero representa um marco.", "Recurso: id, label e capacityUnits; alocação: taskId, resourceId e units. 100 unidades podem representar uma pessoa, mas a escala é definida pelo consumidor.", "Dependência: id, fromTaskId, toTaskId, kind:'FS', lagMs não negativo. IDs e pares duplicados, referências inexistentes e ciclos são rejeitados.", "Datas são inteiros seguros em milissegundos UTC dentro do intervalo Date do JavaScript. Durações são tempo decorrido: fins de semana e feriados não são subtraídos."] },
+      { id: "transactions", title: "Validar, prever e publicar", body: "createOperationalStore(plan) devolve um store independente de frameworks. preview(transaction) calcula o candidato, conflitos e movimentos automáticos sem publicar estado ou consumir histórico. transact(transaction) valida o candidato inteiro e publica um único snapshot congelado; em caso de erro, preserva o snapshot anterior por identidade.", bullets: ["Transação: id, commands, label opcional, expectedRevision opcional, scheduling:'manual'|'cascade-forward', conflicts:'reject'|'report'. IDs são rótulos de operações; não existe deduplicação/idempotência automática por id.", "Comandos: addTask, updateTask, removeTask, addDependency, removeDependency, assign, unassign, upsertResource, removeResource, upsertLocation, removeLocation e replacePlan.", "Referências não são apagadas implicitamente. Para remover uma tarefa atribuída, remove também as alocações e dependências no mesmo lote.", "expectedRevision rejeita edições preparadas sobre uma revisão antiga. Writes síncronos dentro de subscribe são rejeitados; agenda outro comando fora do callback.", "Erros dos observadores não revertem um commit já publicado; configura onObserverError para os reportar."] },
+      { id: "scheduling", title: "Cascata explicável e capacidade", body: "cascade-forward percorre o grafo e avança cada sucessora até ao máximo de início atual, origem do projeto, notBeforeMs e fim dos predecessores mais lag. Preserva duração e devolve a causa de cada movimento. Nunca antecipa tarefas nem faz nivelamento automático de recursos.", bullets: ["Intervalos de capacidade são semiabertos [start,end). Duas tarefas adjacentes não colidem. Marcos não consomem duração.", "operationalCapacity devolve segmentos com procura, capacidade e tarefas ativas. operationalConflicts descreve sobrecargas, precedências e início mínimo.", "conflicts:'report' permite guardar conflitos de datas/capacidade; não ignora schema inválido, ciclos ou uma cascata que tente mover uma tarefa bloqueada.", "locked impede editar/mover/remover a tarefa pelos comandos normais. Desbloqueia numa operação explícita antes de mudar datas. replacePlan substitui o plano completo e não é uma barreira de autorização."] },
+      { id: "cpm", title: "Caminho crítico: o que é calculado", body: "operationalCriticalPath aplica passes forward/backward ao DAG. Devolve earliestStartMs, earliestEndMs, latestStartMs, latestEndMs, totalFloatMs, criticalTaskIds e criticalDependencyIds. Considera duração, precedências, lag, origem e notBeforeMs, mas ignora datas manuais, capacidade e bloqueios; o resultado identifica-se como precedence-only-elapsed.", bullets: ["Todas as ramificações com folga zero são identificadas, incluindo caminhos críticos empatados.", "Uma ligação só é crítica se ambos os extremos forem críticos e EF(predecessor)+lag = ES(sucessor). Um atalho entre tarefas críticas pode não ser crítico.", "O fim mínimo por precedências pode diferir do fim do plano manual atual. A interface mostra os dois.", "Não inclui calendários laborais, SS/FF/SF, lag negativo, baselines, earned value ou resource leveling nesta versão."] },
+      { id: "views", title: "Projeções e integração com os componentes", body: "operationalGantt, operationalCalendar, operationalTopology, operationalMap e operationalLoadChart geram os schemas públicos a partir do mesmo plano. Guarda a seleção de taskId na tua interface, separada do histórico. Eventos do renderer devem produzir comandos, não mutações independentes das projeções.", bullets: ["O calendário geral produz um evento por tarefa, com meta.taskId; não duplica as tarefas por recurso nesta projeção. A grelha de calendário atual segue o fuso do browser, mesmo com rótulos UTC.", "O mapa agrupa tarefas por local; não converte precedências em viagens nem inclui roteamento rodoviário.", "O gráfico agrega pico concorrente por bucket, não a soma de tarefas disjuntas; endMs e capacidade acompanham cada ponto em meta.", "Callbacks de edição dos renderers antecedem o seu commit local. Ressincroniza a projeção no fim do gesto, incluindo a rejeição, para não deixar o renderer com um candidato inválido."] },
+      { id: "history", title: "Histórico, persistência e limites do workspace", body: "undo/redo restaura uma transação completa, incluindo a cascata. A revisão é monotónica; uma nova edição após undo elimina redo. No-ops não consomem histórico. historyLimit é 100 por defeito, admite 0 para o desligar e no máximo 10.000 snapshots.", bullets: ["exportJSON() inclui schema e plano, mas não seleção, histórico ou revisão. Importar é uma transação replacePlan validada.", "O workspace /operations mantém dados apenas na sessão da página. Exporta antes de recarregar. Não existe conta, backend, colaboração ou persistência cloud implícita.", "O workspace de demonstração limita a 500 tarefas, 500 recursos/locais, 5000 vínculos/alocações e 730 dias, com datas entre 1900 e 2199 (incluindo margem visual). O motor de domínio é independente desta política de UI; mede o teu volume real.", "Testes automatizados não substituem ensaios com leitores de ecrã e hardware físico; não existe certificação universal de acessibilidade ou performance."] },
+    ],
+    api: [{ title: "OperationalStore", rows: [
+      { name: "getSnapshot()", type: "OperationalSnapshot", defaultValue: "revision:0", description: "Snapshot congelado, com plan, conflicts, canUndo, canRedo e lastTransaction." },
+      { name: "preview(transaction)", type: "OperationalPreview", defaultValue: "—", description: "Candidato isolado, movimentos e conflitos; sem efeitos no estado/histórico." },
+      { name: "transact(transaction)", type: "OperationalSnapshot", defaultValue: "conflicts:reject", description: "Commit atómico ou NodaraError; sem publicação parcial." },
+      { name: "undo() / redo()", type: "OperationalSnapshot", defaultValue: "historyLimit:100", description: "Restaura a operação transversal com nova revisão monotónica." },
+      { name: "subscribe(listener)", type: "() => void", defaultValue: "—", description: "Uma notificação por commit; devolve unsubscribe." },
+      { name: "exportJSON()", type: "string", defaultValue: "schemaVersion:1", description: "Serializa apenas o plano atual, não histórico nem seleção." },
+      { name: "destroy()", type: "void", defaultValue: "—", description: "Liberta histórico e subscritores; futuras mutações são rejeitadas." },
+    ] }],
+    code: [{ label: "TRANSAÇÃO + PREVIEW", language: "ts", code: `import { createOperationalStore, operationalCriticalPath } from '@nodara/core';
+
+// plan: OperationalPlan validado, por exemplo o JSON exportado do workspace.
+const store = createOperationalStore(plan);
+const transaction = {
+  id: crypto.randomUUID(),
+  expectedRevision: store.getSnapshot().revision,
+  commands: [{ type: 'updateTask' as const, taskId: 'core', changes: {
+    startMs: Date.UTC(2026, 8, 17)
+  }}],
+  scheduling: 'cascade-forward' as const,
+  conflicts: 'reject' as const
+};
+const preview = store.preview(transaction); // sem publicação
+console.table(preview.moves);
+store.transact(transaction); // um commit
+console.log(operationalCriticalPath(store.getSnapshot().plan));
+store.undo(); // desfaz toda a cascata
+store.redo();
+store.destroy();` }],
+    keywords: ["operations", "planeamento", "scheduling", "transações", "capacidade", "CPM", "undo", "redo", "integrado"],
+  },
   {
     id: "overview",
     group: "start",
@@ -78,13 +140,13 @@ export const docsPages: DocPage[] = [
     title: "6 componentes. 69 configurações. 100 receitas.",
     description: "A Nodara disponibiliza seis componentes públicos, 69 configurações visuais e 100 receitas reais: Gantt, Chart, Topology, Calendar, GeoMap e Diagram. Os componentes definem o contrato; o catálogo fornece configurações prontas, demos e padrões de integração.",
     badges: ["v0.1 alpha", "TypeScript strict", "MIT core"],
-    facts: [{ value: "100", label: "receitas" }, { value: "69", label: "tipos visuais" }, { value: "6", label: "componentes" }, { value: "5", label: "pacotes" }],
+    facts: [{ value: "100", label: "receitas" }, { value: "69", label: "configurações" }, { value: "6", label: "componentes" }, { value: "5", label: "pacotes" }],
     sections: [
       { id: "model", title: "O modelo do produto", body: "Seis componentes partilham contratos de dados, temas, renderização adaptativa, acessibilidade, lifecycle e erros. Sobre eles vivem 69 configurações visuais e 100 receitas documentadas, sem duplicar lógica nem criar APIs incompatíveis.", bullets: ["12 receitas Gantt sobre quatro escalas temporais.", "32 receitas de gráfico sobre 26 geometrias.", "12 receitas de topologia sobre cinco layouts em uso.", "16 calendários sobre dez vistas.", "14 mapas sobre dez combinações de modo e projeção.", "14 configurações de diagrama; algumas partilham o mesmo layout base."] },
       { id: "status", title: "O que significa alpha", body: "A implementação é funcional e testada, mas a API ainda pode receber alterações aditivas antes da versão 1.0. Os pacotes continuam versionados em conjunto e mudanças incompatíveis devem ter guia de migração." },
       { id: "path", title: "Percurso recomendado", body: "Começa pela instalação, abre a página do componente, copia o schema mínimo e só depois ajusta renderer, interações e performance. A referência do controller é comum a todas as stacks." },
     ],
-    code: [{ label: "INSTALAÇÃO REACT", language: "bash", code: "npm i @nodara/react\n\n# CSS base obrigatório\nimport '@nodara/core/styles.css';" }],
+    code: [{ label: "INSTALAÇÃO REACT", language: "bash", code: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-react-0.1.0-alpha.1.tgz\n\n# Descarrega primeiro os .tgz em /docs#installation\n# No módulo JavaScript: import \"@nodara/core/styles.css\";" }],
     keywords: ["introdução", "componentes", "gantt", "chart", "topology", "calendar", "alpha"],
   },
   {
@@ -182,7 +244,7 @@ const tasks: GanttTask[] = [{
         { name: "snap", type: "none | day | week | number", defaultValue: "none", description: "Incremento usado em move e resize." },
         { name: "dependencyRouting", type: "straight | orthogonal", defaultValue: "straight", description: "Traçado das dependências." },
         { name: "onTaskSelect", type: "(event) => void", defaultValue: "—", description: "Seleção por ponteiro ou teclado." },
-        { name: "onTaskChange", type: "(event) => void", defaultValue: "—", description: "Move ou resize confirmado." },
+        { name: "onTaskChange", type: "(event) => void", defaultValue: "—", description: "Proposta de move/resize antes do commit local. O evento task:change/event:change do controller é emitido depois; update/setState não simulam interações." },
       ] },
       { title: "Opções partilhadas", rows: baseOptions },
     ],
@@ -204,7 +266,8 @@ const tasks: GanttTask[] = [{
     facts: [{ value: "26", label: "tipos" }, { value: "32", label: "receitas" }, { value: "10k", label: "pontos testados" }, { value: "1", label: "evento tipado" }],
     sections: [
       { id: "data", title: "ChartSeries e ChartPoint", body: "Cada série tem id, label, cor opcional e pontos. x aceita texto, número ou Date; y tem de ser finito. IDs duplicados e valores NaN/Infinity são rejeitados." },
-      { id: "stacking", title: "Stacking", body: "stacked calcula baselines por índice e trata valores positivos e negativos separadamente para evitar domínios incorretos." },
+      { id: "stacking", title: "Stacking", body: "stacked calcula baselines pela identidade de x entre todas as séries e trata valores positivos e negativos separadamente para evitar domínios incorretos." },
+      { id: "science", title: "Estatística real e limites", body: "Consulta Estatística e isolinhas para histogram, gaussianKDE e marchingSquares. Violin recebe amostras y; Contour exige linhas com gridY e coordenadas x numéricas, produzidas por scalarGridSeries. Candles/boxplots/bullet/radial-bar desenham todas as séries; gauge, waterfall e funnel rejeitam mais de uma série. Gauge aceita um valor." },
       { id: "access", title: "Seleção e tooltip", body: "O Canvas responde ao ponteiro e existe em paralelo uma tabela semanticamente navegável. showTooltip controla apenas a camada visual, não os dados acessíveis." },
     ],
     code: [{ label: "REACT", language: "tsx", code: `const revenue = [{
@@ -220,11 +283,13 @@ const tasks: GanttTask[] = [{
       { title: "ChartOptions", rows: [
         { name: "series", type: "ChartSeries[]", defaultValue: "obrigatório", description: "Séries e pontos do gráfico." },
         { name: "type", type: "ChartType (26 geometrias)", defaultValue: "line", description: "Inclui séries cartesianas, radiais, distribuição, forecast, estatística e OHLC; consulta o catálogo para as 26 opções." },
-        { name: "stacked", type: "boolean", defaultValue: "false", description: "Empilha séries por índice." },
+        { name: "stacked", type: "boolean", defaultValue: "false", description: "Empilha séries pela categoria/instante x; positivos e negativos têm baselines separadas." },
         { name: "showLegend", type: "boolean", defaultValue: "true", description: "Legenda visual das séries." },
         { name: "showGrid", type: "boolean", defaultValue: "true", description: "Linhas horizontais e valores do domínio." },
         { name: "showAxes", type: "boolean", defaultValue: "true", description: "Rótulos dos eixos." },
         { name: "showTooltip", type: "boolean", defaultValue: "true", description: "Tooltip no hover de um ponto." },
+        { name: "violinBandwidth", type: "number | scott", defaultValue: "scott", description: "Largura absoluta do kernel; amostras constantes sem largura mostram apenas marcas." },
+        { name: "contourLevels", type: "number[]", defaultValue: "5 níveis interiores", description: "Níveis escalares das isolinhas; as linhas de dados têm gridY explícito." },
         { name: "valueFormatter", type: "(number) => string", defaultValue: "Intl.NumberFormat", description: "Formata eixo, tooltip e tabela acessível." },
         { name: "labelFormatter", type: "(x) => string", defaultValue: "String", description: "Formata o eixo x." },
         { name: "onPointSelect", type: "(event) => void", defaultValue: "—", description: "Callback ao selecionar um ponto." },
@@ -318,7 +383,7 @@ const tasks: GanttTask[] = [{
         { name: "expandRecurrence", type: "boolean", defaultValue: "true", description: "Expande regras RRULE na janela visível." },
         { name: "maxOccurrences", type: "number", defaultValue: "500", description: "Hard limit de expansão." },
         { name: "onEventSelect", type: "(event) => void", defaultValue: "—", description: "Seleção de evento." },
-        { name: "onEventChange", type: "(event) => void", defaultValue: "—", description: "Move ou resize confirmado." },
+        { name: "onEventChange", type: "(event) => void", defaultValue: "—", description: "Proposta de move/resize antes do commit local. O evento task:change/event:change do controller é emitido depois; update/setState não simulam interações." },
       ] },
       { title: "Opções partilhadas", rows: baseOptions },
     ],
@@ -384,8 +449,8 @@ const tasks: GanttTask[] = [{
     facts: [{ value: "14", label: "tipos" }, { value: "14", label: "receitas" }, { value: "2", label: "orientações" }, { value: "1", label: "evento" }],
     sections: [
       { id: "diagram-data", title: "DiagramData", body: "nodes pode declarar value, parentId, kind e meta; links liga ids existentes e pode transportar value, direção, cor e label. IDs e referências são validados antes de desenhar." },
-      { id: "flows", title: "Fluxos ponderados", body: "Sankey e alluvial atribuem níveis aos nós e espessura proporcional a link.value. Chord distribui grupos em círculo e representa relações curvas." },
-      { id: "hierarchies", title: "Hierarquias e processos", body: "Treemap, sunburst, icicle e circle-pack representam magnitude; tree, radial-tree, mindmap, flowchart, org-chart, ER e state organizam relações e níveis." },
+      { id: "flows", title: "Fluxos ponderados", body: "Sankey/alluvial usam D3 sankey com escala global proporcional de links e altura do nó igual a max(entrada,saída). Ciclos e pesos negativos são rejeitados. Chord distribui grupos em círculo e representa relações curvas." },
+      { id: "hierarchies", title: "Hierarquias e processos", body: "Treemap, sunburst, icicle e circle-pack usam contenção real por parentId e agregação de folhas, sem dupla contagem dos pais. D3 hierarchy fornece os algoritmos. ER e state continuam layouts de caixas sem cardinalidades/semântica dedicadas." },
     ],
     code: [{ label: "REACT", language: "tsx", code: `const flow = {
   nodes: [{ id: 'traffic', label: 'Tráfego', value: 100 }, { id: 'trial', label: 'Trial', value: 42 }],
@@ -399,9 +464,9 @@ const tasks: GanttTask[] = [{
       { title: "DiagramOptions", rows: [
         { name: "data", type: "DiagramData", defaultValue: "obrigatório", description: "Nós e links validados." },
         { name: "type", type: "DiagramType (14 tipos)", defaultValue: "flowchart", description: "Sankey, alluvial, treemap, sunburst, icicle, circle-pack, árvores, processos, ER, state e chord." },
-        { name: "orientation", type: "horizontal | vertical", defaultValue: "horizontal", description: "Direção principal de layouts hierárquicos." },
-        { name: "nodeWidth", type: "number", defaultValue: "92", description: "Largura base dos nós retangulares." },
-        { name: "nodeGap", type: "number", defaultValue: "18", description: "Espaçamento entre nós e fluxos." },
+        { name: "orientation", type: "horizontal | vertical", defaultValue: "horizontal", description: "Direção de fluxo/caixas. Não muda a contenção de treemap, icicle, sunburst ou circle-pack." },
+        { name: "nodeWidth", type: "number", defaultValue: "22 fluxo / 92 caixas", description: "Largura de nós em Sankey/alluvial e layouts de caixas; hierarquias de área não usam esta dimensão." },
+        { name: "nodeGap", type: "number", defaultValue: "18", description: "Separação entre nós Sankey/alluvial. As hierarquias de área usam o seu padding interno." },
         { name: "linkOpacity", type: "number", defaultValue: "por tipo", description: "Opacidade das relações." },
         { name: "onNodeSelect", type: "(event) => void", defaultValue: "—", description: "Seleção por ponteiro ou teclado." },
       ] },
@@ -418,10 +483,10 @@ const tasks: GanttTask[] = [{
     title: "React",
     description: "Componentes funcionais que atualizam dados e opções no controller sem destruir a visualização.",
     packageName: "@nodara/react",
-    badges: ["React 18+", "hooks", "tipos reexportados"],
+    badges: ["React >=18.2.0", "hooks", "tipos reexportados"],
     facts: [{ value: "6", label: "componentes" }, { value: "1", label: "prop onReady" }, { value: "0", label: "providers" }, { value: "100%", label: "typed" }],
     sections: [
-      { id: "lifecycle", title: "Lifecycle", body: "A instância é criada no mount, data e options são observados separadamente, e destroy corre no unmount. onReady entrega o controller quando precisas da API imperativa." },
+      { id: "lifecycle", title: "Lifecycle", body: "A instância é criada no mount; alterações simultâneas usam setState, alterações apenas de opções usam setOptions e props idênticas não causam updates. destroy corre no unmount. onReady entrega o controller quando precisas da API imperativa." },
       { id: "state", title: "Estado controlado", body: "Mantém data ou series no estado da aplicação. Nos callbacks de edição, substitui o item emitido e passa o novo array de volta ao componente." },
       { id: "exports", title: "Exports", body: "Gantt, Chart, Topology, Calendar, GeoMap e Diagram, respetivas Props e todos os contratos públicos do core." },
     ],
@@ -563,7 +628,7 @@ chart.setOptions({ stacked: true });
     sections: [
       { id: "normalizers", title: "Normalização pública", body: "Os seis normalizers públicos incluem normalizeGeoMap e normalizeDiagram e podem ser chamados antes de persistir ou enviar dados." },
       { id: "rules", title: "Regras principais", body: "IDs são obrigatórios e únicos; ranges não podem estar invertidos; referências têm de existir; valores numéricos têm de ser finitos; recorrências são analisadas antes do render." },
-      { id: "updates", title: "Todos os updates passam aqui", body: "controller.update() volta sempre a normalizar. O input não é mutado; o controller mantém um snapshot clonado e seguro." },
+      { id: "updates", title: "Todos os updates passam aqui", body: "controller.update() volta sempre a normalizar. O input estrutural é normalizado, mas getData não promete deep-freeze. Não alteres o resultado diretamente; usa update/setState. Apenas o OperationalStore garante snapshots profundamente congelados." },
     ],
     code: [{ label: "VALIDAÇÃO ANTES DE GUARDAR", language: "ts", code: `import { normalizeGanttTasks, NodaraError } from '@nodara/core';
 
@@ -631,8 +696,8 @@ try {
     badges: ["auto", "Canvas", "WebGL"],
     facts: [{ value: "750", label: "Canvas threshold" }, { value: "5k", label: "WebGL threshold" }, { value: "2×", label: "DPR default máx." }, { value: "10k", label: "volume testado" }],
     sections: [
-      { id: "auto", title: "renderer: auto", body: "O core escolhe DOM abaixo do Canvas threshold, Canvas em volume intermédio e WebGL acima do threshold quando o browser o suporta." },
-      { id: "fallback", title: "Fallback", body: "WebGL explícito recua para Canvas se não estiver disponível. Chart converte DOM pedido em Canvas porque a geometria principal é desenhada em bitmap." },
+      { id: "auto", title: "renderer: auto", body: "A escolha depende da família: Gantt usa DOM/densidade Canvas/WebGL; Chart usa Canvas e WebGL apenas para scatter; Topology usa Canvas/WebGL; Calendar usa DOM; GeoMap e Diagram usam Canvas." },
+      { id: "fallback", title: "Fallback", body: "WebGL indisponível, inicialização falhada ou perda de contexto ativa fallback Canvas nos motores GPU. Chart só usa WebGL em scatter; os restantes tipos usam Canvas." },
       { id: "measurement", title: "Medição", body: "Define uma altura estável, limita devicePixelRatio em dispositivos densos e chama resize() quando o host muda fora do alcance do ResizeObserver." },
     ],
     code: [{ label: "PERFORMANCE OPTIONS", language: "tsx", code: `<Chart series={series} renderer="auto" performance={{
@@ -730,7 +795,7 @@ controller.destroy();` }],
 controller.on('error', error => showToast(error.message));
 controller.on('data:change', data => audit('calendar-data', data));` }],
     events: [
-      { name: "render", type: "TData", defaultValue: "todos", description: "Render concluído." },
+      { name: "render", type: "{ data: TData; options: TOptions }", defaultValue: "todos", description: "Render concluído com os dados e opções atuais." },
       { name: "data:change", type: "TData", defaultValue: "todos", description: "Update normalizado aplicado." },
       { name: "options:change", type: "TOptions", defaultValue: "todos", description: "Opções efetivas alteradas." },
       { name: "error", type: "Error", defaultValue: "todos", description: "Erro do renderer ou lifecycle." },
@@ -753,6 +818,7 @@ controller.on('data:change', data => audit('calendar-data', data));` }],
     sections: [
       { id: "gantt", title: "Tempo e Gantt", body: "DAY, buildTimeScale, resolveGanttRange, resolveSnap, snapTimestamp, shiftTask, resizeTask, replaceTask, dependencyPairs e conversores timestamp/percentagem." },
       { id: "calendar", title: "Calendário e recorrência", body: "calendarRange, startOfDay, startOfWeek, moveCalendarEvent, resizeCalendarEvent, replaceCalendarEvent, parseRecurrence, expandRecurringEvent e expandCalendarEvents." },
+      { id: "math", title: "Hierarquias e estatística", body: "layoutDiagramHierarchy, layoutDiagramSankey, validateDiagramLayout, gaussianKDE, histogram, histogramSeries, marchingSquares, scalarGridSeries e seriesScalarGrid. Consulta Estatística e isolinhas e Planeamento integrado para contratos e exemplos numéricos." },
       { id: "visual", title: "Layout, renderer e cor", body: "calculateTopologyLayout, resolveRenderMode, supportsWebGL, isInteractionEnabled, renderWebGLPoints, applyTheme, resolveTheme, contrastRatio, relativeLuminance e readableTextColor." },
     ],
     code: [{ label: "MODELOS SEM UI", language: "ts", code: `import {
@@ -775,7 +841,7 @@ const visible = expandCalendarEvents(events, rangeStart, rangeEnd, 250);` }],
     title: "Testar integrações Nodara",
     description: "Estratégia para contratos, renderers, eventos, acessibilidade, performance e browsers.",
     badges: ["Vitest", "Playwright", "TypeScript"],
-    facts: [{ value: "247", label: "testes core" }, { value: "36", label: "E2E ativos" }, { value: "2", label: "viewports" }, { value: "10k", label: "volume" }],
+    facts: [{ value: "Unit", label: "contratos e matemática" }, { value: "E2E", label: "percursos reais" }, { value: "4", label: "perfis de browser" }, { value: "Artefactos", label: "consumidores isolados" }],
     sections: [
       { id: "unit", title: "Unitários", body: "Testa normalizers e utilities com dados inválidos, limites, imutabilidade e casos vazios. Não uses screenshots para regras de negócio." },
       { id: "integration", title: "Integração", body: "Monta o adaptador, altera dados e opções, observa atributos data-nd-* e confirma eventos. Verifica destroy para evitar listeners residuais." },

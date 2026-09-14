@@ -13,7 +13,7 @@ import { renderWebGLPoints } from "../src/webgl";
 import type { CalendarEvent, CalendarView, ChartSeries, ChartType } from "../src/types";
 import { createCanvas2DContext } from "./setup";
 
-vi.mock("../src/webgl", () => ({ renderWebGLPoints: vi.fn(() => true) }));
+vi.mock("../src/webgl", async importOriginal => ({ ...await importOriginal<typeof import("../src/webgl")>(), renderWebGLPoints: vi.fn(() => true) }));
 const events: CalendarEvent[] = [{ id: "meeting", title: "Meeting", start: "2026-08-20T10:00:00Z", durationMinutes: 60 }];
 const series: ChartSeries[] = [{ id: "signal", label: "Signal", data: [{ x: 0, y: 10 }, { x: 1, y: 20 }, { x: 100, y: 30 }] }];
 function host() { const root = document.createElement("div"); document.body.append(root); Object.defineProperties(root, { clientWidth: { value: 900 }, clientHeight: { value: 500 } }); return root; }

@@ -13,6 +13,7 @@ export interface RecurrenceRule {
 const dayCodes: Record<string, number> = { SU: 0, MO: 1, TU: 2, WE: 3, TH: 4, FR: 5, SA: 6 };
 
 export function parseRecurrence(input: string): RecurrenceRule {
+  if (typeof input !== "string" || !input.trim()) throw new NodaraError("ND_INVALID_RECURRENCE", "Recurrence must be a non-empty rule string.");
   const entries = new Map(input.split(";").map((part) => {
     const [key = "", value = ""] = part.split("=");
     return [key.trim().toUpperCase(), value.trim().toUpperCase()];
@@ -27,7 +28,7 @@ export function parseRecurrence(input: string): RecurrenceRule {
   const countValue = entries.has("COUNT") ? Number(entries.get("COUNT")) : undefined;
   const untilText = entries.get("UNTIL")?.replace(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})Z)?$/, (_, y, m, d, h, min, s) => `${y}-${m}-${d}${h ? `T${h}:${min}:${s}Z` : ""}`);
   const untilValue = untilText === undefined ? undefined : Date.parse(untilText);
-  if (!Number.isInteger(interval) || interval < 1 || (countValue !== undefined && (!Number.isInteger(countValue) || countValue < 1)) || (untilValue !== undefined && !Number.isFinite(untilValue))) throw new NodaraError("ND_INVALID_RECURRENCE", "Invalid recurrence INTERVAL, COUNT or UNTIL.");
+  if (!Number.isSafeInteger(interval) || interval < 1 || (countValue !== undefined && (!Number.isSafeInteger(countValue) || countValue < 1)) || (untilValue !== undefined && !Number.isFinite(untilValue))) throw new NodaraError("ND_INVALID_RECURRENCE", "Invalid recurrence INTERVAL, COUNT or UNTIL.");
   if (entries.has("BYDAY") && entries.get("BYDAY")!.split(",").some(day => dayCodes[day] === undefined)) throw new NodaraError("ND_INVALID_RECURRENCE", "Invalid BYDAY weekday.");
   const byDayValue = entries.get("BYDAY")?.split(",").map((day) => dayCodes[day]).filter((day): day is number => day !== undefined);
   return {
@@ -45,7 +46,10 @@ export function expandRecurringEvent(
   rangeEnd: number,
   maximum = 500,
 ): CalendarEvent[] {
-  if (!event.recurrence) {
+  toTimestamp(rangeStart, "rangeStart"); toTimestamp(rangeEnd, "rangeEnd");
+  if (!Number.isInteger(maximum) || maximum < 1 || maximum > 100_000) throw new NodaraError("ND_INVALID_RECURRENCE", "maximum must be an integer between 1 and 100000.");
+  if (rangeEnd <= rangeStart) return [];
+  if (event.recurrence === undefined) {
     const start = toTimestamp(event.start);
     return start < rangeEnd && toTimestamp(event.end ?? start) >= rangeStart ? [{ ...event }] : [];
   }
@@ -54,6 +58,8 @@ export function expandRecurringEvent(
   const duration = toTimestamp(event.end ?? originalStart + (event.durationMinutes ?? 60) * 60_000) - originalStart;
   const occurrences: CalendarEvent[] = [];
   const hardLimit = Math.max(1, maximum);
+  let scans = 0;
+  const scan = () => { if (++scans > 100_000) throw new NodaraError("ND_RECURRENCE_LIMIT", "Recurrence expansion exceeded 100000 candidate scans; narrow the range or simplify the rule."); };
   const countLimit = rule.count ?? Number.POSITIVE_INFINITY;
   const pushOccurrence = (cursor: number, ordinal: number) => {
     if (cursor + duration >= rangeStart && cursor < rangeEnd && !event.excludedOccurrences?.includes(ordinal)) {
@@ -67,12 +73,13 @@ export function expandRecurringEvent(
     let ordinal = 0;
     let week = 0;
     while (ordinal < countLimit && occurrences.length < hardLimit) {
+      scan();
       const weekStart = weekBase + week * rule.interval * 7 * DAY;
-      if (weekStart >= rangeEnd || (rule.until && weekStart > rule.until)) break;
+      if (weekStart >= rangeEnd || (rule.until !== undefined && weekStart > rule.until)) break;
       for (const day of [...rule.byDay].sort((a, b) => a - b)) {
         const cursor = weekStart + day * DAY;
         if (cursor < originalStart) continue;
-        if (rule.until && cursor > rule.until) break;
+        if (rule.until !== undefined && cursor > rule.until) break;
         if (ordinal >= countLimit || occurrences.length >= hardLimit) break;
         pushOccurrence(cursor, ordinal);
         ordinal += 1;
@@ -91,7 +98,8 @@ export function expandRecurringEvent(
     cursor = originalStart + ordinal * step;
   }
   while (occurrences.length < hardLimit && ordinal < countLimit && cursor < rangeEnd) {
-    if (rule.until && cursor > rule.until) break;
+    scan();
+    if (rule.until !== undefined && cursor > rule.until) break;
     const allowedDay = !rule.byDay?.length || rule.byDay.includes(new Date(cursor).getDay());
     if (allowedDay) {
       pushOccurrence(cursor, ordinal);
@@ -103,10 +111,12 @@ export function expandRecurringEvent(
       const original = new Date(originalStart);
       let candidate: Date;
       do {
+        scan();
         candidate = new Date(originalStart);
         candidate.setDate(1);
         candidate.setMonth(original.getMonth() + scanned * rule.interval);
         candidate.setDate(original.getDate());
+        if (!Number.isFinite(candidate.getTime()) || candidate.getTime() >= rangeEnd) return occurrences;
         if (candidate.getDate() !== original.getDate()) scanned += 1;
       } while (candidate.getDate() !== original.getDate());
       cursor = candidate.getTime();

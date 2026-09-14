@@ -1,4 +1,4 @@
-import { normalizeCalendarEvents, normalizeChartSeries, normalizeDiagram, normalizeGeoMap, normalizeGanttTasks, normalizeTopology } from "@nodara/core";
+import { histogram, histogramSeries, scalarGridSeries, validateChartOptions, validateDiagramLayout, normalizeCalendarEvents, normalizeChartSeries, normalizeDiagram, normalizeGeoMap, normalizeGanttTasks, normalizeTopology } from "@nodara/core";
 import type { CalendarEvent, ChartSeries, ChartType, DiagramData, GanttTask, GeoMapData, TopologyData, VisualCatalogItem } from "@nodara/core";
 export type CatalogData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
 
@@ -88,8 +88,21 @@ const diagramData: DiagramData = {
   ],
 };
 
+const hierarchyData: DiagramData = {
+  nodes: [
+    { id: "product", label: "Produto", value: 100 },
+    { id: "platform", label: "Plataforma", parentId: "product", value: 60 },
+    { id: "experience", label: "Experiência", parentId: "product", value: 40 },
+    { id: "renderers", label: "Motores", parentId: "platform", value: 35 },
+    { id: "domain", label: "Planeamento", parentId: "platform", value: 25 },
+    { id: "adapters", label: "Adaptadores", parentId: "experience", value: 24 },
+    { id: "docs", label: "Documentação", parentId: "experience", value: 16 },
+  ], links: [],
+};
+
 function chartDataFor(item: VisualCatalogItem): ChartSeries[] {
   const type = item.options.type as ChartType;
+  if (type === "histogram") return [histogramSeries(histogram([1, 2, 3, 4, 7, 8, 9, 12, 15, 18, 20, 23, 26, 30, 33, 37, 40, 45], { edges: [0, 5, 10, 20, 30, 50] }), { id: "latency", label: "Latência · amostras", measure: "count" })];
   if (type === "gauge") return [{ id: "score", label: "SLA", color: "#c8fa63", data: [{ x: "SLA", y: 87, meta: { min: 0, max: 100 } }] }];
   if (type === "funnel") return [{ id: "funnel", label: "Conversão", data: [{ x: "Visitas", y: 12000 }, { x: "Trials", y: 7200 }, { x: "Ativações", y: 4100 }, { x: "Clientes", y: 1820 }] }];
   if (type === "waterfall") return [{ id: "variance", label: "Variação", data: [{ x: "Base", y: 120 }, { x: "Novos", y: 48 }, { x: "Expansão", y: 25 }, { x: "Churn", y: -31 }, { x: "Custos", y: -18 }] }];
@@ -116,8 +129,8 @@ function chartDataFor(item: VisualCatalogItem): ChartSeries[] {
     { x: "Core", y: 94, meta: { max: 100 } }, { x: "React", y: 88, meta: { max: 100 } }, { x: "Vue", y: 79, meta: { max: 100 } }, { x: "Angular", y: 73, meta: { max: 100 } },
   ] }];
   if (type === "violin") return [{ id: "density", label: "Densidade", data: [8, 18, 37, 62, 84, 96, 89, 68, 42, 21, 9].map((y, index) => ({ x: index, y })) }];
-  if (type === "contour") return ["Norte", "Centro", "Sul"].map((label, row) => ({ id: label, label, data: [18, 35, 67, 89, 54, 27].map((y, column) => ({ x: column, y: y - row * 8 })) }));
-  if (type === "heatmap") return ["API", "Web", "Worker", "DB"].map((label, row) => ({ id: label.toLowerCase(), label, data: ["S", "T", "Q", "Q", "S", "S", "D"].map((x, column) => ({ x, y: ((row + 2) * (column + 3) * 13) % 97 })) }));
+  if (type === "contour") return scalarGridSeries({ x: [0, 1, 2, 3, 4, 5], y: [0, 1, 2, 3, 4], values: [0, 1, 2, 2, 1, 0, 1, 3, 6, 5, 3, 1, 2, 5, 10, 9, 4, 2, 1, 3, 6, 5, 3, 1, 0, 1, 2, 2, 1, 0] });
+  if (type === "heatmap") return ["API", "Web", "Worker", "DB"].map((label, row) => ({ id: label.toLowerCase(), label, data: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map((x, column) => ({ x, y: ((row + 2) * (column + 3) * 13) % 97 })) }));
   if (type === "bubble") return [{ id: "markets", label: "Mercados", data: [
     { x: "PT", y: 34, meta: { size: 10 } }, { x: "ES", y: 51, meta: { size: 18 } }, { x: "FR", y: 45, meta: { size: 14 } }, { x: "DE", y: 68, meta: { size: 25 } }, { x: "UK", y: 57, meta: { size: 20 } },
   ] }];
@@ -145,7 +158,7 @@ export function sampleData(item: VisualCatalogItem): CatalogData {
     sample.points[0] = { ...sample.points[0]!, label: item.name };
     return sample;
   }
-  const sample = structuredClone(diagramData);
+  const sample = structuredClone(["treemap", "sunburst", "icicle", "circle-pack"].includes(String(item.options.type)) ? hierarchyData : diagramData);
   sample.nodes[0] = { ...sample.nodes[0]!, label: item.name };
   return sample;
 }
@@ -153,9 +166,9 @@ export function sampleData(item: VisualCatalogItem): CatalogData {
 export function normalizeData(item: VisualCatalogItem, json: string): CatalogData {
   const parsed: unknown = JSON.parse(json);
   if (item.family === "gantt") return normalizeGanttTasks(parsed as GanttTask[]);
-  if (item.family === "charts") return normalizeChartSeries(parsed as ChartSeries[]);
+  if (item.family === "charts") { const data = normalizeChartSeries(parsed as ChartSeries[]); validateChartOptions(data, { ...item.options, series: data }); return data; }
   if (item.family === "topology") return normalizeTopology(parsed as TopologyData);
   if (item.family === "calendar") return normalizeCalendarEvents(parsed as CalendarEvent[]);
   if (item.family === "maps") return normalizeGeoMap(parsed as GeoMapData);
-  return normalizeDiagram(parsed as DiagramData);
+  const data = normalizeDiagram(parsed as DiagramData); validateDiagramLayout(data, item.options.type as import("@nodara/core").DiagramType); return data;
 }

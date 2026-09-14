@@ -1,3 +1,4 @@
+import { validateMapOptions } from "./visual-options";
 import { createController } from "./controller";
 import { isInteractionEnabled } from "./render-mode";
 import { applyTheme } from "./theme";
@@ -11,6 +12,7 @@ import type {
 } from "./types";
 import { clamp, createElement, empty, resolveElement } from "./utils";
 import { normalizeGeoMap } from "./validation";
+import { trackPointer } from "./interaction";
 
 interface ProjectedPoint {
   x: number;
@@ -23,11 +25,15 @@ export function createGeoMap(
   options: GeoMapOptions,
 ): NodaraController<GeoMapData, GeoMapOptions> {
   const container = resolveElement(target);
+  const viewport = { zoom: options.initialZoom ?? 1, x: 0, y: 0 };
+  let previousInitialZoom = options.initialZoom;
   return createController(container, options.data, options, ({ container: root, data, options: currentOptions, emit }) => {
+    let active = true;
+    const cleanups: Array<() => void> = [];
     empty(root);
     root.className = `nd-root nd-geo-map ${currentOptions.className ?? ""}`.trim();
     root.setAttribute("role", "figure");
-    root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Geographic map");
+    if (root.getAttribute("aria-label") !== (currentOptions.ariaLabel ?? "Geographic map")) root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Geographic map");
     const tokens = applyTheme(root, currentOptions.theme, currentOptions.tokens);
     const projection = currentOptions.projection ?? "mercator";
     const mode = currentOptions.mode ?? "points";
@@ -49,7 +55,8 @@ export function createGeoMap(
     const center = currentOptions.center ?? { longitude: 0, latitude: 12 };
     const minimumZoom = Math.max(0.2, currentOptions.minZoom ?? 0.6);
     const maximumZoom = Math.max(minimumZoom, currentOptions.maxZoom ?? 12);
-    const viewport = { zoom: clamp(currentOptions.initialZoom ?? 1, minimumZoom, maximumZoom), x: 0, y: 0 };
+    if (currentOptions.initialZoom !== previousInitialZoom) { viewport.zoom = currentOptions.initialZoom ?? 1; previousInitialZoom = currentOptions.initialZoom; }
+    viewport.zoom = clamp(viewport.zoom, minimumZoom, maximumZoom);
     const pointRadius = Math.max(2, currentOptions.pointRadius ?? 6);
     const values = data.points.map((point) => point.value ?? 1);
     const maximumValue = values.reduce((maximum, value) => Math.max(maximum, Math.abs(value)), 1);
@@ -212,18 +219,20 @@ export function createGeoMap(
     draw();
 
     const selectPoint = (payload: GeoPointEvent) => {
-      if (!isInteractionEnabled(currentOptions.interactive, payload.source === "keyboard" ? "keyboard" : "pointer")) return;
+      if (!active || !isInteractionEnabled(currentOptions.interactive, payload.source === "keyboard" ? "keyboard" : "pointer")) return;
       currentOptions.onPointSelect?.(payload);
       emit("point:select", payload);
     };
-    const list = createElement("ul", "nd-sr-only");
+    const list = createElement("ul", "nd-sr-only nd-accessible-data");
     const accessibilityLimit = Math.max(1, Math.floor(currentOptions.performance?.accessibilityLimit ?? 300));
     data.points.slice(0, accessibilityLimit).forEach((point) => {
       const item = createElement("li");
       const button = createElement("button", "", `${point.label}, latitude ${point.latitude}, longitude ${point.longitude}`);
       button.type = "button";
       button.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
-      button.addEventListener("click", () => selectPoint({ point, source: "keyboard" }));
+      button.dataset.ndFocus = point.id;
+      const select = () => selectPoint({ point, source: "keyboard" });
+      button.addEventListener("click", select); cleanups.push(() => button.removeEventListener("click", select));
       item.append(button);
       list.append(item);
     });
@@ -235,7 +244,7 @@ export function createGeoMap(
       const rect = canvas.getBoundingClientRect();
       return data.points.find((point) => {
         const screen = projectScreen(point);
-        return screen.visible && Math.hypot(screen.x - (clientX - rect.left), screen.y - (clientY - rect.top)) <= pointRadius + 10;
+        return screen.visible && Math.hypot(screen.x - (clientX - rect.left) * width / (rect.width || width), screen.y - (clientY - rect.top) * height / (rect.height || height)) <= pointRadius + 10;
       });
     };
     const emitViewport = () => {
@@ -243,11 +252,11 @@ export function createGeoMap(
       currentOptions.onViewportChange?.(payload);
       emit("viewport:change", payload);
     };
-    let panning = false;
     let moved = false;
-    let panOrigin = { x: 0, y: 0, viewportX: 0, viewportY: 0 };
+    let endGesture: (() => void) | undefined;
     const onClick = (event: MouseEvent) => {
-      if (!isInteractionEnabled(currentOptions.interactive, "pointer") || moved) return;
+      if (moved) { moved = false; return; }
+      if (!isInteractionEnabled(currentOptions.interactive, "pointer")) return;
       const point = pointAt(event.clientX, event.clientY);
       if (point) selectPoint({ point, source: "pointer" });
     };
@@ -259,35 +268,29 @@ export function createGeoMap(
       emitViewport();
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (!isInteractionEnabled(currentOptions.interactive, "pan") || pointAt(event.clientX, event.clientY)) return;
-      panning = true;
       moved = false;
-      panOrigin = { x: event.clientX, y: event.clientY, viewportX: viewport.x, viewportY: viewport.y };
-    };
-    const onPointerMove = (event: PointerEvent) => {
-      if (!panning) return;
-      moved = Math.abs(event.clientX - panOrigin.x) + Math.abs(event.clientY - panOrigin.y) > 2;
-      viewport.x = panOrigin.viewportX + event.clientX - panOrigin.x;
-      viewport.y = panOrigin.viewportY + event.clientY - panOrigin.y;
-      draw();
-    };
-    const onPointerUp = () => {
-      if (!panning) return;
-      panning = false;
-      if (moved) emitViewport();
-      setTimeout(() => { moved = false; }, 0);
+      if (event.button !== 0 || !isInteractionEnabled(currentOptions.interactive, "pan") || pointAt(event.clientX, event.clientY)) return;
+      endGesture?.();
+      moved = false;
+      const panOrigin = { x: event.clientX, y: event.clientY, viewportX: viewport.x, viewportY: viewport.y };
+      const panRect = canvas.getBoundingClientRect();
+      endGesture = trackPointer(event, () => {
+        if (moved) emitViewport();
+      }, move => {
+        moved ||= Math.abs(move.clientX - panOrigin.x) + Math.abs(move.clientY - panOrigin.y) > 2;
+        viewport.x = panOrigin.viewportX + (move.clientX - panOrigin.x) * width / (panRect.width || width);
+        viewport.y = panOrigin.viewportY + (move.clientY - panOrigin.y) * height / (panRect.height || height);
+        draw();
+      }, () => { viewport.x = panOrigin.viewportX; viewport.y = panOrigin.viewportY; moved = false; draw(); });
     };
     canvas.addEventListener("click", onClick);
     canvas.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("pointermove", onPointerMove);
-    document.addEventListener("pointerup", onPointerUp);
     return () => {
+      active = false; endGesture?.(); cleanups.forEach(cleanup => cleanup());
       canvas.removeEventListener("click", onClick);
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerup", onPointerUp);
     };
-  }, { normalize: normalizeGeoMap });
+  }, { normalize: normalizeGeoMap, validate: validateMapOptions });
 }

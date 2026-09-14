@@ -1,10 +1,14 @@
-import type { VisualCatalogItem, VisualFamily, VisualTheme } from "@nodara/core";
+import type { VisualFamily, VisualTheme } from "@nodara/core";
 import type { CatalogData } from "./catalog-data";
 
 export type IntegrationFramework = "react" | "vue" | "angular" | "javascript" | "web-components";
 export const integrationFrameworks: Record<IntegrationFramework, string> = { react: "React", vue: "Vue", angular: "Angular", javascript: "JavaScript", "web-components": "Web Components" };
 export interface IntegrationFile { name: string; code: string }
 export interface IntegrationSettings { theme: VisualTheme; interactive: boolean; height: number }
+// Catalog recipes use scalar presets; other consumers can supply nested public
+// options (for example performance thresholds). Generated code retains its typed
+// component Options declaration and is checked by the integration test matrix.
+export interface IntegrationSource { family: VisualFamily; options: Readonly<Record<string, unknown>> }
 const contracts: Record<VisualFamily, { component: string; tag: string; prop: string; dataType: string; event: string; change?: string }> = {
   gantt: { component: "Gantt", tag: "gantt", prop: "data", dataType: "GanttTask[]", event: "task:select", change: "task:change" },
   charts: { component: "Chart", tag: "chart", prop: "series", dataType: "ChartSeries[]", event: "point:select" },
@@ -19,7 +23,7 @@ export function serializeCode(value: unknown): string {
   return JSON.stringify(value, null, 2).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 }
 
-export function previewOptions(item: VisualCatalogItem, settings: IntegrationSettings): Record<string, unknown> {
+export function previewOptions(item: IntegrationSource, settings: IntegrationSettings): Record<string, unknown> {
   return {
     ...item.options, theme: settings.theme, locale: "pt-PT", interactive: settings.interactive,
     ...(item.family === "gantt" ? { start: "2026-01-01", end: "2026-04-30" } : {}),
@@ -28,7 +32,7 @@ export function previewOptions(item: VisualCatalogItem, settings: IntegrationSet
   };
 }
 
-export function integrationFiles(item: VisualCatalogItem, data: CatalogData, settings: IntegrationSettings, framework: IntegrationFramework): IntegrationFile[] {
+export function integrationFiles(item: IntegrationSource, data: CatalogData, settings: IntegrationSettings, framework: IntegrationFramework): IntegrationFile[] {
   const { component, tag, prop, dataType, event, change } = contracts[item.family];
   const optionsType = `${component}Options`;
   const typedImport = `import type { ${dataType.replace("[]", "")}, ${optionsType} } from "@nodara/core";`;

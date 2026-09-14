@@ -1,0 +1,23 @@
+{
+  "reviewedAt": "2026-09-14",
+  "exceptions": [
+    {
+      "advisory": "GHSA-67mh-4wv8-2f99",
+      "path": "node_modules/@esbuild-kit/core-utils/node_modules/esbuild",
+      "version": "0.18.20",
+      "expires": "2026-10-14",
+      "owner": "Nodara maintainers",
+      "reason": "Development-only drizzle-kit loader uses transform/transformSync, not the affected esbuild serve API. Do not expose an esbuild development server. Replace the parent dependency when a compatible patched release is available.",
+      "evidence": { "path": "node_modules/@esbuild-kit/core-utils/dist/index.js", "sha256": "d6d06a0d53716c5e4fe3ad5202ae8cb63f311065890bf7118b76bfdc187d398d" }
+    },
+    {
+      "advisory": "GHSA-g7r4-m6w7-qqqr",
+      "path": "node_modules/tsup/node_modules/esbuild",
+      "version": "0.27.7",
+      "expires": "2026-10-14",
+      "owner": "Nodara maintainers",
+      "reason": "Development-only tsup invokes build/transform/formatMessages, not the affected esbuild development server. This is a temporary acceptance, not a vulnerability fix; no forced incompatible override is used.",
+      "evidence": { "path": "node_modules/tsup/dist/index.js", "sha256": "8d68123d7e85aab57156133f122dfe83a254ecd506eed26d63c50e8cff8c5cd2" }
+    }
+  ]
+}

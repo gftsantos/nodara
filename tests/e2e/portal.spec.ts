@@ -159,7 +159,7 @@ test("search supports its visible keyboard shortcuts", async ({ page }) => {
 test("framework tabs and theme controls update the interface", async ({ page }) => {
   await page.locator("#integrar").scrollIntoViewIfNeeded();
   await page.getByRole("tab", { name: "Vue" }).click();
-  await expect(page.locator(".install-command code")).toHaveText("npm i @nodara/vue");
+  await expect(page.locator(".install-command code")).toHaveText("npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-vue-0.1.0-alpha.1.tgz");
   await page.getByRole("button", { name: "Alternar tema" }).click();
   await expect(page.locator(".site")).toHaveAttribute("data-theme", "light");
 });
@@ -174,7 +174,7 @@ test("type scale and page width remain usable", async ({ page }) => {
     const sizes = visibleLeafNodes.map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
     return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
   });
-  expect(audit.minimum).toBeGreaterThanOrEqual(10);
+  expect(audit.minimum).toBeGreaterThanOrEqual(12);
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });
 
@@ -190,7 +190,7 @@ test("portal links to a complete and honest documentation hub", async ({ page },
   await page.locator(".site-header").getByRole("link", { name: "Documentação", exact: true }).click();
   await expect(page).toHaveURL(/\/docs/);
   await expect(page.locator('[data-docs-ready="true"]')).toBeVisible();
-  await expect(page.getByLabel("Navegação da documentação")).toContainText("24 guias · 100 receitas · 6 componentes");
+  await expect(page.getByLabel("Navegação da documentação")).toContainText("26 guias · 100 receitas · 6 componentes");
 
   for (const component of ["Gantt", "Chart", "Topology", "Calendar", "GeoMap", "Diagram"]) {
     await page.getByLabel("Navegação da documentação").getByRole("link", { name: component, exact: true }).click();
@@ -237,7 +237,7 @@ test("documentation typography and width remain readable", async ({ page }) => {
     }).map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
     return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
   });
-  expect(audit.minimum).toBeGreaterThanOrEqual(10);
+  expect(audit.minimum).toBeGreaterThanOrEqual(12);
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });
 
@@ -345,7 +345,7 @@ test("catalog search, typography and responsive width remain usable", async ({ p
     }).map((element) => Number.parseFloat(getComputedStyle(element).fontSize));
     return { minimum: Math.min(...sizes), clientWidth: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth };
   });
-  expect(audit.minimum).toBeGreaterThanOrEqual(11);
+  expect(audit.minimum).toBeGreaterThanOrEqual(12);
   expect(audit.scrollWidth).toBeLessThanOrEqual(audit.clientWidth);
 });
 

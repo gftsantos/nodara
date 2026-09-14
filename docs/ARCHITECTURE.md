@@ -3,56 +3,55 @@
 ## Layers
 
 ```text
-Application data
-      |
-      v
-Typed contracts + runtime normalization
-      |
-      v
-Reactive controller + plugin lifecycle
-      |
-      +-- Gantt: semantic DOM / Canvas / WebGL density
-      +-- Charts: Canvas / WebGL + accessible table
-      +-- Topology: Canvas / WebGL + layout engine
-      +-- Calendar: semantic DOM + recurrence engine
-      |
-      v
-React | Vue | Angular | Web Components | JavaScript
+Consumer data / OperationalPlan schema 1
+  -> defensive normalization and option/layout validation
+  -> visual controller OR immutable transactional OperationalStore
+  -> six visual projections with shared types and theme tokens
+  -> JavaScript | React | Vue | Angular | Web Components
 ```
 
-Framework adapters only map component lifecycle and events. Rendering,
-normalization, themes, accessibility semantics, performance selection and
-errors belong to `@nodara/core`.
+The operational store is independent of a renderer. Commands validate references, dates, precedence and capacity before publishing an immutable snapshot. Selection belongs to the portal UI, not the undo history. Export/import serializes the plan, not history, revision or selection.
 
-## Reactive controller
+## Visual controller
 
-Data is normalized on initialization and every update. Options are shallowly
-merged and applied without replacing the controller. Render cleanup runs before
-every redraw; ResizeObserver, document listeners and plugin hooks are released
-on destroy.
+Initialization, update and setState normalize data. setState validates the candidate data and merged options together before changing either; setOptions changes options only. Invalid built-in data/options preserve the previous state and DOM.
 
-## Renderer strategy
+Plugin hooks and consumer callbacks run synchronously. Reentrant mutations during an atomic option/state change are rejected; schedule a subsequent mutation after dispatch. Listener snapshots, bounded recursive dispatch, cleanup, ResizeObserver and theme listeners have regression tests. Exceptions in consumer hooks/formatters are not transactional rollbacks of arbitrary external side effects; an error after commit can report a committed state. getData/getOptions expose the current visual-controller references, not deep-frozen snapshots. The operational store has a separate immutable contract.
 
-`renderer: "auto"` selects DOM for semantic small datasets, Canvas for dense
-data and WebGL after a configurable threshold when the browser supports it.
-Explicit WebGL gracefully falls back to Canvas. Each Canvas/WebGL component
-keeps an accessible DOM representation for assistive technology.
+Framework adapters delegate to this controller. React skips unchanged props, uses setOptions for option-only changes and setState for simultaneous changes. Angular tracks successfully applied options rather than an invalid prior input. Web Components retain committed state even if a removed plugin's cleanup throws.
 
-## Performance
+## Renderer capabilities
 
-- 10,000-task Gantt uses a density renderer instead of creating 10,000 rows.
-- Chart geometry and grid topology layouts are linear in item count.
-- Force layout iterations are bounded.
-- Recurrence expansion has configurable hard limits.
-- Device pixel ratio is capped to control Canvas memory.
+| Component | Current implementation |
+| --- | --- |
+| Gantt | Semantic DOM; Canvas/WebGL density mode |
+| Chart | Canvas; WebGL for compatible scatter charts |
+| Topology | Canvas/WebGL; DOM preference resolves to Canvas |
+| Calendar | Semantic DOM |
+| GeoMap | Canvas |
+| Diagram | Canvas |
 
-## Quality gates
+renderer is a preference subject to component capabilities. WebGL paths include Canvas fallback after initialization failure or actual context loss. A density Gantt is an overview, not full interaction parity with the DOM scheduler.
 
-The repository runs TypeScript strict, 197 automated core tests, package builds,
-server-rendered HTML verification and desktop/mobile browser smoke tests. The
-100-iteration implementation ledger is in `docs/ITERATIONS.md`.
+Canvas/WebGL representations have an accessible DOM counterpart capped by accessibilityLimit (default 300); remaining data is accessible via the API. Automated accessibility checks do not constitute a screen-reader or WCAG certification.
 
-## Compatibility
+## Mathematics and scheduling
 
-The target is evergreen browsers, Node.js 22+, React 18+, Vue 3.3+ and Angular
-17+. Packages publish ESM, CommonJS, declarations and source maps.
+- D3 hierarchy and Sankey algorithms are bundled behind Nodara's flat-node schema. parentId defines hierarchy, leaf weights determine aggregate area; flows reject cycles and negative values.
+- Gaussian KDE uses an absolute bandwidth or Scott's rule with sample standard deviation. Degenerate default violins show samples instead of inventing a density.
+- Histogram bins use [start,end), with an inclusive final edge. Density uses bin width and the included-sample count.
+- Contours use a rectangular scalar grid, physical coordinates, marching squares and asymptotic saddle decisions. They are isolines, not filled polygons or interpolation of scattered points.
+- Recurrence supports a documented DAILY/WEEKLY/MONTHLY subset with hard expansion limits. Calendar grids still use the browser's local timezone; formatting a label in another zone does not change geometry.
+- Operational scheduling uses integer UTC instants and elapsed durations, FS dependencies with nonnegative lag, explicit locks, capacity conflicts and precedence-only CPM. Capacity zero is valid; zero-duration tasks are milestones. No working-day calendar, optimization solver or automatic resource leveling is implied.
+
+## Performance contract
+
+Automatic thresholds can switch a 10,000-task Gantt to density rendering; this is not a fluidity benchmark. Force layout has quadratic pairwise repulsion per iteration. KDE costs O(samples × evaluations), contours O(cells × levels); both have a 10-million-work ceiling. Device pixel ratio and semantic item counts are bounded. Measured reports must include dataset, environment, actual renderer, warmup and sample count.
+
+## Quality and compatibility
+
+Use npm run verify:release for the full local gate. CI pins action revisions, Node/npm, preserves evidence, and does not publish npm packages automatically. Security exceptions are specific, reviewed and expiring, never blanket audit suppression.
+
+Reference runtime: Node 22.13.1. Declared consumers: React >=18.2.0, Vue >=3.3.0, Angular >=21.2.21 <22; ranges are not claims that every version has been executed. Browser tests include Chromium, Firefox, WebKit and mobile Chromium emulation, not physical-device Safari.
+
+Core, React, Vue and Web Components provide ESM/CJS and declarations; Angular provides ESM/declarations. The isolated-consumer audit installs the final content-addressed tarballs, validates their checksums and rejects dependencies resolved from the parent workspace.

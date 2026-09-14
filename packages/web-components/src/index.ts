@@ -20,15 +20,18 @@ import {
   type TopologyData,
   type TopologyOptions,
   type VisualTheme,
+  NodaraError,
 } from "@nodara/core";
 
 type ElementKind = "gantt" | "chart" | "topology" | "calendar" | "geo-map" | "diagram";
 type ElementData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
 type ElementOptions = Omit<GanttOptions, "data"> | Omit<ChartOptions, "series"> | Omit<TopologyOptions, "data"> | Omit<CalendarOptions, "events"> | Omit<GeoMapOptions, "data"> | Omit<DiagramOptions, "data">;
+const labels: Record<ElementKind, string> = { gantt: "Gantt chart", chart: "Data chart", topology: "Network topology", calendar: "Calendar", "geo-map": "Geographic map", diagram: "Data diagram" };
 
 export interface NodaraElement extends HTMLElement {
   data: ElementData;
   options: ElementOptions;
+  setState(data: ElementData, options: ElementOptions): void;
   readonly controller?: NodaraController<ElementData, BaseOptions>;
 }
 
@@ -43,24 +46,48 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
           : [];
     #options: ElementOptions = {};
     #controller: NodaraController<ElementData, BaseOptions> | undefined;
+    #applying = false;
+    #ariaAttribute: string | null = null;
 
     static get observedAttributes() { return ["theme", "aria-label", "options"]; }
 
-    get data(): ElementData { return this.#data; }
+    get data(): ElementData { return this.#controller?.getData() ?? this.#data; }
     set data(value: ElementData) {
-      this.#data = value;
-      if (this.#controller) this.#controller.update(value);
-      else this.#mount();
+      const controller = this.#controller;
+      if (controller) { controller.update(value); this.#data = controller.getData(); }
+      else { this.#data = value; this.#mount(); }
     }
 
     get options(): ElementOptions { return this.#options; }
     set options(value: ElementOptions) {
+      if (value !== undefined && value !== null && (typeof value !== "object" || Array.isArray(value))) throw new NodaraError("ND_INVALID_OPTIONS", "Options must be an object.");
       const removed = Object.fromEntries(Object.keys(this.#options).map(key => [key, undefined]));
-      this.#options = value ?? {};
-      this.#controller?.setOptions({ ...removed, ...this.#resolvedOptions() });
+      const previous = this.#options;
+      const candidate = value ?? {};
+      const controller = this.#controller; const before = controller?.getOptions();
+      this.#options = candidate;
+      try { this.#applyOptions(removed); } catch (cause) { if (this.#options === candidate && controller?.getOptions() === before) this.#options = previous; throw cause; }
     }
 
     get controller(): NodaraController<ElementData, BaseOptions> | undefined { return this.#controller; }
+
+    setState(data: ElementData, options: ElementOptions) {
+      if (!options || typeof options !== "object" || Array.isArray(options)) throw new NodaraError("ND_INVALID_OPTIONS", "Options must be an object.");
+      const previous = this.#options; const previousData = this.#data;
+      const controller = this.#controller; const before = controller?.getOptions();
+      const removed = Object.fromEntries(Object.keys(previous).map(key => [key, undefined]));
+      this.#options = options; this.#data = data;
+      this.#applying = true;
+      try {
+        if (controller) { controller.setState(data, { ...removed, ...this.#resolvedOptions() }); this.#data = controller.getData(); }
+        else this.#mount();
+      } catch (cause) {
+        if (controller && controller.getOptions() !== before) this.#data = controller.getData();
+        else { if (this.#options === options) this.#options = previous; if (this.#data === data) this.#data = previousData; }
+        throw cause;
+      }
+      finally { this.#applying = false; }
+    }
 
     connectedCallback() {
       this.style.display ||= "block";
@@ -68,29 +95,50 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
     }
 
     disconnectedCallback() {
-      this.#controller?.destroy();
+      const controller = this.#controller;
+      if (controller) this.#data = controller.getData();
       this.#controller = undefined;
+      this.#applying = true;
+      try { controller?.destroy(); } finally { this.#applying = false; }
     }
 
     attributeChangedCallback(name: string, _oldValue: string | null, value: string | null) {
-      if (name === "options" && value) {
+      if (this.#applying || (_oldValue === value && name !== "aria-label")) return;
+      if (name === "options") {
+        let parsed: unknown;
         try {
-          this.#options = JSON.parse(value) as ElementOptions;
+          parsed = value === null ? {} : JSON.parse(value);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new NodaraError("ND_INVALID_OPTIONS", "Options JSON must be an object.");
         } catch (cause) {
           this.dispatchEvent(new CustomEvent("nodara:error", { detail: cause }));
           return;
         }
+        try { this.options = parsed as ElementOptions; } catch { /* The controller error channel already forwarded this error. */ }
+        return;
       }
-      this.#controller?.setOptions(this.#resolvedOptions());
+      if (name === "aria-label") {
+        const reflected = this.#controller?.getOptions().ariaLabel ?? labels[kind];
+        if (this.#controller && _oldValue !== value && value === reflected) return;
+        this.#ariaAttribute = value;
+      }
+      this.#applyOptions();
+    }
+
+    #applyOptions(removed: Record<string, undefined> = {}) {
+      this.#applying = true;
+      try { this.#controller?.setOptions({ ...removed, ...this.#resolvedOptions() }); }
+      finally { this.#applying = false; }
     }
 
     #resolvedOptions(): BaseOptions {
       const theme = (this.getAttribute("theme") ?? (this.#options as BaseOptions).theme ?? "system") as VisualTheme;
-      const ariaLabel = this.getAttribute("aria-label") ?? (this.#options as BaseOptions).ariaLabel;
-      return { ...(this.#options as BaseOptions), theme, ...(ariaLabel ? { ariaLabel } : {}) };
+      const ariaLabel = this.#ariaAttribute ?? (this.#options as BaseOptions).ariaLabel;
+      return { ...(this.#options as BaseOptions), theme, ariaLabel: ariaLabel ?? labels[kind] };
     }
 
     #forward(controller: NodaraController<ElementData, BaseOptions>) {
+      controller.on<ElementData>("data:change", data => { this.#data = data; });
+      controller.on<Error>("error", detail => this.dispatchEvent(new CustomEvent("nodara:error", { detail })));
       const events = kind === "gantt"
         ? ["task:select", "task:change"]
         : kind === "chart"
@@ -108,12 +156,21 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
     #mount() {
       if (!this.isConnected || this.#controller) return;
       const options = this.#resolvedOptions();
+      this.#applying = true;
+      try {
       if (kind === "gantt") this.#controller = createGantt(this, { ...(options as Omit<GanttOptions, "data">), data: this.#data as GanttTask[] }) as NodaraController<ElementData, BaseOptions>;
       else if (kind === "chart") this.#controller = createChart(this, { ...(options as Omit<ChartOptions, "series">), series: this.#data as ChartSeries[] }) as NodaraController<ElementData, BaseOptions>;
       else if (kind === "topology") this.#controller = createTopology(this, { ...(options as Omit<TopologyOptions, "data">), data: this.#data as TopologyData }) as NodaraController<ElementData, BaseOptions>;
       else if (kind === "geo-map") this.#controller = createGeoMap(this, { ...(options as Omit<GeoMapOptions, "data">), data: this.#data as GeoMapData }) as NodaraController<ElementData, BaseOptions>;
       else if (kind === "diagram") this.#controller = createDiagram(this, { ...(options as Omit<DiagramOptions, "data">), data: this.#data as DiagramData }) as NodaraController<ElementData, BaseOptions>;
       else this.#controller = createCalendar(this, { ...(options as Omit<CalendarOptions, "events">), events: this.#data as CalendarEvent[] }) as NodaraController<ElementData, BaseOptions>;
+      } catch (cause) { this.dispatchEvent(new CustomEvent("nodara:error", { detail: cause })); throw cause; }
+      finally { this.#applying = false; }
+      if (!this.isConnected) {
+        const disconnected = this.#controller; this.#controller = undefined;
+        this.#applying = true; try { disconnected?.destroy(); } finally { this.#applying = false; }
+        return;
+      }
       this.#forward(this.#controller);
       this.dispatchEvent(new CustomEvent("nodara:ready", { detail: this.#controller }));
     }

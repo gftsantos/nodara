@@ -9,8 +9,8 @@ export function resolveElement(target: string | Element): HTMLElement {
 }
 
 export function toTimestamp(input: DateInput, field = "date"): number {
-  const value = input instanceof Date ? input.getTime() : typeof input === "number" ? input : Date.parse(input);
-  if (!Number.isFinite(value)) {
+  const value = input instanceof Date ? input.getTime() : typeof input === "number" ? input : typeof input === "string" ? Date.parse(input) : NaN;
+  if (!Number.isFinite(value) || Math.abs(value) > 8.64e15) {
     throw new NodaraError("ND_INVALID_DATE", `Invalid ${field}: ${String(input)}.`);
   }
   return value;

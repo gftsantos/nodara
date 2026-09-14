@@ -25,6 +25,7 @@ function mountHost(): HTMLDivElement {
 }
 
 describe("React adapter", () => {
+  it("does not emit data changes for identical props or option-only rerenders", async () => { const element = mountHost(); const root = createRoot(element); const changed = vi.fn(); const ready = vi.fn(controller => controller.on("data:change", changed)); await act(async () => root.render(createElement(ReactChart, { series: chart, onReady: ready }))); await act(async () => root.render(createElement(ReactChart, { series: chart, onReady: ready }))); await act(async () => root.render(createElement(ReactChart, { series: chart, theme: "light", onReady: ready }))); expect(changed).not.toHaveBeenCalled(); expect(ready).toHaveBeenCalledTimes(1); await act(async () => root.unmount()); });
   it("resets removed options instead of leaking the previous recipe", async () => {
     const element = mountHost(); const root = createRoot(element);
     await act(async () => root.render(createElement(ReactChart, { series: chart, stacked: true, showLegend: false })));
@@ -44,6 +45,7 @@ describe("React adapter", () => {
 });
 
 describe("Vue adapter", () => {
+  it("retains committed Vue options after plugin cleanup failure so a later reset clears them", async () => { const element = mountHost(); const options = ref<import("../src/types").BaseOptions & { showLegend?: boolean }>({ plugins: [{ name: "throw-on-remove", onDestroy() { throw new Error("cleanup failed"); } }] }); const app = createApp({ setup: () => () => h(NodaraChart, { series: chart, options: options.value }) }); const errors = vi.fn(); app.config.errorHandler = errors; app.mount(element); options.value = { showLegend: false }; await nextTick(); expect(errors).toHaveBeenCalledTimes(1); expect(element.querySelector(".nd-chart__legend")).toBeNull(); options.value = {}; await nextTick(); expect(element.querySelector(".nd-chart__legend")).not.toBeNull(); app.unmount(); });
   it("resets deleted nested options", async () => {
     const element = mountHost(); const options = reactive<{ stacked?: boolean }>({ stacked: true });
     const app = createApp({ setup: () => () => h(NodaraChart, { series: chart, options }) }); app.mount(element);
@@ -67,6 +69,7 @@ describe("Vue adapter", () => {
 });
 
 describe("Angular adapter", () => {
+  it("clears last applied options after an intervening rejected change", () => { const element = mountHost(); const component = new NodaraChartComponent(); component.host = new ElementRef(element); component.series = [{ ...chart[0]!, data: [{ x: 0, y: 1 }, { x: 1, y: 2 }] }]; component.options = { showLegend: false }; component.ngAfterViewInit(); component.options = { type: "gauge" }; const changes = { options: { previousValue: { showLegend: false }, currentValue: component.options, firstChange: false, isFirstChange: () => false } }; expect(() => component.ngOnChanges(changes)).toThrow(); component.options = {}; component.ngOnChanges({ options: { ...changes.options, previousValue: { type: "gauge" }, currentValue: {} } }); expect(element.querySelector(".nd-chart__legend")).not.toBeNull(); component.ngOnDestroy(); });
   it("resets removed Angular options", () => {
     const element = mountHost(); const component = new NodaraChartComponent(); component.host = new ElementRef(element); component.series = chart; component.options = { stacked: true }; component.ngAfterViewInit(); component.options = {};
     component.ngOnChanges({ options: { previousValue: { stacked: true }, currentValue: {}, firstChange: false, isFirstChange: () => false } });
@@ -93,6 +96,7 @@ describe("Angular adapter", () => {
 });
 
 describe("Web Components adapter", () => {
+  it("retains committed data/options after a removed plugin throws and survives remount", () => { defineNodaraElements("postcommit"); const element = document.createElement("postcommit-chart") as NodaraElement; element.data = chart; element.options = { type: "gauge", plugins: [{ name: "failing-cleanup", onDestroy() { throw new Error("cleanup failed"); } }] }; document.body.append(element); const next = [{ ...chart[0]!, data: [{ x: 0, y: 1 }, { x: 1, y: 2 }] }]; expect(() => element.setState(next, { type: "line" })).toThrow("cleanup failed"); expect(element.options).toMatchObject({ type: "line" }); expect(element.data).toHaveLength(1); expect((element.data as typeof chart)[0]!.data).toHaveLength(2); element.remove(); document.body.append(element); expect(element.dataset.ndType).toBe("line"); expect(element.controller).toBeDefined(); element.remove(); });
   it("resets removed custom-element options", () => {
     defineNodaraElements("audit"); const element = document.createElement("audit-chart") as NodaraElement; element.data = chart; element.options = { stacked: true }; document.body.append(element); element.options = {};
     expect(element.getAttribute("data-nd-stacked")).toBe("false"); element.remove();

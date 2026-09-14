@@ -113,6 +113,8 @@ export interface ChartSeries {
   label: string;
   color?: string;
   data: ChartPoint[];
+  /** Contour only: physical Y coordinate of this scalar-grid row. */
+  gridY?: number;
 }
 
 export type ChartType =
@@ -151,6 +153,10 @@ export interface ChartOptions extends BaseOptions {
   showGrid?: boolean;
   showAxes?: boolean;
   showTooltip?: boolean;
+  /** Absolute Gaussian KDE bandwidth. Default Scott; constant samples show a rug only. */
+  violinBandwidth?: number | "scott";
+  /** Scalar levels of contour isolines. Default: five interior levels of the scalar range. */
+  contourLevels?: number[];
   valueFormatter?: (value: number) => string;
   labelFormatter?: (value: ChartPoint["x"]) => string;
   onPointSelect?: (event: ChartPointEvent) => void;
@@ -377,13 +383,30 @@ export interface CalendarEventChangeEvent extends CalendarEventSelectEvent {
 
 export type Unsubscribe = () => void;
 
+export interface NodaraEvents<TData, TOptions> {
+  "data:change": TData;
+  "options:change": TOptions;
+  render: { data: TData; options: TOptions };
+  error: Error;
+  "task:select": GanttTaskEvent;
+  "task:change": GanttTaskEvent;
+  "event:select": CalendarEventSelectEvent;
+  "event:change": CalendarEventChangeEvent;
+  "point:select": TData extends GeoMapData ? GeoPointEvent : ChartPointEvent;
+  "node:select": TData extends DiagramData ? DiagramNodeEvent : TopologyNodeEvent;
+  "viewport:change": TData extends GeoMapData ? GeoViewportEvent : TopologyViewportEvent;
+}
+
 export interface NodaraController<TData, TOptions = unknown> {
   readonly element: HTMLElement;
   getData(): TData;
   getOptions(): TOptions;
   update(data: TData): void;
   setOptions(options: Partial<TOptions>): void;
+  /** Validate data and options together; one render, no invalid intermediate state. */
+  setState(data: TData, options: Partial<TOptions>): void;
   resize(): void;
   destroy(): void;
+  on<TEvent extends keyof NodaraEvents<TData, TOptions>>(event: TEvent, listener: (payload: NodaraEvents<TData, TOptions>[TEvent]) => void): Unsubscribe;
   on<TPayload = unknown>(event: string, listener: (payload: TPayload) => void): Unsubscribe;
 }

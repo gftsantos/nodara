@@ -1,5 +1,10 @@
 import type { ChartPoint, ChartSeries, ChartType } from "./types";
 
+export function chartNumericX(x: ChartPoint["x"]): number { return typeof x === "number" ? x : x instanceof Date ? x.getTime() : /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(x) ? Date.parse(x) : NaN; }
+export function chartXIdentity(x: ChartPoint["x"]): string { const numeric = chartNumericX(x); return Number.isFinite(numeric) ? `number:${numeric}` : `string:${x}`; }
+/** First appearance defines category order, shared by every series. */
+export function chartCategories(series: ChartSeries[]): ChartPoint[] { const points = new Map<string, ChartPoint>(); for (const entry of series) for (const point of entry.data) { const key = chartXIdentity(point.x); if (!points.has(key)) points.set(key, point); } return [...points.values()]; }
+
 export interface ChartDatum {
   series: ChartSeries;
   seriesIndex: number;
@@ -9,13 +14,14 @@ export interface ChartDatum {
 }
 
 export function buildChartData(series: ChartSeries[], stacked = false): ChartDatum[] {
-  const positive = new Map<number, number>();
-  const negative = new Map<number, number>();
+  const positive = new Map<string | number, number>();
+  const negative = new Map<string | number, number>();
   return series.flatMap((entry, seriesIndex) => entry.data.map((point, pointIndex) => {
     const baselines = point.y >= 0 ? positive : negative;
-    const baseline = stacked ? baselines.get(pointIndex) ?? 0 : 0;
+    const key = chartXIdentity(point.x);
+    const baseline = stacked ? baselines.get(key) ?? 0 : 0;
     const value = stacked ? baseline + point.y : point.y;
-    if (stacked) baselines.set(pointIndex, value);
+    if (stacked) baselines.set(key, value);
     return { series: entry, seriesIndex, pointIndex, value, baseline };
   }));
 }
@@ -38,17 +44,17 @@ export function chartDomain(data: ChartDatum[], type?: ChartType): { minimum: nu
 }
 
 export function chartXScale(series: ChartSeries[], left: number, width: number): (point: ChartPoint, index: number) => number {
-  const numeric = (x: ChartPoint["x"]): number => typeof x === "number" ? x : x instanceof Date ? x.getTime() : /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(x) ? Date.parse(x) : NaN;
-  let minimum = Infinity; let maximum = -Infinity; let continuous = true; let count = 1;
+  const numeric = chartNumericX;
+  const categories = new Map(chartCategories(series).map((point, index) => [chartXIdentity(point.x), index]));
+  let minimum = Infinity; let maximum = -Infinity; let continuous = true; const count = Math.max(1, categories.size);
   for (const entry of series) {
-    count = Math.max(count, entry.data.length);
     for (const point of entry.data) {
       const x = numeric(point.x);
       if (!Number.isFinite(x)) continuous = false;
       else { minimum = Math.min(minimum, x); maximum = Math.max(maximum, x); }
     }
   }
-  return (point, index) => left + (continuous && Number.isFinite(minimum) ? maximum === minimum ? width / 2 : (numeric(point.x) - minimum) / (maximum - minimum) * width : count === 1 ? width / 2 : index / (count - 1) * width);
+  return (point, index) => left + (continuous && Number.isFinite(minimum) ? maximum === minimum ? width / 2 : (numeric(point.x) - minimum) / (maximum - minimum) * width : count === 1 ? width / 2 : (categories.get(chartXIdentity(point.x)) ?? index) / (count - 1) * width);
 }
 
 export function chartPointCount(series: ChartSeries[]): number {

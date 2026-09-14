@@ -42,7 +42,7 @@ test("renders the complete Nodara documentation hub", async () => {
   const html = await response.text();
   assert.match(html, /Documentação — Nodara/);
   assert.match(html, /6 componentes\. 69 configurações\. 100 receitas/);
-  assert.match(html, /24<!-- --> guias · 100 receitas · 6 componentes/);
+  assert.match(html, /26<!-- --> guias · 100 receitas · 6 componentes/);
   assert.match(html, /Gantt/);
   assert.match(html, /Web Components/);
 });
@@ -59,4 +59,14 @@ test("renders the organized visual catalog", async () => {
   assert.match(html, /Calendário semanal/);
   assert.match(html, /Orthographic globe/);
   assert.match(html, /Sankey/);
+});
+
+test("renders the shared operational planning workspace", async () => {
+  const response = await render("/operations");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Planeamento operacional/);
+  assert.match(html, /Gantt/);
+  assert.match(html, /Calendário/);
+  assert.match(html, /JSON/);
 });

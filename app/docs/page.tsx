@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -77,24 +77,41 @@ function PortalLink({ children, className, label }: { children: ReactNode; class
 }
 
 function CopyCode({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timeout.current) clearTimeout(timeout.current); }, []);
 
-  async function copy() {
+  async function copy(event: ReactMouseEvent<HTMLButtonElement>) {
+    const button = event.currentTarget;
+    const code = button.closest("section")?.querySelector("pre");
+    let success = false;
     try {
       await navigator.clipboard.writeText(value);
+      success = true;
     } catch {
+      if (!button.isConnected) return;
       const area = document.createElement("textarea");
       area.value = value;
       document.body.append(area);
       area.select();
-      document.execCommand("copy");
-      area.remove();
+      try { success = document.execCommand("copy"); } catch { success = false; } finally { area.remove(); }
     }
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    if (!button.isConnected) return;
+    if (timeout.current) clearTimeout(timeout.current);
+    if (success) {
+      setState("copied");
+      timeout.current = setTimeout(() => setState("idle"), 1500);
+    } else {
+      if (code) {
+        code.focus();
+        const range = document.createRange(); range.selectNodeContents(code);
+        const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+      }
+      setState("manual");
+    }
   }
 
-  return <button className={styles.copyCode} onClick={copy} aria-label="Copiar código">{copied ? <Check size={14} /> : <Copy size={14} />}{copied ? "Copiado" : "Copiar"}</button>;
+  return <><button className={styles.copyCode} onClick={copy} aria-label="Copiar código">{state === "copied" ? <Check size={14} /> : <Copy size={14} />}{state === "copied" ? "Copiado" : "Copiar"}</button>{state === "manual" && <span className={styles.copyStatus} role="status">A cópia foi bloqueada. Código selecionado: usa Ctrl+C ou ⌘C.</span>}</>;
 }
 
 function DocIcon({ id, size = 16 }: { id: string; size?: number }) {
@@ -125,7 +142,12 @@ export default function DocsPage() {
     const root = docsRef.current;
     if (!root) return;
     root.dataset.docsReady = "true";
-    return () => { delete root.dataset.docsReady; };
+    const header = root.querySelector("header");
+    const measureHeader = () => { if (header) root.style.setProperty("--docs-header-height", `${header.getBoundingClientRect().height}px`); };
+    const observer = new ResizeObserver(measureHeader);
+    if (header) observer.observe(header);
+    measureHeader();
+    return () => { observer.disconnect(); root.style.removeProperty("--docs-header-height"); delete root.dataset.docsReady; };
   }, []);
 
   useEffect(() => {
@@ -245,7 +267,8 @@ export default function DocsPage() {
             {activePage.code?.map((block) => (
               <section className={styles.codeSection} key={block.label} aria-label={`Exemplo ${block.label}`}>
                 <div className={styles.codeHead}><span><i /><i /><i /></span><strong>{block.label}</strong><small>{block.language}</small><CopyCode value={block.code} /></div>
-                <pre><code>{block.code}</code></pre>
+                {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A labelled scrollable code region needs keyboard scrolling. */}
+                <pre tabIndex={0} role="region" aria-label={`Código ${block.label}`}><code>{block.code}</code></pre>
               </section>
             ))}
 

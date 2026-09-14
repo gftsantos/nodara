@@ -44,9 +44,14 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
-    server: isCodexSeatbeltSandbox
-      ? { watch: { useFsEvents: false, usePolling: true } }
-      : undefined,
+    server: {
+      watch: {
+        // Browser traces contain HTML. Watching generated evidence causes full
+        // page reloads during tests and can discard an unsaved operational plan.
+        ignored: ["**/outputs/**", "**/work/**", "**/test-results/**", "**/playwright-report/**", "**/public/downloads/**"],
+        ...(isCodexSeatbeltSandbox ? { useFsEvents: false, usePolling: true } : {}),
+      },
+    },
     plugins: [
       vinext(),
       sites(),

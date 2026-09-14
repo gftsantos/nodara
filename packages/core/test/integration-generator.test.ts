@@ -48,13 +48,17 @@ describe("Complete copy-and-paste integrations", () => {
     expect(options).toMatchObject({ date: "2026-08-20", interactive: false, view: "resource-week", locale: "pt-PT" });
     expect(options.resources).toHaveLength(3);
   });
-  it("typechecks all 100 generated React components against the built public packages", () => {
+  it("typechecks all 100 recipe React components and nested options against the built public packages", () => {
     const directory = resolve("work/integration-checks/react"); mkdirSync(directory, { recursive: true });
     const paths = visualCatalog.map(item => {
       const path = resolve(directory, `${item.id}.tsx`);
       writeFileSync(path, integrationFiles(item, sampleData(item), settings, "react")[0]!.code);
       return path;
     });
+    const nestedPath = resolve(directory, "nested-topology-options.tsx");
+    const nestedCode = integrationFiles({ family: "topology", options: { layout: "hierarchical", performance: { canvasThreshold: 80, webglThreshold: 150 } } }, { nodes: [{ id: "a", label: "Nested options" }], edges: [] }, settings, "react")[0]!.code;
+    expect(nestedCode).toContain('"canvasThreshold": 80');
+    writeFileSync(nestedPath, nestedCode); paths.push(nestedPath);
     const program = ts.createProgram(paths, { strict: true, noEmit: true, skipLibCheck: true, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler });
     const errors = ts.getPreEmitDiagnostics(program).map(error => ts.flattenDiagnosticMessageText(error.messageText, "\n"));
     expect(errors).toEqual([]);
@@ -63,9 +67,8 @@ describe("Complete copy-and-paste integrations", () => {
     const directory = resolve("work/integration-checks/angular"); mkdirSync(directory, { recursive: true });
     visualCatalog.forEach(item => writeFileSync(resolve(directory, `${item.id}.ts`), integrationFiles(item, sampleData(item), settings, "angular")[0]!.code));
     writeFileSync(resolve(directory, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true, noEmit: true, skipLibCheck: true, target: "ES2022", module: "ESNext", moduleResolution: "bundler", experimentalDecorators: true }, angularCompilerOptions: { strictTemplates: true }, include: ["*.ts"] }));
-    let output = "";
-    try { output = execFileSync(process.execPath, [resolve("node_modules/@angular/compiler-cli/bundles/src/bin/ngc.js"), "-p", resolve(directory, "tsconfig.json")], { encoding: "utf8", timeout: 100_000, stdio: "pipe" }); }
-    catch (error) { const failure = error as { stdout?: string; stderr?: string }; output = `${failure.stdout ?? ""}${failure.stderr ?? ""}`; }
+    // A compiler failure/timeout must fail even when it emits no diagnostics.
+    const output = execFileSync(process.execPath, [resolve("node_modules/@angular/compiler-cli/bundles/src/bin/ngc.js"), "-p", resolve(directory, "tsconfig.json")], { encoding: "utf8", timeout: 100_000, stdio: "pipe" });
     expect(output).toBe("");
   }, 120_000);
 });

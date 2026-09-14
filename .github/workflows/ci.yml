@@ -1,26 +1,38 @@
-name: CI
-
+name: Technical confidence
 on:
   pull_request:
   push:
     branches: [main]
-
+  workflow_call:
 permissions:
   contents: read
-
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: 22
+          node-version: 22.13.1
           cache: npm
+      - run: npm install --global npm@11.19.1
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run test:lib
-      - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run verify:release
+      - name: Declared minimum React and Vue runtimes (browser compatibility, not a deployment recommendation)
+        run: npm run test:consumers
+        env:
+          NODARA_CONSUMER_VARIANT: minimum
+      - name: Consolidate results and documented exclusions
+        run: node scripts/summarize-technical-confidence.mjs
+      - name: Preserve evidence and candidate packages (not an npm release)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nodara-candidate-${{ github.sha }}
+          path: |
+            outputs/technical-confidence/
+            public/downloads/
+          retention-days: 14
+          if-no-files-found: warn

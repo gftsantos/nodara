@@ -30,6 +30,27 @@
   border: 0 !important;
 }
 
+.nd-accessible-data:focus-within {
+  clip: auto !important;
+  clip-path: none !important;
+  width: calc(100% - 24px) !important;
+  height: auto !important;
+  max-height: 45%;
+  margin: 0 !important;
+  padding: 12px !important;
+  top: 12px;
+  left: 12px;
+  overflow: auto !important;
+  white-space: normal !important;
+  border: 2px solid var(--nd-primary) !important;
+  border-radius: var(--nd-radius);
+  background: var(--nd-surface);
+  color: var(--nd-fg);
+  z-index: 4;
+}
+.nd-accessible-data button { color: var(--nd-fg); background: var(--nd-bg); border: 1px solid var(--nd-border); padding: 8px; min-height: 36px; font: inherit; }
+.nd-root button:focus-visible { outline: 3px solid var(--nd-primary); outline-offset: 2px; }
+
 .nd-gantt__header,
 .nd-calendar__header {
   height: 44px;
@@ -70,7 +91,7 @@
   align-items: center;
   border-bottom: 1px solid var(--nd-border);
   color: var(--nd-muted);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -97,7 +118,7 @@
   border-radius: calc(var(--nd-radius) - 1px);
   background: var(--nd-primary);
   color: #111;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -116,7 +137,7 @@
 
 .nd-gantt__label-text small {
   color: var(--nd-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .nd-gantt__timeline {
@@ -223,7 +244,7 @@
 
 .nd-chart__tooltip {
   position: absolute;
-  z-index: 3;
+  z-index: 5;
   max-width: 220px;
   padding: 7px 9px;
   border: 1px solid var(--nd-border);
@@ -236,6 +257,10 @@
 }
 
 .nd-chart__tooltip[hidden] { display: none; }
+.nd-topology__labels { position: absolute; inset: 0 auto auto 0; pointer-events: none; overflow: hidden; }
+.nd-topology__labels[hidden] { display: none; }
+.nd-topology__labels span { position: absolute; transform: translateX(-50%); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; line-height: 16px; color: var(--nd-fg); }
+.nd-topology__labels .nd-topology__edge-label { color: var(--nd-muted); background: var(--nd-bg); padding: 0 3px; }
 
 .nd-chart__legend {
   min-height: 38px;
@@ -300,7 +325,7 @@
   align-items: center;
   justify-content: space-between;
   color: var(--nd-muted);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
 }
 
@@ -342,7 +367,7 @@
 
 .nd-calendar__event small {
   color: var(--nd-muted);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .nd-calendar__year {

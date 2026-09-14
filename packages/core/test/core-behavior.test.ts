@@ -98,7 +98,7 @@ describe("real renderers and interactions", () => {
   it("[I129] renders chart tooltips", () => { const element = host(); createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }], showTooltip: true }); expect(element.querySelector(".nd-chart__tooltip")).not.toBeNull(); });
   it.each<ChartType>(["line", "area", "bar", "scatter", "bubble", "pie", "donut", "radar", "polar-area", "heatmap", "waterfall", "funnel", "gauge", "candlestick", "histogram", "boxplot", "error-bar", "range-area", "step-line", "spline", "lollipop", "bullet", "radial-bar", "ohlc", "violin", "contour"])("[collection] renders the %s chart geometry", (type) => {
     const element = host();
-    createChart(element, { series: [{ id: "a", label: "A", data: [{ x: "Jan", y: 24, meta: { size: 12, min: 0, max: 100, open: 18, high: 28, low: 15, close: 24 } }, { x: "Fev", y: 36 }] }], type });
+    createChart(element, { series: type === "contour" ? [{ id: "row0", label: "y=0", gridY: 0, data: [{ x: 0, y: 0 }, { x: 1, y: 2 }] }, { id: "row1", label: "y=1", gridY: 1, data: [{ x: 0, y: 2 }, { x: 1, y: 0 }] }] : [{ id: "a", label: "A", data: (type === "gauge" ? [{ x: "SLA", y: 24 }] : [{ x: "Jan", y: 24, meta: { size: 12, min: 0, max: 100, open: 18, high: 28, low: 15, close: 24 } }, { x: "Fev", y: 36 }]) }], type });
     expect(element.dataset.ndType).toBe(type);
     expect(element.dataset.ndRenderer).toBe("canvas");
     expect(element.querySelector("canvas")).not.toBeNull();
@@ -150,6 +150,7 @@ describe("WebGL and large-volume primitives", () => {
   it("[I137] renders WebGL point buffers when supported", () => {
     const gl = {
       ARRAY_BUFFER: 1, STATIC_DRAW: 2, FLOAT: 3, VERTEX_SHADER: 4, FRAGMENT_SHADER: 5, COMPILE_STATUS: 6, LINK_STATUS: 7, COLOR_BUFFER_BIT: 8, POINTS: 9,
+      enable: vi.fn(), blendFuncSeparate: vi.fn(), uniform1f: vi.fn(),
       attachShader: vi.fn(), bindBuffer: vi.fn(), bufferData: vi.fn(), clear: vi.fn(), clearColor: vi.fn(), compileShader: vi.fn(), createBuffer: vi.fn(() => ({})), createProgram: vi.fn(() => ({})), createShader: vi.fn(() => ({})), deleteBuffer: vi.fn(), deleteProgram: vi.fn(), deleteShader: vi.fn(), drawArrays: vi.fn(), enableVertexAttribArray: vi.fn(), getAttribLocation: vi.fn((_p, name) => name === "a_position" ? 0 : 1), getProgramParameter: vi.fn(() => true), getShaderParameter: vi.fn(() => true), getUniformLocation: vi.fn(() => ({})), linkProgram: vi.fn(), shaderSource: vi.fn(), uniform2f: vi.fn(), uniform4fv: vi.fn(), useProgram: vi.fn(), vertexAttribPointer: vi.fn(), viewport: vi.fn(),
     };
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(((type: string) => type.startsWith("webgl") ? gl : null) as typeof HTMLCanvasElement.prototype.getContext);

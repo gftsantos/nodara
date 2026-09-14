@@ -111,9 +111,10 @@ test("every downloadable package is available and matches its manifest size", as
   }
 });
 
-test("catalog discloses shared and illustrative renderers", async ({ page }) => {
+test("catalog discloses shared renderers and precise scientific contracts", async ({ page }) => {
   await page.goto("/catalog#er-diagram");
   await expect(page.getByLabel("Limitações desta receita")).toContainText("cardinalidades");
   await page.goto("/catalog#contour");
-  await expect(page.getByLabel("Limitações desta receita")).toContainText("isolinhas científicas");
+  await expect(page.getByLabel("Limitações desta receita")).toContainText("Isolinhas reais de grelha retangular");
+  await expect(page.locator('.nd-chart[data-nd-contours]')).toBeVisible();
 });

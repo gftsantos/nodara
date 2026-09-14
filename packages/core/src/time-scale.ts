@@ -18,9 +18,12 @@ export interface TimeScale {
 const zoomTickCounts: Record<GanttZoom, number> = { day: 24, week: 14, month: 12, quarter: 8 };
 
 export function resolveGanttRange(tasks: GanttTask[], start?: DateInput, end?: DateInput): { start: number; end: number } {
-  const timestamps = tasks.flatMap((task) => [toTimestamp(task.start), toTimestamp(task.end)]);
-  const minimum = start === undefined ? Math.min(...timestamps) : toTimestamp(start);
-  const maximum = end === undefined ? Math.max(...timestamps) : toTimestamp(end);
+  let minimum = start === undefined ? Infinity : toTimestamp(start);
+  let maximum = end === undefined ? -Infinity : toTimestamp(end);
+  for (const task of tasks) {
+    if (start === undefined) minimum = Math.min(minimum, toTimestamp(task.start), toTimestamp(task.end));
+    if (end === undefined) maximum = Math.max(maximum, toTimestamp(task.start), toTimestamp(task.end));
+  }
   const safeStart = Number.isFinite(minimum) ? minimum : Date.now();
   const safeEnd = Number.isFinite(maximum) && maximum > safeStart ? maximum : safeStart + DAY;
   return { start: safeStart, end: safeEnd };

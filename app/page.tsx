@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { integrationFiles } from "./catalog/integration";
 import { Calendar, Chart, Gantt, Topology } from "@nodara/react";
 import {
   normalizeCalendarEvents,
   normalizeChartSeries,
   normalizeGanttTasks,
   normalizeTopology,
+  replaceCalendarEvent,
 } from "@nodara/core";
 import type { CalendarEvent, ChartSeries, GanttTask, TopologyData, VisualTheme } from "@nodara/core";
 import {
@@ -89,10 +91,10 @@ const featureItems: Array<{
 ];
 
 const frameworks: Array<{ id: FrameworkId; label: string; install: string }> = [
-  { id: "react", label: "React", install: "npm i @nodara/react" },
-  { id: "angular", label: "Angular", install: "npm i @nodara/angular" },
-  { id: "vue", label: "Vue", install: "npm i @nodara/vue" },
-  { id: "vanilla", label: "JavaScript", install: "npm i @nodara/core" },
+  { id: "react", label: "React", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-react-0.1.0-alpha.1.tgz" },
+  { id: "angular", label: "Angular", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-angular-0.1.0-alpha.1.tgz" },
+  { id: "vue", label: "Vue", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-vue-0.1.0-alpha.1.tgz" },
+  { id: "vanilla", label: "JavaScript", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz" },
 ];
 
 const snippets: Record<FrameworkId, string> = {
@@ -147,34 +149,11 @@ const gantt = createGantt('#roadmap', {
 gantt.on('task:change', syncTask);`,
 };
 
-const featureSnippets: Record<FeatureId, string> = {
-  gantt: `<Gantt
-  data={roadmap}
-  start="2026-01-01"
-  end="2026-04-30"
-  zoom="month"
-  onTaskChange={syncTask}
-/>`,
-  charts: `<Chart
-  series={revenue}
-  type="area"
-  stacked
-  showTooltip
-  valueFormatter={formatCurrency}
-/>`,
-  topology: `<Topology
-  data={services}
-  layout="hierarchical"
-  renderer="auto"
-  interactive={{ pan: true, zoom: true }}
-/>`,
-  calendar: `<Calendar
-  events={schedule}
-  date="2026-08-20"
-  view="workweek"
-  expandRecurrence
-  onEventChange={syncEvent}
-/>`,
+const featureOptions: Record<FeatureId, Record<string, unknown>> = {
+  gantt: { zoom: "month", snap: "day", rowHeight: 54, dependencyRouting: "orthogonal" },
+  charts: { type: "area", stacked: true, showTooltip: true },
+  topology: { layout: "hierarchical", renderer: "auto", performance: { canvasThreshold: 80, webglThreshold: 150 } },
+  calendar: { date: "2026-08-20", view: "workweek", weekStartsOn: 1, expandRecurrence: true },
 };
 
 const foundationDetails = {
@@ -262,28 +241,44 @@ const searchEntries = [
   "Tokens de design",
 ];
 
-function CopyButton({ value, label = "Copiar" }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
+function CopyButton({ value, label = "Copiar", text = label }: { value: string; label?: string; text?: string }) {
+  const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timeout.current) clearTimeout(timeout.current); }, []);
 
-  async function copy() {
+  async function copy(event: ReactMouseEvent<HTMLButtonElement>) {
+    const button = event.currentTarget;
+    let success = false;
     try {
       await navigator.clipboard.writeText(value);
+      success = true;
     } catch {
+      if (!button.isConnected) return;
       const textArea = document.createElement("textarea");
       textArea.value = value;
       document.body.appendChild(textArea);
       textArea.select();
-      document.execCommand("copy");
-      textArea.remove();
+      try { success = document.execCommand("copy"); } catch { success = false; } finally { textArea.remove(); }
     }
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    if (!button.isConnected) return;
+    if (timeout.current) clearTimeout(timeout.current);
+    if (success) { setState("copied"); timeout.current = setTimeout(() => setState("idle"), 1600); }
+    else {
+      let container = button.parentElement; let target: HTMLElement | undefined;
+      while (container && !target) { target = [...container.querySelectorAll<HTMLElement>("pre,code")].find(element => element.textContent === value); container = container.parentElement; }
+      if (target) {
+        if (target.tabIndex >= 0) target.focus();
+        const range = document.createRange(); range.selectNodeContents(target);
+        const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+      }
+      setState("manual");
+    }
   }
 
   return (
-    <button className="copy-button" onClick={copy} aria-label={`${label}: ${value}`}>
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-      <span>{copied ? "Copiado" : label}</span>
+    <button className="copy-button" onClick={copy} aria-label={label} title={state === "manual" ? "A cópia foi bloqueada. Seleciona o código e usa Ctrl+C ou ⌘C." : label}>
+      {state === "copied" ? <Check size={14} /> : <Copy size={14} />}
+      <span aria-live="polite">{state === "copied" ? "Copiado" : state === "manual" ? "Cópia manual" : text}</span>
     </button>
   );
 }
@@ -450,7 +445,7 @@ function CalendarPreview({ data, onChange, theme, liveTick }: { data: CalendarEv
     durationMinutes: Math.max(30, (event.durationMinutes ?? 60) + (liveTick > 0 && index === liveTick % data.length ? (liveTick % 2 === 0 ? 5 : -5) : 0)),
   })), [data, liveTick]);
 
-  return <div className="real-preview calendar-shell"><Calendar events={displayedEvents} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => onChange(data.map((item) => item.id === event.id ? event : item))} style={{ height: 420 }} /></div>;
+  return <div className="real-preview calendar-shell"><Calendar events={displayedEvents} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => onChange(replaceCalendarEvent(data, event.id, event))} style={{ height: 420 }} /></div>;
 }
 
 function FeaturePreview({ data, feature, liveTick, onCalendarChange, onGanttChange, theme }: {
@@ -467,22 +462,48 @@ function FeaturePreview({ data, feature, liveTick, onCalendarChange, onGanttChan
   return <GanttPreview data={data.gantt} onChange={onGanttChange} liveTick={liveTick} theme={theme} />;
 }
 
-function PortalDialog({ dialog, feature, onClose }: { dialog: DialogId; feature: FeatureId; onClose: () => void }) {
+function manageDialogFocus(panel: HTMLElement, initial: HTMLElement, opener: HTMLElement | null) {
+  initial.focus();
+  const trapFocus = (event: KeyboardEvent) => {
+    if (event.key !== "Tab") return;
+    const controls = [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')].filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
+    // Safari can omit buttons/links from its native Tab order. Manage the whole
+    // cycle, including labelled scrollable code, not only its ends.
+    event.preventDefault();
+    const index = controls.indexOf(document.activeElement as HTMLElement);
+    const next = index < 0 ? (event.shiftKey ? controls.at(-1) : controls[0]) : controls[(index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length];
+    (next ?? initial).focus();
+  };
+  document.addEventListener("keydown", trapFocus, true);
+  return () => { document.removeEventListener("keydown", trapFocus, true); if (opener?.isConnected) opener.focus({ preventScroll: true }); };
+}
+
+function DialogCode({ value, label }: { value: string; label: string }) {
+  // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A named, scrollable code region must support keyboard scrolling.
+  return <pre tabIndex={0} role="region" aria-label={`Código: ${label}`}><code>{value}</code></pre>;
+}
+
+function PortalDialog({ dialog, feature, data, theme, opener, onClose }: { dialog: DialogId; feature: FeatureId; data: PlaygroundDataMap[FeatureId]; theme: VisualTheme; opener: HTMLElement; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const featureData = featureItems.find((item) => item.id === feature)!;
 
-  useEffect(() => { closeRef.current?.focus(); }, []);
+  useEffect(() => {
+    const panel = closeRef.current?.closest<HTMLElement>('[role="dialog"]');
+    if (panel && closeRef.current) return manageDialogFocus(panel, closeRef.current, opener);
+  }, [opener]);
 
   if (dialog === "example") {
+    const payload = JSON.stringify(data, null, 2);
+    const code = integrationFiles({ family: feature, options: featureOptions[feature] }, data, { theme, height: 420, interactive: true }, "react")[0]!.code;
     return (
       <div className="info-overlay">
         <button type="button" className="info-backdrop" aria-label="Fechar exemplo" onClick={onClose} />
         <section className="info-dialog info-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
           <div className="info-dialog-head"><div><span>EXEMPLO EXECUTÁVEL</span><h2 id="dialog-title">{featureData.name}</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
-          <p>Este é o mesmo componente real do preview. Copia os dados e a integração para começares com um contrato funcional.</p>
+          <p>Copia um componente React completo com os últimos dados validados. A simulação local de dados e os formatadores visuais do portal não são exportados. Usa os pacotes disponíveis na documentação de instalação.</p>
           <div className="example-dialog-grid">
-            <article><div className="dialog-code-head"><span>DADOS DE ENTRADA</span><CopyButton value={payloads[feature]} /></div><pre><code>{payloads[feature]}</code></pre></article>
-            <article><div className="dialog-code-head"><span>INTEGRAÇÃO REACT</span><CopyButton value={featureSnippets[feature]} /></div><pre><code>{featureSnippets[feature]}</code></pre></article>
+            <article><div className="dialog-code-head"><span>DADOS DE ENTRADA</span><CopyButton value={payload} label="Copiar dados" text="Copiar" /></div><DialogCode value={payload} label="Dados de entrada" /></article>
+            <article><div className="dialog-code-head"><span>INTEGRAÇÃO REACT</span><CopyButton value={code} label="Copiar integração React" text="Copiar" /></div><DialogCode value={code} label="Integração React" /></article>
           </div>
           <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href={`/docs#${feature}`}>Documentação de {featureData.name} <ArrowRight size={15} /></a></div>
         </section>
@@ -526,7 +547,7 @@ function PortalDialog({ dialog, feature, onClose }: { dialog: DialogId; feature:
         <div className="info-dialog-head"><div><span>{details.eyebrow}</span><h2 id="dialog-title">{details.title}</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
         <p>{details.description}</p>
         <ul className="foundation-list">{details.items.map((item) => <li key={item}><CheckCircle2 size={16} />{item}</li>)}</ul>
-        <div className="foundation-code"><div className="dialog-code-head"><span>EXEMPLO</span><CopyButton value={details.code} /></div><pre><code>{details.code}</code></pre></div>
+        <div className="foundation-code"><div className="dialog-code-head"><span>EXEMPLO</span><CopyButton value={details.code} /></div><DialogCode value={details.code} label={details.title} /></div>
         <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href={`/docs#${docsTarget}`}>Documentação completa <ArrowRight size={15} /></a></div>
       </section>
     </div>
@@ -548,8 +569,10 @@ export default function Home() {
   const [searchIndex, setSearchIndex] = useState(0);
   const [mobileNav, setMobileNav] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeDialog, setActiveDialog] = useState<DialogId | null>(null);
+  const [activeDialog, setActiveDialog] = useState<{ id: DialogId; opener: HTMLElement } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchOpenerRef = useRef<HTMLElement | null>(null);
   const siteRef = useRef<HTMLDivElement>(null);
 
   const activeFrameworkData = frameworks.find((item) => item.id === activeFramework)!;
@@ -562,14 +585,19 @@ export default function Home() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      const searchShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
+      // Do not move focus into a second, visually covered modal.
+      if (activeDialog && (searchShortcut || event.key === "/")) { event.preventDefault(); return; }
+      if (searchShortcut) {
         event.preventDefault();
-        setShowSearch((value) => !value);
+        if (!showSearch) searchOpenerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTriggerRef.current;
+        setShowSearch(!showSearch);
       }
       const target = event.target as HTMLElement | null;
       const isEditing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
       if (event.key === "/" && !isEditing) {
         event.preventDefault();
+        if (!showSearch) searchOpenerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTriggerRef.current;
         setShowSearch(true);
       }
       if (event.key === "Escape") {
@@ -579,10 +607,12 @@ export default function Home() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [activeDialog, showSearch]);
 
   useEffect(() => {
-    if (showSearch) searchInputRef.current?.focus();
+    const field = searchInputRef.current;
+    const panel = field?.closest<HTMLElement>('[role="dialog"]');
+    if (showSearch && panel && field) return manageDialogFocus(panel, field, searchOpenerRef.current);
   }, [showSearch]);
 
   useEffect(() => {
@@ -695,16 +725,17 @@ export default function Home() {
         <button className="brand" onClick={() => scrollTo("inicio")} aria-label="Nodara, início">
           <span className="brand-mark"><i /><i /><i /><i /></span>
           <span>NODARA</span>
-          <sup>BETA</sup>
+          <sup>ALPHA</sup>
         </button>
         <nav className={mobileNav ? "main-nav is-open" : "main-nav"} aria-label="Navegação principal">
           <a href="/catalog">Catálogo</a>
+          <a href="/operations">Operações</a>
           <a href="/docs">Documentação</a>
           <button onClick={() => scrollTo("arquitetura")}>Arquitetura</button>
           <button onClick={() => scrollTo("enterprise")}>Enterprise</button>
         </nav>
         <div className="header-actions">
-          <button className="header-search" onClick={() => setShowSearch(true)} aria-label="Pesquisar documentação">
+          <button ref={searchTriggerRef} className="header-search" onClick={event => { searchOpenerRef.current = event.currentTarget; setShowSearch(true); }} aria-label="Pesquisar documentação">
             <Search size={15} /><span>Pesquisar</span><kbd>⌘ K</kbd>
           </button>
           <button className="icon-button theme-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Alternar tema">
@@ -721,12 +752,12 @@ export default function Home() {
         <section className="hero" id="inicio">
           <div className="hero-grid" />
           <div className="hero-copy">
-            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.2 alpha</b></div>
+            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.1 alpha</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
             <p>Uma biblioteca TypeScript com 6 componentes, 69 configurações visuais e 100 receitas prontas para produtos ambiciosos.</p>
             <div className="hero-actions">
               <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar o catálogo</a>
-              <CopyButton value="npm i @nodara/react" label="npm i @nodara/react" />
+              <CopyButton value="npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-react-0.1.0-alpha.1.tgz" label="Instalar os pacotes alpha" />
             </div>
             <div className="framework-proof">
               <span>Funciona onde trabalhas</span>
@@ -780,7 +811,7 @@ export default function Home() {
           <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>
             <aside className="component-sidebar">
               <div className="sidebar-title"><span>EXPLORADOR</span><button onClick={() => setSidebarCollapsed((value) => !value)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"} title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}><PanelLeftClose size={15} /></button></div>
-              <button className="sidebar-search" onClick={() => setShowSearch(true)}><Search size={14} /><span>Procurar componente</span><kbd>/</kbd></button>
+              <button className="sidebar-search" onClick={event => { searchOpenerRef.current = event.currentTarget; setShowSearch(true); }}><Search size={14} /><span>Procurar componente</span><kbd>/</kbd></button>
               <p className="sidebar-label">72 RECEITAS · 4 WORKSPACES</p>
               <div className="feature-nav">
                 {featureItems.map((item) => {
@@ -795,10 +826,10 @@ export default function Home() {
                 })}
               </div>
               <p className="sidebar-label">FUNDAÇÕES</p>
-              <button className="foundation-link" onClick={() => setActiveDialog("schemas")}><Braces size={15} /><span>Tipos & schemas</span><ChevronRight size={14} /></button>
-              <button className="foundation-link" onClick={() => setActiveDialog("tokens")}><Sparkles size={15} /><span>Temas & tokens</span><ChevronRight size={14} /></button>
-              <button className="foundation-link" onClick={() => setActiveDialog("accessibility")}><ShieldCheck size={15} /><span>Acessibilidade</span><ChevronRight size={14} /></button>
-              <button className="sidebar-help" onClick={() => setActiveDialog("help")}><CircleHelp size={17} /><span><strong>Precisas de ajuda?</strong><small>Fala com um engenheiro</small></span><ArrowRight size={15} /></button>
+              <button className="foundation-link" onClick={event => setActiveDialog({ id: "schemas", opener: event.currentTarget })}><Braces size={15} /><span>Tipos & schemas</span><ChevronRight size={14} /></button>
+              <button className="foundation-link" onClick={event => setActiveDialog({ id: "tokens", opener: event.currentTarget })}><Sparkles size={15} /><span>Temas & tokens</span><ChevronRight size={14} /></button>
+              <button className="foundation-link" onClick={event => setActiveDialog({ id: "accessibility", opener: event.currentTarget })}><ShieldCheck size={15} /><span>Acessibilidade</span><ChevronRight size={14} /></button>
+              <button className="sidebar-help" onClick={event => setActiveDialog({ id: "help", opener: event.currentTarget })}><CircleHelp size={17} /><span><strong>Precisas de ajuda?</strong><small>Fala com um engenheiro</small></span><ArrowRight size={15} /></button>
             </aside>
 
             <div className="workspace">
@@ -811,7 +842,7 @@ export default function Home() {
                 <div className="workspace-action-stack">
                   <div className="workspace-actions">
                     <button className={liveData ? "active" : ""} aria-pressed={liveData} aria-describedby="live-data-description" onClick={toggleLiveData} title="Simula atualizações dos dados a cada 1,5 segundos"><Zap size={14} /> Simular stream</button>
-                    <button onClick={() => setActiveDialog("example")}><ExternalLink size={14} /> Abrir exemplo</button>
+                    <button onClick={event => setActiveDialog({ id: "example", opener: event.currentTarget })}><ExternalLink size={14} /> Abrir exemplo</button>
                   </div>
                   <span className={liveData ? "live-explainer is-live" : "live-explainer"} id="live-data-description">{liveData ? `Stream simulado · ciclo ${liveTick} · JSON intacto` : "Varia o preview a cada 1,5 s; não altera o JSON"}</span>
                 </div>
@@ -820,7 +851,7 @@ export default function Home() {
                 <button role="tab" aria-selected={workspaceTab === "preview"} className={workspaceTab === "preview" ? "active" : ""} onClick={() => setWorkspaceTab("preview")}><Play size={13} /> Preview</button>
                 <button role="tab" aria-selected={workspaceTab === "data"} className={workspaceTab === "data" ? "active" : ""} onClick={() => setWorkspaceTab("data")}><FileJson size={13} /> Dados</button>
                 <button role="tab" aria-selected={workspaceTab === "api"} className={workspaceTab === "api" ? "active" : ""} onClick={() => setWorkspaceTab("api")}><Braces size={13} /> API</button>
-                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.name} · ${activeFeatureData.count} receitas`}</div>
+                <div className="tab-meta"><span className="status-dot" /> Motor ativo <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.name} · ${activeFeatureData.count} receitas`}</div>
               </div>
               <div className="workspace-canvas">
                 {workspaceTab === "preview" && <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />}
@@ -927,7 +958,7 @@ export default function Home() {
             <div className="contract-flow">
               <div className="flow-card flow-input"><span>INPUT</span><FileJson size={22} /><strong>JSON / REST / Stream</strong><small>Qualquer fonte de dados</small></div>
               <div className="flow-arrow"><i /><Zap size={17} /></div>
-              <div className="flow-card flow-core"><span>NODARA CORE</span><div className="brand-mark"><i /><i /><i /><i /></div><strong>Normalize + Render</strong><small>Schema validado · 8.4ms</small></div>
+              <div className="flow-card flow-core"><span>NODARA CORE</span><div className="brand-mark"><i /><i /><i /><i /></div><strong>Normalize + Render</strong><small>Schema validado · API partilhada</small></div>
               <div className="flow-arrow"><i /><Check size={17} /></div>
               <div className="flow-card flow-output"><span>OUTPUT</span><Sparkles size={22} /><strong>Canvas acessível</strong><small>Interativo e responsivo</small></div>
             </div>
@@ -940,7 +971,7 @@ export default function Home() {
             <p className="mini-label">FEITA PARA ESCALAR</p>
             <h2>Bonita por fora.<br /><em>Séria por dentro.</em></h2>
             <p>Um core independente, renderização adaptativa e contratos públicos estáveis. O tipo de fundação que não obriga a reescrever o produto daqui a dois anos.</p>
-            <button className="secondary-button" onClick={() => setActiveDialog("architecture")}>Explorar arquitetura <ArrowRight size={15} /></button>
+            <button className="secondary-button" onClick={event => setActiveDialog({ id: "architecture", opener: event.currentTarget })}>Explorar arquitetura <ArrowRight size={15} /></button>
           </div>
           <div className="architecture-grid">
             <article className="arch-card arch-wide">
@@ -976,7 +1007,7 @@ export default function Home() {
         <div className="search-overlay">
           <button type="button" className="search-backdrop" aria-label="Fechar pesquisa" onClick={() => setShowSearch(false)} />
           <div className="search-dialog" role="dialog" aria-modal="true" aria-label="Pesquisa da documentação">
-            <div className="search-input-wrap"><Search size={19} /><input ref={searchInputRef} value={query} onChange={(event) => { setQuery(event.target.value); setSearchIndex(0); }} onKeyDown={onSearchKeyDown} placeholder="Pesquisar componentes, APIs e guias…" aria-activedescendant={filteredSearch[searchIndex] ? `search-result-${searchIndex}` : undefined} /><kbd>ESC</kbd></div>
+            <div className="search-input-wrap"><Search size={19} /><input ref={searchInputRef} value={query} onChange={(event) => { setQuery(event.target.value); setSearchIndex(0); }} onKeyDown={onSearchKeyDown} placeholder="Pesquisar componentes, APIs e guias…" aria-label="Pesquisar na documentação" aria-activedescendant={filteredSearch[searchIndex] ? `search-result-${searchIndex}` : undefined} /><button className="search-close" aria-label="Fechar pesquisa" onClick={() => setShowSearch(false)}><X size={16} /></button></div>
             <p>SUGESTÕES</p>
             <div className="search-results">
               {filteredSearch.map((entry, index) => <button id={`search-result-${index}`} className={searchIndex === index ? "selected" : ""} key={entry} onMouseEnter={() => setSearchIndex(index)} onClick={() => openSearchResult(entry)}><span><Command size={14} />{entry}</span><ChevronRight size={14} /></button>)}
@@ -987,7 +1018,7 @@ export default function Home() {
         </div>
       )}
 
-      {activeDialog && <PortalDialog dialog={activeDialog} feature={activeFeature} onClose={() => setActiveDialog(null)} />}
+      {activeDialog && <PortalDialog dialog={activeDialog.id} opener={activeDialog.opener} feature={activeFeature} data={playgroundData[activeFeature]} theme={theme} onClose={() => setActiveDialog(null)} />}
     </div>
   );
 }

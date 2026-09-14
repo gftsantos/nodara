@@ -1,3 +1,4 @@
+import { validateCalendarOptions } from "./visual-options";
 import { calendarRange, moveCalendarEvent, replaceCalendarEvent, resizeCalendarEvent } from "./calendar-model";
 import { createController } from "./controller";
 import { expandCalendarEvents } from "./recurrence";
@@ -7,6 +8,7 @@ import { DAY } from "./time-scale";
 import type { CalendarEvent, CalendarEventChangeEvent, CalendarEventSelectEvent, CalendarOptions, NodaraController } from "./types";
 import { createElement, empty, formatDate, resolveElement, toTimestamp } from "./utils";
 import { normalizeCalendarEvents } from "./validation";
+import { trackPointer } from "./interaction";
 
 export function createCalendar(
   target: string | Element,
@@ -17,7 +19,7 @@ export function createCalendar(
     empty(root);
     root.className = `nd-root nd-calendar ${currentOptions.className ?? ""}`.trim();
     root.setAttribute("role", "region");
-    root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Calendar");
+    if (root.getAttribute("aria-label") !== (currentOptions.ariaLabel ?? "Calendar")) root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Calendar");
     applyTheme(root, currentOptions.theme, currentOptions.tokens);
     const locale = currentOptions.locale ?? "en";
     const anchor = currentOptions.date === undefined ? Date.now() : toTimestamp(currentOptions.date);
@@ -90,6 +92,7 @@ export function createCalendar(
       const agenda = createElement("div", "nd-calendar__agenda");
       [...visibleEvents].sort((left, right) => toTimestamp(left.start) - toTimestamp(right.start)).forEach((event) => {
         const button = createElement("button", "nd-calendar__agenda-event");
+        button.dataset.ndFocus = event.id;
         button.type = "button";
         button.disabled = event.disabled === true;
         button.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
@@ -130,6 +133,7 @@ export function createCalendar(
           const left = Math.max(0, Math.min(100, (start - range.start) / (range.end - range.start) * 100));
           const duration = Math.max(1.5, Math.min(100 - left, (end - start) / (range.end - range.start) * 100));
           const button = createElement("button", "nd-calendar__timeline-event", event.title);
+          button.dataset.ndFocus = event.id;
           button.type = "button";
           button.style.left = `${left}%`;
           button.style.width = `${duration}%`;
@@ -169,6 +173,7 @@ export function createCalendar(
         const eventButton = createElement("button", "nd-calendar__event");
         eventButton.type = "button";
         eventButton.dataset.eventId = event.id;
+        eventButton.dataset.ndFocus = event.id;
         eventButton.style.setProperty("--nd-event-color", event.color ?? resource?.color ?? "var(--nd-primary)");
         eventButton.disabled = event.disabled === true;
         eventButton.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
@@ -191,14 +196,12 @@ export function createCalendar(
         const onPointerDown = (pointerEvent: PointerEvent) => {
           if (!isInteractionEnabled(currentOptions.interactive, "pointer") || event.disabled || pointerEvent.button !== 0) return;
           const origin = pointerEvent.clientX;
-          const onPointerUp = (upEvent: PointerEvent) => {
+          const cleanupGesture = trackPointer(pointerEvent, (upEvent) => {
             const width = Math.max(1, grid.getBoundingClientRect().width / Math.max(1, view === "month" ? 7 : range.days.length));
             const dayDelta = Math.round((upEvent.clientX - origin) / width);
             if (dayDelta !== 0) changeEvent(event, moveCalendarEvent(event, dayDelta * DAY), "move", "pointer");
-            document.removeEventListener("pointerup", onPointerUp);
-          };
-          document.addEventListener("pointerup", onPointerUp, { once: true });
-          listeners.push(() => document.removeEventListener("pointerup", onPointerUp));
+          });
+          listeners.push(cleanupGesture);
         };
         eventButton.addEventListener("click", onClick);
         eventButton.addEventListener("keydown", onKeyDown);
@@ -214,5 +217,5 @@ export function createCalendar(
     });
     root.append(grid);
     return () => listeners.forEach((listener) => listener());
-  }, { normalize: normalizeCalendarEvents });
+  }, { normalize: normalizeCalendarEvents, validate: validateCalendarOptions });
 }

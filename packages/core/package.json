@@ -4,8 +4,14 @@
   "description": "Framework-agnostic visual engine for Gantt, charts, topologies and calendars.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",
-  "repository": { "type": "git", "url": "https://github.com/gftsantos/nodara.git", "directory": "packages/core" },
-  "bugs": { "url": "https://github.com/gftsantos/nodara/issues" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gftsantos/nodara.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/gftsantos/nodara/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -18,12 +24,33 @@
     },
     "./styles.css": "./src/styles.css"
   },
-  "files": ["dist", "src/styles.css", "README.md"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist",
+    "src/styles.css",
+    "README.md",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "publishConfig": { "access": "public" },
-  "keywords": ["gantt", "charts", "graph", "topology", "calendar", "typescript", "visualization"]
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "gantt",
+    "charts",
+    "graph",
+    "topology",
+    "calendar",
+    "typescript",
+    "visualization"
+  ],
+  "dependencies": {
+    "d3-hierarchy": "3.1.2",
+    "d3-sankey": "0.12.3"
+  }
 }

@@ -1,10 +1,14 @@
 export { createGantt } from "./gantt";
 export { createChart } from "./chart";
+export { gaussianKDE, histogram, histogramSeries, marchingSquares, scalarGridSeries, seriesScalarGrid, validateScalarGrid } from "./statistics";
+export type { DensityPoint, DensityEstimate, HistogramBin, Histogram, ScalarGrid, ContourSegment } from "./statistics";
 export { buildChartData, chartDomain, chartPointCount } from "./chart-model";
 export { createTopology } from "./topology";
 export { createCalendar } from "./calendar";
 export { createGeoMap } from "./geo-map";
 export { createDiagram } from "./diagram";
+export { layoutDiagramHierarchy, layoutDiagramSankey, validateDiagramLayout } from "./diagram-model";
+export type { DiagramLayoutBox, SankeyLayout, SankeyLayoutLink, HierarchyDiagramType } from "./diagram-model";
 export {
   getVisualCatalogGroupKey,
   getVisualCatalogItem,
@@ -45,4 +49,9 @@ export {
   normalizeTopology,
 } from "./validation";
 export { NodaraError } from "./utils";
+export { validateChartOptions } from "./visual-options";
+export { normalizeOperationalPlan, operationalOrder, operationalCapacity, operationalConflicts, operationalCriticalPath, cascadeOperationalPlan, operationalGantt, operationalCalendar, operationalTopology, operationalMap, operationalLoadChart } from "./operations-model";
+export type * from "./operations-model";
+export { createOperationalStore } from "./operations-store";
+export type * from "./operations-store";
 export type * from "./types";

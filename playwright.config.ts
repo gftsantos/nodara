@@ -1,24 +1,27 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.NODARA_E2E_PORT ?? "4173";
+const origin = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   timeout: 45_000,
   expect: { timeout: 10_000 },
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 2 : 0,
+  retries: 0,
   workers: 2,
-  reporter: "list",
+  reporter: [["list"], ["json", { outputFile: "./outputs/technical-confidence/portal-results.json" }]],
   use: {
-    baseURL: "http://localhost:3100",
+    baseURL: origin,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 3100",
-    url: "http://localhost:3100",
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    command: `node node_modules/vinext/dist/cli.js start --hostname 127.0.0.1 --port ${port}`,
+    url: origin,
+    reuseExistingServer: false,
+    timeout: 180_000,
   },
   projects: [
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
