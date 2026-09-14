@@ -72,7 +72,11 @@ export function normalizeTopology(input: TopologyData): TopologyData {
     if (edgeIds.has(id)) throw new NodaraError("ND_DUPLICATE_EDGE", `Duplicate edge id: ${id}.`);
     edgeIds.add(id);
   });
-  return { nodes: input.nodes.map((node) => ({ ...node })), edges: input.edges.map((edge) => ({ ...edge })) };
+  return { nodes: input.nodes.map((node) => {
+    if (!node.label?.trim()) throw new NodaraError("ND_MISSING_LABEL", `Node ${node.id} requires a label.`);
+    if ((node.x !== undefined && !Number.isFinite(node.x)) || (node.y !== undefined && !Number.isFinite(node.y))) throw new NodaraError("ND_INVALID_COORDINATE", `Node ${node.id} requires finite coordinates.`);
+    return { ...node };
+  }), edges: input.edges.map((edge) => ({ ...edge })) };
 }
 
 export function normalizeCalendarEvents(input: CalendarEvent[]): CalendarEvent[] {
@@ -86,6 +90,7 @@ export function normalizeCalendarEvents(input: CalendarEvent[]): CalendarEvent[]
     const end = event.end === undefined ? start + (event.durationMinutes ?? 60) * 60_000 : toTimestamp(event.end, `${event.id}.end`);
     if (end < start) throw new NodaraError("ND_INVALID_RANGE", `Event ${event.id} ends before it starts.`);
     if (event.recurrence) parseRecurrence(event.recurrence);
+    if (event.excludedOccurrences && (!Array.isArray(event.excludedOccurrences) || event.excludedOccurrences.some(value => !Number.isInteger(value) || value < 0))) throw new NodaraError("ND_INVALID_RECURRENCE", "excludedOccurrences requires non-negative integer ordinals.");
     return { ...event, start, end };
   });
 }

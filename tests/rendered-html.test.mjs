@@ -41,7 +41,7 @@ test("renders the complete Nodara documentation hub", async () => {
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /Documentação — Nodara/);
-  assert.match(html, /6 componentes\. 69 tipos\. 100 receitas/);
+  assert.match(html, /6 componentes\. 69 configurações\. 100 receitas/);
   assert.match(html, /24<!-- --> guias · 100 receitas · 6 componentes/);
   assert.match(html, /Gantt/);
   assert.match(html, /Web Components/);
@@ -51,7 +51,9 @@ test("renders the organized visual catalog", async () => {
   const response = await render("/catalog");
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.match(html, /6 componentes\. 69 tipos visuais/);
+  assert.match(html, /Copia e integra/);
+  assert.match(html, /Framework de integração/);
+  assert.match(html, /downloads\/nodara-core/);
   assert.match(html, /Line chart/);
   assert.match(html, /Candlestick/);
   assert.match(html, /Calendário semanal/);

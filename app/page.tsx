@@ -723,7 +723,7 @@ export default function Home() {
           <div className="hero-copy">
             <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.2 alpha</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
-            <p>Uma biblioteca TypeScript com 6 componentes, 69 tipos visuais únicos e 100 receitas prontas para produtos ambiciosos.</p>
+            <p>Uma biblioteca TypeScript com 6 componentes, 69 configurações visuais e 100 receitas prontas para produtos ambiciosos.</p>
             <div className="hero-actions">
               <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar o catálogo</a>
               <CopyButton value="npm i @nodara/react" label="npm i @nodara/react" />
@@ -764,7 +764,7 @@ export default function Home() {
           </div>
           <div className="hero-foot">
             <div><strong>5</strong><span>pacotes alpha</span></div>
-            <div><strong>69</strong><span>tipos visuais únicos</span></div>
+            <div><strong>69</strong><span>configurações visuais</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
             <div><strong>200+</strong><span>testes automatizados</span></div>
           </div>
@@ -774,7 +774,7 @@ export default function Home() {
           <div className="section-heading">
             <div><span className="section-number">01</span><p>O MESMO MOTOR. TODAS AS FORMAS.</p></div>
             <h2>Um playground para<br />dados do mundo real.</h2>
-            <p>Experimenta aqui quatro workspaces centrais ou abre o catálogo organizado por 69 tipos visuais e 100 receitas, todos com demo, dados e integração próprios.</p>
+            <p>Experimenta aqui quatro workspaces centrais ou abre o catálogo organizado por 69 configurações visuais e 100 receitas, todos com demo, dados e integração próprios.</p>
           </div>
 
           <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>

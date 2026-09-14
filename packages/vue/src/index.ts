@@ -30,6 +30,7 @@ export const NodaraGantt = defineComponent({
   emits: ["ready", "task-select", "task-change"],
   setup(props, { emit }) {
     const host = ref<HTMLElement>();
+    let previousOptions = { ...props.options };
     let controller: NodaraController<GanttTask[]> | undefined;
     onMounted(() => {
       if (!host.value) return;
@@ -39,7 +40,11 @@ export const NodaraGantt = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.data, (data) => controller?.update(data), { deep: true });
-    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    watch(() => props.options, (options) => {
+      const removed = Object.fromEntries(Object.keys(previousOptions).map(key => [key, undefined]));
+      controller?.setOptions({ ...removed, ...options });
+      previousOptions = { ...options };
+    }, { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -54,6 +59,7 @@ export const NodaraChart = defineComponent({
   emits: ["ready", "point-select"],
   setup(props, { emit }) {
     const host = ref<HTMLElement>();
+    let previousOptions = { ...props.options };
     let controller: NodaraController<ChartSeries[]> | undefined;
     onMounted(() => {
       if (!host.value) return;
@@ -62,7 +68,11 @@ export const NodaraChart = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.series, (series) => controller?.update(series), { deep: true });
-    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    watch(() => props.options, (options) => {
+      const removed = Object.fromEntries(Object.keys(previousOptions).map(key => [key, undefined]));
+      controller?.setOptions({ ...removed, ...options });
+      previousOptions = { ...options };
+    }, { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -74,18 +84,24 @@ export const NodaraTopology = defineComponent({
     data: { type: Object as PropType<TopologyData>, required: true },
     options: { type: Object as PropType<Omit<TopologyOptions, "data">>, default: () => ({}) },
   },
-  emits: ["ready", "node-select"],
+  emits: ["ready", "node-select", "viewport-change"],
   setup(props, { emit }) {
     const host = ref<HTMLElement>();
+    let previousOptions = { ...props.options };
     let controller: NodaraController<TopologyData> | undefined;
     onMounted(() => {
       if (!host.value) return;
       controller = createTopology(host.value, { ...props.options, data: props.data });
       controller.on("node:select", (event) => emit("node-select", event));
+      controller.on("viewport:change", (event) => emit("viewport-change", event));
       emit("ready", controller);
     });
     watch(() => props.data, (data) => controller?.update(data), { deep: true });
-    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    watch(() => props.options, (options) => {
+      const removed = Object.fromEntries(Object.keys(previousOptions).map(key => [key, undefined]));
+      controller?.setOptions({ ...removed, ...options });
+      previousOptions = { ...options };
+    }, { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -97,18 +113,24 @@ export const NodaraCalendar = defineComponent({
     events: { type: Array as PropType<CalendarEvent[]>, required: true },
     options: { type: Object as PropType<Omit<CalendarOptions, "events">>, default: () => ({}) },
   },
-  emits: ["ready", "event-select"],
+  emits: ["ready", "event-select", "event-change"],
   setup(props, { emit }) {
     const host = ref<HTMLElement>();
+    let previousOptions = { ...props.options };
     let controller: NodaraController<CalendarEvent[]> | undefined;
     onMounted(() => {
       if (!host.value) return;
       controller = createCalendar(host.value, { ...props.options, events: props.events });
       controller.on("event:select", (event) => emit("event-select", event));
+      controller.on("event:change", (event) => emit("event-change", event));
       emit("ready", controller);
     });
     watch(() => props.events, (events) => controller?.update(events), { deep: true });
-    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    watch(() => props.options, (options) => {
+      const removed = Object.fromEntries(Object.keys(previousOptions).map(key => [key, undefined]));
+      controller?.setOptions({ ...removed, ...options });
+      previousOptions = { ...options };
+    }, { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -123,6 +145,7 @@ export const NodaraGeoMap = defineComponent({
   emits: ["ready", "point-select", "viewport-change"],
   setup(props, { emit }) {
     const host = ref<HTMLElement>();
+    let previousOptions = { ...props.options };
     let controller: NodaraController<GeoMapData> | undefined;
     onMounted(() => {
       if (!host.value) return;
@@ -132,7 +155,11 @@ export const NodaraGeoMap = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.data, (data) => controller?.update(data), { deep: true });
-    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    watch(() => props.options, (options) => {
+      const removed = Object.fromEntries(Object.keys(previousOptions).map(key => [key, undefined]));
+      controller?.setOptions({ ...removed, ...options });
+      previousOptions = { ...options };
+    }, { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },
@@ -147,6 +174,7 @@ export const NodaraDiagram = defineComponent({
   emits: ["ready", "node-select"],
   setup(props, { emit }) {
     const host = ref<HTMLElement>();
+    let previousOptions = { ...props.options };
     let controller: NodaraController<DiagramData> | undefined;
     onMounted(() => {
       if (!host.value) return;
@@ -155,7 +183,11 @@ export const NodaraDiagram = defineComponent({
       emit("ready", controller);
     });
     watch(() => props.data, (data) => controller?.update(data), { deep: true });
-    watch(() => props.options, (options) => controller?.setOptions(options), { deep: true });
+    watch(() => props.options, (options) => {
+      const removed = Object.fromEntries(Object.keys(previousOptions).map(key => [key, undefined]));
+      controller?.setOptions({ ...removed, ...options });
+      previousOptions = { ...options };
+    }, { deep: true });
     onBeforeUnmount(() => controller?.destroy());
     return () => h("div", { ref: host });
   },

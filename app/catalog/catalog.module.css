@@ -89,7 +89,7 @@
 .hero {
   max-width: 1560px;
   margin: 0 auto;
-  padding: clamp(54px, 8vw, 112px) clamp(18px, 4vw, 64px) clamp(42px, 6vw, 80px);
+  padding: 40px clamp(18px, 4vw, 64px) 30px;
 }
 
 .hero > p {
@@ -104,7 +104,7 @@
 .hero h1 {
   max-width: 1100px;
   margin: 0;
-  font-size: clamp(42px, 7vw, 102px);
+  font-size: clamp(38px, 5vw, 68px);
   font-weight: 570;
   letter-spacing: -.065em;
   line-height: .94;
@@ -261,7 +261,7 @@
   text-transform: uppercase;
 }
 
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 1100px; overflow-y: auto; overscroll-behavior: contain; }
 .card {
   --family: var(--accent);
   position: relative;
@@ -294,8 +294,8 @@
 .empty { padding: 50px 20px; color: var(--muted); text-align: center; font-size: 13px; }
 
 .demo {
-  position: sticky;
-  top: 80px;
+  position: relative;
+  top: 0;
   align-self: start;
   overflow: hidden;
 }
@@ -408,6 +408,35 @@
 .docsLink { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--accent); font-size: 12px; text-decoration: none; }
 .docsLink svg:last-child { margin-left: auto; }
 
+.integration { padding: 20px; border-top: 1px solid var(--border); background: var(--surface); }
+.integration p { color: var(--muted); font-size: .875rem; line-height: 1.6; }
+.integrationControls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin: 18px 0; }
+.integrationControls input[type="range"], .integrationControls select { width: 100%; min-width: 0; }
+.integrationControls > label { display: flex; flex-direction: column; gap: 9px; font-size: .875rem; }
+.integrationControls select { min-height: 40px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 8px; font: inherit; }
+.checkbox { display: flex !important; flex-direction: row !important; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--text); font-size: .875rem; }
+.checkbox input { accent-color: var(--accent); width: 18px; height: 18px; }
+.warning { border-left: 3px solid var(--accent); padding: 1px 12px; background: var(--surface-2); color: var(--text); font-size: .875rem; line-height: 1.6; }
+.installGuide { margin: 20px 0; padding: 14px; border: 1px solid var(--border); border-radius: 6px; }
+.installGuide summary { cursor: pointer; font-size: .875rem; font-weight: 650; }
+.downloads, .fileTabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.downloads a { display: inline-flex; gap: 6px; align-items: center; color: var(--accent); font-size: .875rem; }
+.installCommand { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--bg); border-radius: 5px; font-size: .8125rem; }
+.installCommand code { overflow-wrap: anywhere; min-width: 0; }
+.installCommand button, .fileTabs button { border: 1px solid var(--border); border-radius: 4px; background: var(--surface-2); color: var(--text); min-height: 36px; padding: 8px; cursor: pointer; font: inherit; font-size: .8125rem; }
+.fileTabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.generatedCode { max-height: 480px; overflow: auto; padding: 16px; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; font-family: var(--font-geist-mono), Consolas, monospace; font-size: .8125rem; line-height: 1.7; tab-size: 2; }
+.copyStatus { min-height: 24px; }
+.generatedCode pre { margin: 0; font: inherit; }
+.page :is(button, a, select, textarea, input, pre):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.demoTabs { grid-template-columns: 1fr; }
+.demoTabs > section + section { border-left: 0; border-top: 1px solid var(--border); }
+.demoTabs textarea { font-size: .8125rem; height: 240px; }
+.sectionTitle, .reference div, .editorFooter, .cardDescription, .demoHead p { font-size: .875rem; }
+.sectionTitle button, .editorFooter button { font-size: .8125rem; min-height: 36px; }
+.cardFamily, .cardIndex, .resultLine, .liveBar, .tags i, .modelStrip span, .viewSwitch button span, .demoHead > div > span, .realBadge, .recipePicker { font-size: .75rem; }
+.heroBottom > p { font-size: 1rem; }
+
 @media (max-width: 1180px) {
   .workspace { grid-template-columns: minmax(360px, .8fr) minmax(500px, 1.2fr); }
   .grid { grid-template-columns: 1fr; }
@@ -428,6 +457,7 @@
 }
 
 @media (max-width: 620px) {
+  .integrationControls { grid-template-columns: 1fr; }
   .header { padding: 0 14px; }
   .header nav a:first-child { display: none; }
   .header nav a { padding: 0 9px; }

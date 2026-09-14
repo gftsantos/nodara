@@ -1,4 +1,4 @@
-import { buildChartData, chartDomain, chartPointCount } from "./chart-model";
+import { buildChartData, chartDomain, chartPointCount, chartXScale } from "./chart-model";
 import { createController } from "./controller";
 import { isInteractionEnabled, resolveRenderMode } from "./render-mode";
 import { applyTheme } from "./theme";
@@ -31,7 +31,7 @@ export function createChart(
     const tokens = applyTheme(root, currentOptions.theme, currentOptions.tokens);
     const chartType = currentOptions.type ?? "line";
     const requestedMode = resolveRenderMode(currentOptions.renderer, chartPointCount(data), currentOptions.performance);
-    const mode = requestedMode === "dom" || canvasOnlyTypes.has(chartType) ? "canvas" : requestedMode;
+    const mode = requestedMode === "webgl" && chartType === "scatter" && !canvasOnlyTypes.has(chartType) ? "webgl" : "canvas";
     root.dataset.ndRenderer = mode;
     root.dataset.ndStacked = String(currentOptions.stacked === true);
     root.dataset.ndType = chartType;
@@ -49,6 +49,7 @@ export function createChart(
     }
 
     const selectPoint = (payload: ChartPointEvent) => {
+      if (!isInteractionEnabled(currentOptions.interactive, payload.source === "keyboard" ? "keyboard" : "pointer")) return;
       currentOptions.onPointSelect?.(payload);
       emit("point:select", payload);
     };
@@ -91,16 +92,16 @@ export function createChart(
     root.append(canvas);
 
     const chartData = buildChartData(data, currentOptions.stacked === true);
-    const domain = chartDomain(chartData);
+    const domain = chartDomain(chartData, chartType);
     const padding = { top: 24, right: 22, bottom: currentOptions.showAxes === false ? 12 : 38, left: currentOptions.showAxes === false ? 12 : 52 };
     const plotWidth = Math.max(1, width - padding.left - padding.right);
     const plotHeight = Math.max(1, height - padding.top - padding.bottom);
-    const maxPoints = Math.max(...data.map((series) => series.data.length), 1);
+    const maxPoints = data.reduce((maximum, series) => Math.max(maximum, series.data.length), 1);
     const valueFormatter = currentOptions.valueFormatter ?? ((value: number) => Intl.NumberFormat(currentOptions.locale).format(value));
     const labelFormatter = currentOptions.labelFormatter ?? ((value: unknown) => String(value));
     const yFor = (value: number) => padding.top + plotHeight - ((value - domain.minimum) / domain.range) * plotHeight;
-    const xFor = (index: number) => padding.left + (maxPoints === 1 ? plotWidth / 2 : (plotWidth * index) / (maxPoints - 1));
-    const pointsForWebGL = chartData.map((item) => ({ x: xFor(item.pointIndex), y: yFor(item.value), size: 6 }));
+    const xFor = chartXScale(data, padding.left, plotWidth);
+    const pointsForWebGL = chartData.map((item) => ({ x: xFor(item.series.data[item.pointIndex]!, item.pointIndex), y: yFor(item.value), size: 6 }));
     const usedWebGL = mode === "webgl" && renderWebGLPoints(canvas, pointsForWebGL, width, height);
     const hitAreas: Array<{ x: number; y: number; radius: number; event: ChartPointEvent }> = [];
 
@@ -112,15 +113,17 @@ export function createChart(
         context.lineWidth = 1;
         const cartesian = ["line", "area", "bar", "scatter", "bubble", "histogram", "boxplot", "error-bar", "range-area", "step-line", "spline", "lollipop", "bullet", "ohlc", "violin"].includes(chartType);
 
-        if (cartesian && currentOptions.showGrid !== false) {
+        if (cartesian) {
           context.strokeStyle = tokens.border;
           context.fillStyle = tokens.muted;
           for (let line = 0; line <= 4; line += 1) {
             const y = padding.top + (plotHeight * line) / 4;
-            context.beginPath();
-            context.moveTo(padding.left, y);
-            context.lineTo(width - padding.right, y);
-            context.stroke();
+            if (currentOptions.showGrid !== false) {
+              context.beginPath();
+              context.moveTo(padding.left, y);
+              context.lineTo(width - padding.right, y);
+              context.stroke();
+            }
             if (currentOptions.showAxes !== false) context.fillText(valueFormatter(domain.maximum - (domain.range * line) / 4), 4, y + 3);
           }
         }
@@ -130,7 +133,7 @@ export function createChart(
           context.textAlign = "center";
           const stride = Math.max(1, Math.ceil(labels.length / 8));
           labels.forEach((point, index) => {
-            if (index % stride === 0) context.fillText(labelFormatter(point.x), xFor(index), height - 10);
+            if (index % stride === 0) context.fillText(labelFormatter(point.x), ["bar", "histogram", "boxplot", "ohlc"].includes(chartType) ? padding.left + (index + 0.5) * plotWidth / maxPoints : xFor(point, index), height - 10);
           });
         }
 
@@ -445,7 +448,7 @@ export function createChart(
           data.forEach((series, seriesIndex) => {
             const color = series.color ?? palette[seriesIndex % palette.length] ?? tokens.primary;
             const entries = chartData.filter((item) => item.seriesIndex === seriesIndex);
-            const coordinates = entries.map((item) => ({ ...item, x: xFor(item.pointIndex), y: yFor(item.value), baselineY: yFor(item.baseline) }));
+            const coordinates = entries.map((item) => ({ ...item, x: xFor(item.series.data[item.pointIndex]!, item.pointIndex), y: yFor(item.value), baselineY: yFor(item.baseline) }));
             if (chartType === "bar" || chartType === "histogram") {
               const groupWidth = plotWidth / maxPoints;
               const barWidth = currentOptions.stacked ? groupWidth * 0.64 : (groupWidth * 0.72) / Math.max(data.length, 1);
@@ -530,7 +533,7 @@ export function createChart(
         context.globalAlpha = 1;
       }
     } else {
-      chartData.forEach((item) => hitAreas.push({ x: xFor(item.pointIndex), y: yFor(item.value), radius: 12, event: { point: item.series.data[item.pointIndex]!, series: item.series, source: "pointer" } }));
+      chartData.forEach((item) => hitAreas.push({ x: xFor(item.series.data[item.pointIndex]!, item.pointIndex), y: yFor(item.value), radius: 12, event: { point: item.series.data[item.pointIndex]!, series: item.series, source: "pointer" } }));
     }
 
     const tooltip = createElement("div", "nd-chart__tooltip");

@@ -5,12 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Calendar, Chart, Diagram, Gantt, GeoMap, Topology } from "@nodara/react";
 import {
-  normalizeCalendarEvents,
-  normalizeChartSeries,
-  normalizeDiagram,
-  normalizeGeoMap,
-  normalizeGanttTasks,
-  normalizeTopology,
+  replaceCalendarEvent,
   groupVisualCatalog,
   visualCatalog,
   visualCatalogCounts,
@@ -23,7 +18,6 @@ import type {
   CalendarOptions,
   ChartOptions,
   ChartSeries,
-  ChartType,
   DiagramData,
   DiagramOptions,
   GanttOptions,
@@ -36,10 +30,13 @@ import type {
   VisualFamily,
   VisualTheme,
 } from "@nodara/core";
-import { ArrowLeft, BookOpen, Check, ChevronRight, Copy, Database, Moon, Play, RotateCcw, Search, Sun } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, Database, Moon, Play, RotateCcw, Search, Sun } from "lucide-react";
 import styles from "./catalog.module.css";
+import { sampleData, normalizeData, type CatalogData } from "./catalog-data";
+import { previewOptions, type IntegrationSettings } from "./integration";
+import IntegrationWorkbench from "./integration-workbench";
+import { recipeLimitations } from "./capabilities";
 
-type CatalogData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
 type FamilyFilter = "all" | VisualFamily;
 type CatalogView = "types" | "recipes";
 
@@ -61,197 +58,30 @@ const familyColors: Record<VisualFamily, string> = {
   diagrams: "#bf7cff",
 };
 
-const ganttData: GanttTask[] = [
-  { id: "discovery", label: "Discovery", start: "2026-01-05", end: "2026-01-23", progress: 100, owner: { name: "Ana", color: "#c8fa63" } },
-  { id: "design", label: "Product design", start: "2026-01-19", end: "2026-02-20", progress: 82, dependencies: ["discovery"], owner: { name: "Mia", color: "#7884ff" } },
-  { id: "platform", label: "Platform core", start: "2026-02-02", end: "2026-03-20", progress: 61, dependencies: ["design"], owner: { name: "Leo", color: "#52d6c7" } },
-  { id: "adapters", label: "Framework adapters", start: "2026-02-23", end: "2026-04-03", progress: 46, dependencies: ["platform"], owner: { name: "Sam", color: "#ff7657" } },
-  { id: "quality", label: "Quality gates", start: "2026-03-16", end: "2026-04-17", progress: 28, dependencies: ["adapters"], owner: { name: "Noa", color: "#f5c451" } },
-  { id: "launch", label: "Public launch", start: "2026-04-20", end: "2026-04-30", progress: 5, dependencies: ["quality"], owner: { name: "Eva", color: "#bf7cff" } },
-];
 
-const topologyData: TopologyData = {
-  nodes: [
-    { id: "gateway", label: "Gateway", status: "healthy", x: 460, y: 70, value: "12ms" },
-    { id: "auth", label: "Auth", status: "healthy", x: 220, y: 180, value: "99.99%" },
-    { id: "checkout", label: "Checkout", status: "warning", x: 460, y: 180, value: "184ms" },
-    { id: "catalog", label: "Catalog", status: "healthy", x: 700, y: 180, value: "43ms" },
-    { id: "users", label: "Users DB", status: "healthy", x: 180, y: 320, value: "8ms" },
-    { id: "orders", label: "Orders DB", status: "critical", x: 380, y: 330, value: "92%" },
-    { id: "payments", label: "Payments", status: "warning", x: 540, y: 330, value: "241ms" },
-    { id: "search", label: "Search", status: "healthy", x: 700, y: 330, value: "31ms" },
-    { id: "events", label: "Event bus", status: "healthy", x: 460, y: 440, value: "4.2k/s" },
-  ],
-  edges: [
-    { from: "gateway", to: "auth", directed: true, label: "JWT" },
-    { from: "gateway", to: "checkout", directed: true },
-    { from: "gateway", to: "catalog", directed: true },
-    { from: "auth", to: "users", directed: true },
-    { from: "checkout", to: "orders", directed: true },
-    { from: "checkout", to: "payments", directed: true },
-    { from: "catalog", to: "search", directed: true },
-    { from: "orders", to: "events", directed: true },
-    { from: "payments", to: "events", directed: true },
-    { from: "search", to: "events", directed: true },
-  ],
-};
-
-const calendarData: CalendarEvent[] = [
-  { id: "planning", title: "Planeamento", start: "2026-08-17T09:30:00+01:00", durationMinutes: 60, resourceId: "product" },
-  { id: "design", title: "Design critique", start: "2026-08-18T14:00:00+01:00", durationMinutes: 90, resourceId: "studio" },
-  { id: "ops", title: "Operations sync", start: "2026-08-19T11:00:00+01:00", durationMinutes: 45, resourceId: "platform", recurrence: "FREQ=WEEKLY;COUNT=8" },
-  { id: "launch", title: "Release candidate", start: "2026-08-20T15:30:00+01:00", durationMinutes: 120, resourceId: "product" },
-  { id: "focus", title: "Focus day", start: "2026-08-21T00:00:00+01:00", allDay: true, resourceId: "studio" },
-  { id: "retro", title: "Retro", start: "2026-08-21T16:00:00+01:00", durationMinutes: 60, resourceId: "platform" },
-];
-
-const geoMapData: GeoMapData = {
-  points: [
-    { id: "lisbon", label: "Lisboa", latitude: 38.72, longitude: -9.14, value: 58 },
-    { id: "london", label: "Londres", latitude: 51.51, longitude: -0.13, value: 82 },
-    { id: "paris", label: "Paris", latitude: 48.86, longitude: 2.35, value: 67 },
-    { id: "new-york", label: "Nova Iorque", latitude: 40.71, longitude: -74.01, value: 94 },
-    { id: "sao-paulo", label: "São Paulo", latitude: -23.55, longitude: -46.63, value: 73 },
-    { id: "tokyo", label: "Tóquio", latitude: 35.68, longitude: 139.69, value: 88 },
-  ],
-  routes: [
-    { from: "lisbon", to: "london", value: 3, directed: true },
-    { from: "lisbon", to: "new-york", value: 7, directed: true },
-    { from: "london", to: "tokyo", value: 5, directed: true },
-    { from: "sao-paulo", to: "lisbon", value: 4, directed: true },
-  ],
-  regions: [
-    { id: "iberia", label: "Península Ibérica", value: 3, coordinates: [{ longitude: -10, latitude: 36 }, { longitude: 4, latitude: 36 }, { longitude: 4, latitude: 44 }, { longitude: -10, latitude: 44 }] },
-    { id: "western-europe", label: "Europa ocidental", value: 6, coordinates: [{ longitude: -6, latitude: 44 }, { longitude: 10, latitude: 44 }, { longitude: 10, latitude: 55 }, { longitude: -6, latitude: 55 }] },
-    { id: "east-us", label: "Estados Unidos oriental", value: 8, coordinates: [{ longitude: -84, latitude: 30 }, { longitude: -66, latitude: 30 }, { longitude: -66, latitude: 48 }, { longitude: -84, latitude: 48 }] },
-  ],
-};
-
-const diagramData: DiagramData = {
-  nodes: [
-    { id: "traffic", label: "Tráfego", value: 100 },
-    { id: "organic", label: "Orgânico", parentId: "traffic", value: 46 },
-    { id: "paid", label: "Pago", parentId: "traffic", value: 34 },
-    { id: "referral", label: "Referral", parentId: "traffic", value: 20 },
-    { id: "trial", label: "Trial", parentId: "organic", value: 61 },
-    { id: "customer", label: "Cliente", parentId: "trial", value: 29 },
-  ],
-  links: [
-    { from: "traffic", to: "organic", value: 46, directed: true },
-    { from: "traffic", to: "paid", value: 34, directed: true },
-    { from: "traffic", to: "referral", value: 20, directed: true },
-    { from: "organic", to: "trial", value: 31, directed: true },
-    { from: "paid", to: "trial", value: 21, directed: true },
-    { from: "referral", to: "trial", value: 9, directed: true },
-    { from: "trial", to: "customer", value: 29, directed: true },
-  ],
-};
-
-function chartDataFor(item: VisualCatalogItem): ChartSeries[] {
-  const type = item.options.type as ChartType;
-  if (type === "gauge") return [{ id: "score", label: "SLA", color: "#c8fa63", data: [{ x: "SLA", y: 87, meta: { min: 0, max: 100 } }] }];
-  if (type === "funnel") return [{ id: "funnel", label: "Conversão", data: [{ x: "Visitas", y: 12000 }, { x: "Trials", y: 7200 }, { x: "Ativações", y: 4100 }, { x: "Clientes", y: 1820 }] }];
-  if (type === "waterfall") return [{ id: "variance", label: "Variação", data: [{ x: "Base", y: 120 }, { x: "Novos", y: 48 }, { x: "Expansão", y: 25 }, { x: "Churn", y: -31 }, { x: "Custos", y: -18 }] }];
-  if (type === "candlestick" || type === "ohlc") return [{ id: "ohlc", label: "NDR", data: [
-    { x: "Seg", y: 106, meta: { open: 101, high: 109, low: 98, close: 106 } },
-    { x: "Ter", y: 103, meta: { open: 106, high: 111, low: 101, close: 103 } },
-    { x: "Qua", y: 112, meta: { open: 103, high: 116, low: 102, close: 112 } },
-    { x: "Qui", y: 118, meta: { open: 112, high: 121, low: 109, close: 118 } },
-    { x: "Sex", y: 115, meta: { open: 118, high: 120, low: 111, close: 115 } },
-  ] }];
-  if (type === "boxplot") return [{ id: "latency", label: "Latência", data: [
-    { x: "API", y: 48, meta: { min: 18, q1: 31, median: 48, q3: 63, max: 91 } },
-    { x: "Web", y: 61, meta: { min: 24, q1: 42, median: 61, q3: 77, max: 108 } },
-    { x: "Worker", y: 37, meta: { min: 12, q1: 25, median: 37, q3: 49, max: 74 } },
-  ] }];
-  if (type === "error-bar") return [{ id: "measure", label: "Medição", data: [42, 55, 49, 72, 63].map((y, index) => ({ x: `A${index + 1}`, y, meta: { error: 5 + index } })) }];
-  if (type === "range-area") return [{ id: "forecast", label: "Previsão", data: [
-    { x: "Jan", y: 52, meta: { low: 41, high: 62 } }, { x: "Fev", y: 61, meta: { low: 48, high: 73 } }, { x: "Mar", y: 67, meta: { low: 54, high: 81 } }, { x: "Abr", y: 78, meta: { low: 65, high: 91 } },
-  ] }];
-  if (type === "bullet") return [{ id: "kpis", label: "KPIs", data: [
-    { x: "SLA", y: 87, meta: { target: 92, max: 100 } }, { x: "NPS", y: 71, meta: { target: 75, max: 100 } }, { x: "Adoção", y: 64, meta: { target: 60, max: 100 } },
-  ] }];
-  if (type === "radial-bar") return [{ id: "health", label: "Saúde", data: [
-    { x: "Core", y: 94, meta: { max: 100 } }, { x: "React", y: 88, meta: { max: 100 } }, { x: "Vue", y: 79, meta: { max: 100 } }, { x: "Angular", y: 73, meta: { max: 100 } },
-  ] }];
-  if (type === "violin") return [{ id: "density", label: "Densidade", data: [8, 18, 37, 62, 84, 96, 89, 68, 42, 21, 9].map((y, index) => ({ x: index, y })) }];
-  if (type === "contour") return ["Norte", "Centro", "Sul"].map((label, row) => ({ id: label, label, data: [18, 35, 67, 89, 54, 27].map((y, column) => ({ x: column, y: y - row * 8 })) }));
-  if (type === "heatmap") return ["API", "Web", "Worker", "DB"].map((label, row) => ({ id: label.toLowerCase(), label, data: ["S", "T", "Q", "Q", "S", "S", "D"].map((x, column) => ({ x, y: ((row + 2) * (column + 3) * 13) % 97 })) }));
-  if (type === "bubble") return [{ id: "markets", label: "Mercados", data: [
-    { x: "PT", y: 34, meta: { size: 10 } }, { x: "ES", y: 51, meta: { size: 18 } }, { x: "FR", y: 45, meta: { size: 14 } }, { x: "DE", y: 68, meta: { size: 25 } }, { x: "UK", y: 57, meta: { size: 20 } },
-  ] }];
-  if (["pie", "donut", "polar-area"].includes(type)) return [{ id: "mix", label: "Mix", data: [{ x: "Core", y: 38 }, { x: "React", y: 26 }, { x: "Vue", y: 17 }, { x: "Angular", y: 12 }, { x: "Web", y: 7 }] }];
-  if (item.id === "negative-bars") return [{ id: "variance", label: "Variação", data: [{ x: "Jan", y: 18 }, { x: "Fev", y: -9 }, { x: "Mar", y: 24 }, { x: "Abr", y: -14 }, { x: "Mai", y: 31 }] }];
-  const time = item.id === "time-series";
-  const xs = time ? ["2026-01-01", "2026-02-01", "2026-03-01", "2026-04-01", "2026-05-01", "2026-06-01"] : ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"];
-  return [
-    { id: "revenue", label: "Receita", color: "#7884ff", data: xs.map((x, index) => ({ x, y: [42, 55, 49, 72, 83, 96][index]! })) },
-    { id: "target", label: "Objetivo", color: "#52d6c7", data: xs.map((x, index) => ({ x, y: [38, 47, 58, 66, 78, 88][index]! })) },
-  ];
-}
-
-function sampleData(item: VisualCatalogItem): CatalogData {
-  if (item.family === "gantt") return structuredClone(ganttData).map((task, index) => index === 0 ? { ...task, label: item.name } : task);
-  if (item.family === "charts") return chartDataFor(item).map((series, index) => index === 0 ? { ...series, label: item.name } : series);
-  if (item.family === "topology") {
-    const sample = structuredClone(topologyData);
-    sample.nodes[0] = { ...sample.nodes[0]!, label: item.name };
-    return sample;
-  }
-  if (item.family === "calendar") return structuredClone(calendarData).map((event, index) => index === 0 ? { ...event, title: item.name } : event);
-  if (item.family === "maps") {
-    const sample = structuredClone(geoMapData);
-    sample.points[0] = { ...sample.points[0]!, label: item.name };
-    return sample;
-  }
-  const sample = structuredClone(diagramData);
-  sample.nodes[0] = { ...sample.nodes[0]!, label: item.name };
-  return sample;
-}
-
-function normalizeData(item: VisualCatalogItem, json: string): CatalogData {
-  const parsed: unknown = JSON.parse(json);
-  if (item.family === "gantt") return normalizeGanttTasks(parsed as GanttTask[]);
-  if (item.family === "charts") return normalizeChartSeries(parsed as ChartSeries[]);
-  if (item.family === "topology") return normalizeTopology(parsed as TopologyData);
-  if (item.family === "calendar") return normalizeCalendarEvents(parsed as CalendarEvent[]);
-  if (item.family === "maps") return normalizeGeoMap(parsed as GeoMapData);
-  return normalizeDiagram(parsed as DiagramData);
-}
-
-function codeFor(item: VisualCatalogItem): string {
-  const props = Object.entries(item.options).map(([key, value]) => typeof value === "string" ? `${key}="${value}"` : value === true ? key : `${key}={${String(value)}}`).join(" ");
-  if (item.family === "gantt") return `<Gantt data={tasks} ${props}\n  onTaskChange={({ task }) => save(task)} />`;
-  if (item.family === "charts") return `<Chart series={series} ${props}\n  showTooltip onPointSelect={({ point }) => inspect(point)} />`;
-  if (item.family === "topology") return `<Topology data={network} ${props}\n  interactive={{ pan: true, zoom: true }} />`;
-  if (item.family === "calendar") return `<Calendar events={events} date="2026-08-20" ${props}\n  onEventChange={({ event }) => save(event)} />`;
-  if (item.family === "maps") return `<GeoMap data={geoData} ${props}\n  interactive={{ pan: true, zoom: true }} />`;
-  return `<Diagram data={diagramData} ${props}\n  onNodeSelect={({ node }) => inspect(node)} />`;
-}
-
-function CatalogPreview({ data, item, onDataChange, onEvent, theme }: { data: CatalogData; item: VisualCatalogItem; onDataChange: (data: CatalogData) => void; onEvent: (message: string) => void; theme: VisualTheme }) {
+function CatalogPreview({ data, item, onDataChange, onEvent, settings }: { data: CatalogData; item: VisualCatalogItem; onDataChange: (data: CatalogData) => void; onEvent: (message: string) => void; settings: IntegrationSettings }) {
   if (item.family === "gantt") {
-    const options = item.options as Partial<Omit<GanttOptions, "data">>;
-    return <Gantt data={data as GanttTask[]} {...options} start="2026-01-01" end="2026-04-30" theme={theme} locale="pt-PT" interactive onTaskSelect={({ task }) => onEvent(`task:select · ${task.label}`)} onTaskChange={({ task }) => { const next = (data as GanttTask[]).map((entry) => entry.id === task.id ? task : entry); onDataChange(next); onEvent(`task:change · ${task.label}`); }} style={{ height: 430 }} />;
+    const options = previewOptions(item, settings) as Partial<Omit<GanttOptions, "data">>;
+    return <Gantt data={data as GanttTask[]} {...options} onTaskSelect={({ task }) => onEvent(`task:select · ${task.label}`)} onTaskChange={({ task }) => { const next = (data as GanttTask[]).map((entry) => entry.id === task.id ? task : entry); onDataChange(next); onEvent(`task:change · ${task.label}`); }} style={{ height: settings.height }} />;
   }
   if (item.family === "charts") {
-    const options = item.options as Partial<Omit<ChartOptions, "series">>;
-    return <Chart series={data as ChartSeries[]} {...options} theme={theme} locale="pt-PT" interactive showTooltip onPointSelect={({ point, series }) => onEvent(`point:select · ${series.label} / ${String(point.x)}`)} style={{ height: 430 }} />;
+    const options = previewOptions(item, settings) as Partial<Omit<ChartOptions, "series">>;
+    return <Chart series={data as ChartSeries[]} {...options} showTooltip onPointSelect={({ point, series }) => onEvent(`point:select · ${series.label} / ${String(point.x)}`)} style={{ height: settings.height }} />;
   }
   if (item.family === "topology") {
-    const options = item.options as Partial<Omit<TopologyOptions, "data">>;
-    return <Topology data={data as TopologyData} {...options} theme={theme} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} onNodeSelect={({ node }) => onEvent(`node:select · ${node.label}`)} onViewportChange={({ zoom }) => onEvent(`viewport:change · ${zoom.toFixed(2)}×`)} style={{ height: 430 }} />;
+    const options = previewOptions(item, settings) as Partial<Omit<TopologyOptions, "data">>;
+    return <Topology data={data as TopologyData} {...options} onNodeSelect={({ node }) => onEvent(`node:select · ${node.label}`)} onViewportChange={({ zoom }) => onEvent(`viewport:change · ${zoom.toFixed(2)}×`)} style={{ height: settings.height }} />;
   }
   if (item.family === "maps") {
-    const options = item.options as Partial<Omit<GeoMapOptions, "data">>;
-    return <GeoMap data={data as GeoMapData} {...options} theme={theme} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} onPointSelect={({ point }) => onEvent(`point:select · ${point.label}`)} onViewportChange={({ zoom }) => onEvent(`viewport:change · ${zoom.toFixed(2)}×`)} style={{ height: 430 }} />;
+    const options = previewOptions(item, settings) as Partial<Omit<GeoMapOptions, "data">>;
+    return <GeoMap data={data as GeoMapData} {...options} onPointSelect={({ point }) => onEvent(`point:select · ${point.label}`)} onViewportChange={({ zoom }) => onEvent(`viewport:change · ${zoom.toFixed(2)}×`)} style={{ height: settings.height }} />;
   }
   if (item.family === "diagrams") {
-    const options = item.options as Partial<Omit<DiagramOptions, "data">>;
-    return <Diagram data={data as DiagramData} {...options} theme={theme} interactive onNodeSelect={({ node }) => onEvent(`node:select · ${node.label}`)} style={{ height: 430 }} />;
+    const options = previewOptions(item, settings) as Partial<Omit<DiagramOptions, "data">>;
+    return <Diagram data={data as DiagramData} {...options} onNodeSelect={({ node }) => onEvent(`node:select · ${node.label}`)} style={{ height: settings.height }} />;
   }
-  const options = item.options as Partial<Omit<CalendarOptions, "events">>;
-  return <Calendar events={data as CalendarEvent[]} {...options} date="2026-08-20" theme={theme} locale="pt-PT" interactive resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventSelect={({ event }) => onEvent(`event:select · ${event.title}`)} onEventChange={({ event }) => { const next = (data as CalendarEvent[]).map((entry) => entry.id === event.id ? event : entry); onDataChange(next); onEvent(`event:change · ${event.title}`); }} style={{ height: 430 }} />;
+  const options = previewOptions(item, settings) as Partial<Omit<CalendarOptions, "events">>;
+  return <Calendar events={data as CalendarEvent[]} {...options} date="2026-08-20" resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventSelect={({ event }) => onEvent(`event:select · ${event.title}`)} onEventChange={({ event, previousEvent }) => { const next = replaceCalendarEvent(data as CalendarEvent[], previousEvent.id, event); onDataChange(next); onEvent(`event:change · ${event.title}`); }} style={{ height: settings.height }} />;
 }
 
 export default function CatalogPage() {
@@ -264,7 +94,11 @@ export default function CatalogPage() {
   const [editor, setEditor] = useState(() => JSON.stringify(sampleData(visualCatalog[0]!), null, 2));
   const [editorStatus, setEditorStatus] = useState("Dados de exemplo prontos.");
   const [eventLog, setEventLog] = useState("À espera de interação…");
-  const [copied, setCopied] = useState(false);
+  const [interactive, setInteractive] = useState(true);
+  const [height, setHeight] = useState(420);
+  const [autoApply, setAutoApply] = useState(true);
+  const [editorError, setEditorError] = useState(false);
+  const settings = { theme, interactive, height };
   const pageRef = useRef<HTMLElement>(null);
   const demoRef = useRef<HTMLElement>(null);
   const activeItem = visualCatalog.find((item) => item.id === activeId) ?? visualCatalog[0]!;
@@ -279,7 +113,8 @@ export default function CatalogPage() {
 
   useEffect(() => {
     const selectHash = () => {
-      const id = decodeURIComponent(window.location.hash.slice(1));
+      let id: string;
+      try { id = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
       const item = visualCatalog.find((entry) => entry.id === id);
       if (item) {
         const next = sampleData(item);
@@ -287,6 +122,7 @@ export default function CatalogPage() {
         setData(next);
         setEditor(JSON.stringify(next, null, 2));
         setEditorStatus("Dados de exemplo prontos.");
+        setEditorError(false);
         setEventLog("À espera de interação…");
       }
     };
@@ -306,15 +142,33 @@ export default function CatalogPage() {
     setData(next);
     setEditor(JSON.stringify(next, null, 2));
     setEditorStatus("Dados de exemplo prontos.");
+    setEditorError(false);
     setEventLog("À espera de interação…");
     window.history.pushState(null, "", `#${item.id}`);
-    if (window.innerWidth < 980) requestAnimationFrame(() => demoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    if (window.innerWidth < 980) requestAnimationFrame(() => demoRef.current?.scrollIntoView({ behavior: "instant", block: "start" }));
   };
 
   const updateData = (next: CatalogData) => {
     setData(next);
     setEditor(JSON.stringify(next, null, 2));
+    setEditorError(false);
   };
+
+  useEffect(() => {
+    if (!autoApply) return;
+    const timeout = window.setTimeout(() => {
+      try {
+        const next = normalizeData(activeItem, editor);
+        setData(next);
+        setEditorError(false);
+        setEditorStatus("Preview atualizado automaticamente.");
+      } catch (error) {
+        setEditorError(true);
+        setEditorStatus(error instanceof Error ? error.message : "Dados inválidos.");
+      }
+    }, 450);
+    return () => window.clearTimeout(timeout);
+  }, [activeItem, editor, autoApply]);
 
   const applyEditor = () => {
     try {
@@ -322,7 +176,9 @@ export default function CatalogPage() {
       setData(next);
       setEditor(JSON.stringify(next, null, 2));
       setEditorStatus("Dados validados e renderizados.");
+      setEditorError(false);
     } catch (error) {
+      setEditorError(true);
       setEditorStatus(error instanceof Error ? error.message : "Dados inválidos.");
     }
   };
@@ -331,12 +187,6 @@ export default function CatalogPage() {
     const next = sampleData(activeItem);
     updateData(next);
     setEditorStatus("Exemplo reposto.");
-  };
-
-  const copyCode = async () => {
-    await navigator.clipboard.writeText(codeFor(activeItem));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1400);
   };
 
   return (
@@ -352,17 +202,17 @@ export default function CatalogPage() {
 
       <section className={styles.hero}>
         <p>CATÁLOGO NODARA · ARQUITETURA EXPLICADA</p>
-        <h1>6 componentes. 69 tipos visuais.<br /><span>100 receitas prontas.</span></h1>
+        <h1>Explora. Ajusta.<br /><span>Copia e integra.</span></h1>
         <div className={styles.heroBottom}>
-          <p>Um componente é a API que integras. Um tipo visual é uma geometria, vista ou layout distinto. Uma receita combina esse tipo com opções e dados para um caso de uso. Assim sabes exatamente o que é único e o que é um preset reutilizável.</p>
+          <p>100 receitas organizadas em 6 APIs. Experimenta o motor real, altera os dados e leva o código para o teu projeto. As configurações agrupam vistas e presets — não são 69 motores independentes. Consulta os limites de cada receita antes de integrar.</p>
           <div className={styles.metric}><strong>{visualCatalogStats.components}</strong><span>componentes públicos</span></div>
-          <div className={styles.metric}><strong data-contrast-sample="accent">{visualCatalogStats.visualTypes}</strong><span>tipos visuais únicos</span></div>
+          <div className={styles.metric}><strong data-contrast-sample="accent">{visualCatalogStats.visualTypes}</strong><span>configurações agrupadas</span></div>
           <div className={styles.metric}><strong>{visualCatalogStats.recipes}</strong><span>receitas testáveis</span></div>
         </div>
         <div className={styles.modelStrip} aria-label="Modelo do catálogo">
-          <div><span>01</span><strong>Componente</strong><small>API e contrato estáveis</small></div>
+          <div><span>01</span><strong>Componente</strong><small>API e contrato comuns</small></div>
           <ChevronRight aria-hidden="true" />
-          <div><span>02</span><strong>Tipo visual</strong><small>Geometria, vista ou layout</small></div>
+          <div><span>02</span><strong>Configuração</strong><small>Geometria, vista ou preset</small></div>
           <ChevronRight aria-hidden="true" />
           <div><span>03</span><strong>Receita</strong><small>Dados e opções de um caso real</small></div>
         </div>
@@ -373,7 +223,7 @@ export default function CatalogPage() {
           <div className={styles.toolbar}>
             <label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Procurar visualização…" aria-label="Procurar no catálogo" /></label>
             <div className={styles.viewSwitch} role="group" aria-label="Nível de detalhe do catálogo">
-              <button type="button" aria-pressed={catalogView === "types"} className={catalogView === "types" ? styles.activeView : ""} onClick={() => setCatalogView("types")}><strong>Tipos únicos</strong><span>69 agrupados, sem ruído</span></button>
+              <button type="button" aria-pressed={catalogView === "types"} className={catalogView === "types" ? styles.activeView : ""} onClick={() => setCatalogView("types")}><strong>Tipos e vistas</strong><span>69 configurações agrupadas</span></button>
               <button type="button" aria-pressed={catalogView === "recipes"} className={catalogView === "recipes" ? styles.activeView : ""} onClick={() => setCatalogView("recipes")}><strong>Todas as receitas</strong><span>100 casos de uso</span></button>
             </div>
             <div className={styles.filters} role="group" aria-label="Filtrar por família">
@@ -381,12 +231,12 @@ export default function CatalogPage() {
               {(Object.keys(familyLabels) as VisualFamily[]).map((family) => <button type="button" className={filter === family ? styles.activeFilter : ""} onClick={() => setFilter(family)} key={family}>{familyLabels[family]} <span>{catalogView === "types" ? visualCatalogUniqueCounts[family] : visualCatalogCounts[family]}</span></button>)}
             </div>
           </div>
-          <div className={styles.resultLine}><span>{resultCount} {catalogView === "types" ? "tipos visuais" : "receitas"}</span><span>{catalogView === "types" ? `${filtered.length - filteredGroups.length} presets agrupados` : "Todos ligados ao core público"}</span></div>
+          <div className={styles.resultLine}><span>{resultCount} {catalogView === "types" ? "configurações" : "receitas"}</span><span>{catalogView === "types" ? `${filtered.length - filteredGroups.length} presets agrupados` : "Todos ligados ao core público"}</span></div>
           <div className={styles.grid}>
             {(catalogView === "types" ? filteredGroups.map((group) => ({ item: group.items[0]!, recipes: group.items })) : filtered.map((item) => ({ item, recipes: [item] }))).map(({ item, recipes }, index) => (
-              <button type="button" data-catalog-id={item.id} className={`${styles.card} ${recipes.some((recipe) => recipe.id === activeItem.id) ? styles.activeCard : ""}`} onClick={() => choose(item)} key={catalogView === "types" ? `${item.family}-${recipes.map((recipe) => recipe.id).join("-")}` : item.id} style={{ "--family": familyColors[item.family] } as React.CSSProperties} aria-label={`Abrir demonstração: ${item.name}`}>
+              <button type="button" data-catalog-id={item.id} className={`${styles.card} ${recipes.some((recipe) => recipe.id === activeItem.id) ? styles.activeCard : ""}`} onClick={() => choose(item)} key={catalogView === "types" ? `${item.family}-${recipes.map((recipe) => recipe.id).join("-")}` : item.id} style={{ "--family": theme === "light" ? "var(--accent)" : familyColors[item.family] } as React.CSSProperties} aria-label={`Abrir demonstração: ${item.name}`}>
                 <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.cardFamily}>{familyLabels[item.family]} · {catalogView === "types" ? "TIPO VISUAL" : "RECEITA"}</span>
+                <span className={styles.cardFamily}>{familyLabels[item.family]} · {catalogView === "types" ? "CONFIGURAÇÃO" : "RECEITA"}</span>
                 <strong>{item.name}</strong>
                 <span className={styles.cardDescription}>{item.description}</span>
                 <span className={styles.tags}>{item.tags.slice(0, 3).map((tag, tagIndex) => <i key={`${tag}-${tagIndex}`}>{tag}</i>)}</span>
@@ -399,24 +249,25 @@ export default function CatalogPage() {
 
         <aside className={styles.demo} data-active-id={activeItem.id} ref={demoRef} aria-label={`Demonstração de ${activeItem.name}`}>
           <div className={styles.demoHead}>
-            <div><span style={{ color: familyColors[activeItem.family] }}>{familyLabels[activeItem.family]} · {activeGroup.variant}</span><h2>{activeItem.name}</h2><p>{activeItem.description}</p>
+            <div><span style={{ color: theme === "light" ? "var(--accent)" : familyColors[activeItem.family] }}>{familyLabels[activeItem.family]} · {activeGroup.variant}</span><h2>{activeItem.name}</h2><p>{activeItem.description}</p>
               {activeGroup.items.length > 1 && <label className={styles.recipePicker}>Receita deste tipo<select aria-label="Escolher receita deste tipo visual" value={activeItem.id} onChange={(event) => { const item = visualCatalog.find((entry) => entry.id === event.target.value); if (item) choose(item); }}>{activeGroup.items.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>}
             </div>
             <span className={styles.realBadge}><Play size={12} fill="currentColor" /> MOTOR REAL</span>
           </div>
           <div className={styles.preview}>
-            <CatalogPreview data={data} item={activeItem} onDataChange={updateData} onEvent={setEventLog} theme={theme} />
+            <CatalogPreview data={data} item={activeItem} onDataChange={updateData} onEvent={setEventLog} settings={settings} />
           </div>
           <div className={styles.liveBar}><span><i /> LIVE EVENT</span><code>{eventLog}</code></div>
           <div className={styles.demoTabs}>
             <section>
               <div className={styles.sectionTitle}><span><Database size={14} /> Dados editáveis</span><button type="button" onClick={reset}><RotateCcw size={13} /> Repor</button></div>
-              <textarea value={editor} onChange={(event) => setEditor(event.target.value)} spellCheck={false} aria-label="Editar dados da demonstração" />
-              <div className={styles.editorFooter}><span role="status" aria-live="polite">{editorStatus}</span><button type="button" data-contrast-sample="action" onClick={applyEditor}><Play size={13} fill="currentColor" /> Validar e renderizar</button></div>
+              <label className={styles.checkbox}><input type="checkbox" checked={autoApply} onChange={event => setAutoApply(event.target.checked)} /> Renderizar enquanto escrevo</label>
+              <textarea value={editor} onChange={(event) => setEditor(event.target.value)} spellCheck={false} aria-label="Editar dados da demonstração" aria-invalid={editorError} aria-describedby="catalog-editor-status" />
+              <div className={styles.editorFooter}><span id="catalog-editor-status" role={editorError ? "alert" : "status"} aria-live="polite">{editorStatus}{editorError ? " O último preview válido foi preservado." : ""}</span><button type="button" data-contrast-sample="action" onClick={applyEditor}><Play size={13} fill="currentColor" /> Validar e renderizar</button></div>
             </section>
             <section>
-              <div className={styles.sectionTitle}><span>Integração React</span><button type="button" onClick={copyCode}>{copied ? <Check size={13} /> : <Copy size={13} />}{copied ? "Copiado" : "Copiar"}</button></div>
-              <pre><code>{codeFor(activeItem)}</code></pre>
+              <div className={styles.sectionTitle}><span>Contrato e limites</span></div>
+              {recipeLimitations(activeItem).length > 0 && <div className={styles.warning} aria-label="Limitações desta receita">{recipeLimitations(activeItem).map(note => <p key={note}>{note}</p>)}</div>}
               <dl className={styles.reference}>
                 <div><dt>Dados</dt><dd>{activeItem.dataContract}</dd></div>
                 <div><dt>Opções ativas</dt><dd>{Object.entries(activeItem.options).map(([key, value]) => `${key}: ${String(value)}`).join(" · ")}</dd></div>
@@ -425,6 +276,7 @@ export default function CatalogPage() {
               <a className={styles.docsLink} href={`/docs#${activeItem.family === "charts" ? "charts" : activeItem.family === "maps" ? "geo-map" : activeItem.family === "diagrams" ? "diagram" : activeItem.family}`}><BookOpen size={14} /> Abrir referência completa da API <ChevronRight size={14} /></a>
             </section>
           </div>
+          <IntegrationWorkbench item={activeItem} data={data} settings={settings} pending={editorError || (() => { try { return JSON.stringify(normalizeData(activeItem, editor)) !== JSON.stringify(data); } catch { return true; } })()} onSettingsChange={next => { setTheme(next.theme); setInteractive(next.interactive); setHeight(next.height); }} />
         </aside>
       </section>
     </main>

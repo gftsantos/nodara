@@ -36,6 +36,7 @@ export type DiagramProps = DiagramOptions & AdapterProps<DiagramData, DiagramOpt
 export function Gantt({ data, onReady, style, ...options }: GanttProps) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<NodaraController<GanttTask[], GanttOptions> | undefined>(undefined);
+  const previousOptions = useRef(options);
   const initial = useRef({ data, options });
   useEffect(() => {
     if (!host.current) return;
@@ -43,7 +44,11 @@ export function Gantt({ data, onReady, style, ...options }: GanttProps) {
     return () => { controller.current?.destroy(); controller.current = undefined; };
   }, []);
   useEffect(() => { controller.current?.update(data); }, [data]);
-  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => {
+    const removed = Object.fromEntries(Object.keys(previousOptions.current).map(key => [key, undefined]));
+    controller.current?.setOptions({ ...removed, ...options });
+    previousOptions.current = options;
+  }, [options]);
   useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
   return <div ref={host} style={style} />;
 }
@@ -51,6 +56,7 @@ export function Gantt({ data, onReady, style, ...options }: GanttProps) {
 export function Chart({ series, onReady, style, ...options }: ChartProps) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<NodaraController<ChartSeries[], ChartOptions> | undefined>(undefined);
+  const previousOptions = useRef(options);
   const initial = useRef({ series, options });
   useEffect(() => {
     if (!host.current) return;
@@ -58,7 +64,11 @@ export function Chart({ series, onReady, style, ...options }: ChartProps) {
     return () => { controller.current?.destroy(); controller.current = undefined; };
   }, []);
   useEffect(() => { controller.current?.update(series); }, [series]);
-  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => {
+    const removed = Object.fromEntries(Object.keys(previousOptions.current).map(key => [key, undefined]));
+    controller.current?.setOptions({ ...removed, ...options });
+    previousOptions.current = options;
+  }, [options]);
   useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
   return <div ref={host} style={style} />;
 }
@@ -66,6 +76,7 @@ export function Chart({ series, onReady, style, ...options }: ChartProps) {
 export function Topology({ data, onReady, style, ...options }: TopologyProps) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<NodaraController<TopologyData, TopologyOptions> | undefined>(undefined);
+  const previousOptions = useRef(options);
   const initial = useRef({ data, options });
   useEffect(() => {
     if (!host.current) return;
@@ -73,7 +84,11 @@ export function Topology({ data, onReady, style, ...options }: TopologyProps) {
     return () => { controller.current?.destroy(); controller.current = undefined; };
   }, []);
   useEffect(() => { controller.current?.update(data); }, [data]);
-  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => {
+    const removed = Object.fromEntries(Object.keys(previousOptions.current).map(key => [key, undefined]));
+    controller.current?.setOptions({ ...removed, ...options });
+    previousOptions.current = options;
+  }, [options]);
   useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
   return <div ref={host} style={style} />;
 }
@@ -81,6 +96,7 @@ export function Topology({ data, onReady, style, ...options }: TopologyProps) {
 export function Calendar({ events, onReady, style, ...options }: CalendarProps) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<NodaraController<CalendarEvent[], CalendarOptions> | undefined>(undefined);
+  const previousOptions = useRef(options);
   const initial = useRef({ events, options });
   useEffect(() => {
     if (!host.current) return;
@@ -88,7 +104,11 @@ export function Calendar({ events, onReady, style, ...options }: CalendarProps) 
     return () => { controller.current?.destroy(); controller.current = undefined; };
   }, []);
   useEffect(() => { controller.current?.update(events); }, [events]);
-  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => {
+    const removed = Object.fromEntries(Object.keys(previousOptions.current).map(key => [key, undefined]));
+    controller.current?.setOptions({ ...removed, ...options });
+    previousOptions.current = options;
+  }, [options]);
   useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
   return <div ref={host} style={style} />;
 }
@@ -96,6 +116,7 @@ export function Calendar({ events, onReady, style, ...options }: CalendarProps) 
 export function GeoMap({ data, onReady, style, ...options }: GeoMapProps) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<NodaraController<GeoMapData, GeoMapOptions> | undefined>(undefined);
+  const previousOptions = useRef(options);
   const initial = useRef({ data, options });
   useEffect(() => {
     if (!host.current) return;
@@ -103,7 +124,11 @@ export function GeoMap({ data, onReady, style, ...options }: GeoMapProps) {
     return () => { controller.current?.destroy(); controller.current = undefined; };
   }, []);
   useEffect(() => { controller.current?.update(data); }, [data]);
-  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => {
+    const removed = Object.fromEntries(Object.keys(previousOptions.current).map(key => [key, undefined]));
+    controller.current?.setOptions({ ...removed, ...options });
+    previousOptions.current = options;
+  }, [options]);
   useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
   return <div ref={host} style={style} />;
 }
@@ -111,6 +136,7 @@ export function GeoMap({ data, onReady, style, ...options }: GeoMapProps) {
 export function Diagram({ data, onReady, style, ...options }: DiagramProps) {
   const host = useRef<HTMLDivElement>(null);
   const controller = useRef<NodaraController<DiagramData, DiagramOptions> | undefined>(undefined);
+  const previousOptions = useRef(options);
   const initial = useRef({ data, options });
   useEffect(() => {
     if (!host.current) return;
@@ -118,7 +144,11 @@ export function Diagram({ data, onReady, style, ...options }: DiagramProps) {
     return () => { controller.current?.destroy(); controller.current = undefined; };
   }, []);
   useEffect(() => { controller.current?.update(data); }, [data]);
-  useEffect(() => { controller.current?.setOptions(options); }, [options]);
+  useEffect(() => {
+    const removed = Object.fromEntries(Object.keys(previousOptions.current).map(key => [key, undefined]));
+    controller.current?.setOptions({ ...removed, ...options });
+    previousOptions.current = options;
+  }, [options]);
   useEffect(() => { if (controller.current) onReady?.(controller.current); }, [onReady]);
   return <div ref={host} style={style} />;
 }

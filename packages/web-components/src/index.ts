@@ -55,8 +55,9 @@ function createElementClass(kind: ElementKind): CustomElementConstructor {
 
     get options(): ElementOptions { return this.#options; }
     set options(value: ElementOptions) {
+      const removed = Object.fromEntries(Object.keys(this.#options).map(key => [key, undefined]));
       this.#options = value ?? {};
-      this.#controller?.setOptions(this.#resolvedOptions());
+      this.#controller?.setOptions({ ...removed, ...this.#resolvedOptions() });
     }
 
     get controller(): NodaraController<ElementData, BaseOptions> | undefined { return this.#controller; }

@@ -343,6 +343,8 @@ export interface CalendarEvent {
   color?: string;
   allDay?: boolean;
   recurrence?: string;
+  /** Zero-based occurrence ordinals detached from this recurring series. */
+  excludedOccurrences?: number[];
   disabled?: boolean;
   meta?: Record<string, unknown>;
 }

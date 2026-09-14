@@ -39,15 +39,18 @@ function manual(nodes: TopologyNode[], width: number, height: number): PositionM
 function hierarchical(data: TopologyData, width: number, height: number): PositionMap {
   const incoming = new Map(data.nodes.map((node) => [node.id, 0]));
   data.edges.forEach((edge) => incoming.set(edge.to, (incoming.get(edge.to) ?? 0) + 1));
+  const outgoing = new Map<string, string[]>();
+  data.edges.forEach(edge => { const neighbors = outgoing.get(edge.from) ?? []; neighbors.push(edge.to); outgoing.set(edge.from, neighbors); });
   const levels = new Map<string, number>();
   const queue = data.nodes.filter((node) => (incoming.get(node.id) ?? 0) === 0).map((node) => node.id);
   queue.forEach((id) => levels.set(id, 0));
   for (let index = 0; index < queue.length; index += 1) {
     const id = queue[index]!;
     const level = levels.get(id) ?? 0;
-    data.edges.filter((edge) => edge.from === id).forEach((edge) => {
-      levels.set(edge.to, Math.max(levels.get(edge.to) ?? 0, level + 1));
-      if (!queue.includes(edge.to)) queue.push(edge.to);
+    (outgoing.get(id) ?? []).forEach((to) => {
+      levels.set(to, Math.max(levels.get(to) ?? 0, level + 1));
+      incoming.set(to, (incoming.get(to) ?? 0) - 1);
+      if (incoming.get(to) === 0) queue.push(to);
     });
   }
   data.nodes.forEach((node) => { if (!levels.has(node.id)) levels.set(node.id, 0); });

@@ -61,6 +61,14 @@ export function resizeCalendarEvent(event: CalendarEvent, delta: number, minimum
 }
 
 export function replaceCalendarEvent(events: CalendarEvent[], previousId: string, next: CalendarEvent): CalendarEvent[] {
-  const sourceId = previousId.split("::")[0]!;
-  return events.map((event) => event.id === sourceId || event.id === previousId ? { ...next, id: sourceId } : event);
+  if (events.some(event => event.id === previousId)) return events.map(event => event.id === previousId ? { ...next, id: previousId } : event);
+  const separator = previousId.lastIndexOf("::");
+  const sourceId = previousId.slice(0, separator);
+  const ordinal = Number(previousId.slice(separator + 2));
+  const source = events.find(event => event.id === sourceId && event.recurrence);
+  if (separator < 0 || !source || !Number.isInteger(ordinal) || ordinal < 0) return events;
+  const detached = { ...next, id: previousId };
+  delete detached.recurrence;
+  delete detached.excludedOccurrences;
+  return [...events.map(event => event === source ? { ...event, excludedOccurrences: [...new Set([...(event.excludedOccurrences ?? []), ordinal])] } : event), detached];
 }

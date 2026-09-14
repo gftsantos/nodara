@@ -244,9 +244,9 @@ test("documentation typography and width remain readable", async ({ page }) => {
 test("catalog separates unique visual types from all recipes", async ({ page }) => {
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("6 componentes. 69 tipos visuais.");
-  await expect(page.getByText("69 tipos visuais", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Tipos únicos/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Copia e integra.");
+  await expect(page.getByText("69 configurações", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Tipos e vistas/ })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: /Todas as receitas/ }).click();
   await expect(page.getByText("100 receitas", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Gráficos 32", exact: true }).click();
@@ -265,9 +265,8 @@ test("catalog groups presets and lets users switch recipe inside one visual type
   await expect(page.getByRole("textbox", { name: "Editar dados da demonstração" })).toHaveValue(/Stacked bars/);
 });
 
-test("all 100 catalog recipes mount a real renderer without runtime errors", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-chromium", "One complete catalog sweep is sufficient");
-  test.setTimeout(180_000);
+test("all 100 catalog recipes mount and paint real renderers without runtime errors", async ({ page }) => {
+  test.setTimeout(300_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/catalog");
@@ -276,7 +275,7 @@ test("all 100 catalog recipes mount a real renderer without runtime errors", asy
   await expect(page.locator('[data-catalog-id="resource-plan"]')).toBeAttached();
   const rootByFamily = { gantt: ".nd-gantt", charts: ".nd-chart", topology: ".nd-topology", calendar: ".nd-calendar", maps: ".nd-geo-map", diagrams: ".nd-diagram" } as const;
   for (const item of visualCatalog) {
-    await page.locator(`[data-catalog-id="${item.id}"]`).evaluate((element) => (element as HTMLButtonElement).click());
+    await page.locator(`[data-catalog-id="${item.id}"]`).click();
     const demo = page.locator(`aside[data-active-id="${item.id}"]`);
     const root = demo.locator(rootByFamily[item.family]);
     await expect(root).toBeVisible();
@@ -289,6 +288,18 @@ test("all 100 catalog recipes mount a real renderer without runtime errors", asy
       await expect(root).toHaveAttribute("data-nd-projection", String(item.options.projection));
     }
     if (item.family === "diagrams") await expect(root).toHaveAttribute("data-nd-type", String(item.options.type));
+    if (["charts", "topology", "maps", "diagrams"].includes(item.family)) {
+      const colors = await root.locator("canvas").evaluate(element => {
+        const canvas = element as HTMLCanvasElement;
+        const pixels = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+        const palette = new Set<string>();
+        for (let offset = 0; offset < pixels.length; offset += 64) palette.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]},${pixels[offset + 3]}`);
+        return palette.size;
+      });
+      expect(colors, `${item.id} must paint more than a background`).toBeGreaterThan(4);
+    } else if (item.family === "gantt") await expect(root.locator(".nd-gantt__bar")).toHaveCount(6);
+    else if (item.options.view === "year") await expect(root.locator(".nd-calendar__month-card")).toHaveCount(12);
+    else expect(await root.locator("button").count(), `${item.id} has visible sample events`).toBeGreaterThan(0);
     expect(await demo.getByRole("textbox", { name: "Editar dados da demonstração" }).inputValue()).toContain(item.name);
   }
   expect(errors).toEqual([]);
@@ -311,6 +322,7 @@ test("catalog opens real chart geometries and rerenders edited data", async ({ p
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
   await expect(page.locator(".nd-chart")).toHaveAttribute("data-nd-type", "donut");
   const editor = page.getByRole("textbox", { name: "Editar dados da demonstração" });
+  await page.getByLabel("Renderizar enquanto escrevo").uncheck();
   await editor.fill((await editor.inputValue()).replace('"y": 38', '"y": 58'));
   await page.getByRole("button", { name: "Validar e renderizar" }).click();
   await expect(page.getByText("Dados validados e renderizados.")).toBeVisible();
@@ -323,7 +335,7 @@ test("catalog search, typography and responsive width remain usable", async ({ p
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
   await page.getByRole("textbox", { name: "Procurar no catálogo" }).fill("recorrentes");
-  await expect(page.getByText("1 tipos visuais", { exact: true })).toBeVisible();
+  await expect(page.getByText("1 configurações", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Eventos recorrentes/ })).toBeVisible();
   const audit = await page.evaluate(() => {
     const sizes = [...document.body.querySelectorAll("*")].filter((element) => {

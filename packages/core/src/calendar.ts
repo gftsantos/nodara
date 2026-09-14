@@ -40,6 +40,7 @@ export function createCalendar(
     const listeners: Array<() => void> = [];
 
     const selectEvent = (event: CalendarEvent, source: "pointer" | "keyboard") => {
+      if (event.disabled || !isInteractionEnabled(currentOptions.interactive, source)) return;
       const payload = { event, source } satisfies CalendarEventSelectEvent;
       currentOptions.onEventSelect?.(payload);
       emit("event:select", payload);
@@ -47,7 +48,7 @@ export function createCalendar(
     const changeEvent = (previousEvent: CalendarEvent, event: CalendarEvent, change: "move" | "resize", source: "pointer" | "keyboard") => {
       const singleEvent: CalendarEvent = { ...event };
       delete singleEvent.recurrence;
-      const next = { ...singleEvent, id: previousEvent.id.split("::")[0]! } satisfies CalendarEvent;
+      const next = { ...singleEvent, id: previousEvent.id } satisfies CalendarEvent;
       const payload = { event: next, previousEvent, change, source } satisfies CalendarEventChangeEvent;
       currentOptions.onEventChange?.(payload);
       commit(replaceCalendarEvent(data, previousEvent.id, next), "event:change", payload);
@@ -66,7 +67,7 @@ export function createCalendar(
         card.append(createElement("strong", "", formatDate(monthStart, locale, { month: "long" })));
         card.append(createElement("span", "", `${monthEvents.length} events`));
         const density = createElement("div", "nd-calendar__month-density");
-        Array.from({ length: 31 }, (_, day) => {
+        Array.from({ length: new Date(new Date(anchor).getFullYear(), month + 1, 0).getDate() }, (_, day) => {
           const dayStart = new Date(new Date(anchor).getFullYear(), month, day + 1).getTime();
           const marker = createElement("i");
           const count = monthEvents.filter((event) => {
@@ -132,7 +133,7 @@ export function createCalendar(
           button.type = "button";
           button.style.left = `${left}%`;
           button.style.width = `${duration}%`;
-          button.style.top = `${6 + index % 3 * 28}px`;
+          button.style.top = `${6 + index * 28}px`;
           button.style.setProperty("--nd-event-color", event.color ?? "var(--nd-primary)");
           button.disabled = event.disabled === true;
           button.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
@@ -141,6 +142,7 @@ export function createCalendar(
           listeners.push(() => button.removeEventListener("click", onClick));
           track.append(button);
         });
+        track.style.minHeight = `${Math.max(96, 12 + rowEvents.length * 28)}px`;
         row.append(track);
         timeline.append(row);
       });
@@ -190,7 +192,7 @@ export function createCalendar(
           if (!isInteractionEnabled(currentOptions.interactive, "pointer") || event.disabled || pointerEvent.button !== 0) return;
           const origin = pointerEvent.clientX;
           const onPointerUp = (upEvent: PointerEvent) => {
-            const width = Math.max(1, grid.getBoundingClientRect().width / Math.max(1, range.days.length));
+            const width = Math.max(1, grid.getBoundingClientRect().width / Math.max(1, view === "month" ? 7 : range.days.length));
             const dayDelta = Math.round((upEvent.clientX - origin) / width);
             if (dayDelta !== 0) changeEvent(event, moveCalendarEvent(event, dayDelta * DAY), "move", "pointer");
             document.removeEventListener("pointerup", onPointerUp);

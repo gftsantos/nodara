@@ -235,6 +235,7 @@ export function createDiagram(
     }
 
     const selectNode = (payload: DiagramNodeEvent) => {
+      if (!isInteractionEnabled(currentOptions.interactive, payload.source === "keyboard" ? "keyboard" : "pointer")) return;
       currentOptions.onNodeSelect?.(payload);
       emit("node:select", payload);
     };

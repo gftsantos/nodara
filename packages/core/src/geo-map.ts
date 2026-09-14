@@ -52,7 +52,7 @@ export function createGeoMap(
     const viewport = { zoom: clamp(currentOptions.initialZoom ?? 1, minimumZoom, maximumZoom), x: 0, y: 0 };
     const pointRadius = Math.max(2, currentOptions.pointRadius ?? 6);
     const values = data.points.map((point) => point.value ?? 1);
-    const maximumValue = Math.max(1, ...values);
+    const maximumValue = values.reduce((maximum, value) => Math.max(maximum, Math.abs(value)), 1);
 
     const projectBase = (coordinate: GeoCoordinate): ProjectedPoint => {
       const longitude = coordinate.longitude - center.longitude;
@@ -70,11 +70,12 @@ export function createGeoMap(
       }
       const x = ((longitude + 180) % 360 + 360) % 360 / 360 * width;
       if (projection === "equirectangular") {
-        return { x, y: (90 - coordinate.latitude) / 180 * height, visible: true };
+        return { x, y: height / 2 - (coordinate.latitude - center.latitude) / 180 * height, visible: true };
       }
       const latitude = clamp(coordinate.latitude, -85, 85) * Math.PI / 180;
       const mercator = Math.log(Math.tan(Math.PI / 4 + latitude / 2));
-      return { x, y: height / 2 - mercator * height / (2 * Math.PI), visible: true };
+      const centerMercator = Math.log(Math.tan(Math.PI / 4 + clamp(center.latitude, -85, 85) * Math.PI / 360));
+      return { x, y: height / 2 - (mercator - centerMercator) * height / (2 * Math.PI), visible: true };
     };
     const projectScreen = (coordinate: GeoCoordinate) => {
       const projected = projectBase(coordinate);
@@ -148,7 +149,7 @@ export function createGeoMap(
         context.stroke();
       });
 
-      data.routes?.forEach((route) => {
+      (mode === "routes" ? data.routes : [])?.forEach((route) => {
         const fromValue = resolveRouteEnd(route.from);
         const toValue = resolveRouteEnd(route.to);
         if (!fromValue || !toValue) return;
@@ -161,7 +162,7 @@ export function createGeoMap(
         context.quadraticCurveTo((from.x + to.x) / 2, (from.y + to.y) / 2 - lift, to.x, to.y);
         context.strokeStyle = route.color ?? tokens.primary;
         context.globalAlpha = 0.72;
-        context.lineWidth = Math.max(1.5, Math.sqrt(route.value ?? 1));
+        context.lineWidth = Math.max(1.5, Math.sqrt(Math.abs(route.value ?? 1)));
         context.stroke();
         context.globalAlpha = 1;
         if (route.directed) {
@@ -179,7 +180,7 @@ export function createGeoMap(
       data.points.forEach((point) => {
         const screen = projectScreen(point);
         if (!screen.visible) return;
-        const proportionalRadius = pointRadius + Math.sqrt((point.value ?? 1) / maximumValue) * 14;
+        const proportionalRadius = pointRadius + Math.sqrt(Math.abs(point.value ?? 1) / maximumValue) * 14;
         const radius = mode === "bubbles" ? proportionalRadius : pointRadius;
         if (mode === "heatmap") {
           const gradient = context.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, proportionalRadius * 2.5);
@@ -211,6 +212,7 @@ export function createGeoMap(
     draw();
 
     const selectPoint = (payload: GeoPointEvent) => {
+      if (!isInteractionEnabled(currentOptions.interactive, payload.source === "keyboard" ? "keyboard" : "pointer")) return;
       currentOptions.onPointSelect?.(payload);
       emit("point:select", payload);
     };

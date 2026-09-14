@@ -25,6 +25,14 @@ function mountHost(): HTMLDivElement {
 }
 
 describe("React adapter", () => {
+  it("resets removed options instead of leaking the previous recipe", async () => {
+    const element = mountHost(); const root = createRoot(element);
+    await act(async () => root.render(createElement(ReactChart, { series: chart, stacked: true, showLegend: false })));
+    await act(async () => root.render(createElement(ReactChart, { series: chart })));
+    expect(element.querySelector(".nd-chart")?.getAttribute("data-nd-stacked")).toBe("false");
+    expect(element.querySelector(".nd-chart__legend")).not.toBeNull();
+    await act(async () => root.unmount());
+  });
   it("[I141] mounts the real gantt renderer", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactGantt, { data: tasks }))); expect(element.querySelector(".nd-gantt")).not.toBeNull(); await act(async () => root.unmount()); });
   it("[I142] updates React gantt data without remounting", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactGantt, { data: tasks }))); const renderer = element.querySelector(".nd-gantt"); await act(async () => root.render(createElement(ReactGantt, { data: [...tasks, { id: "b", label: "Beta", start: "2026-01-05", end: "2026-01-06" }] }))); expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(2); expect(element.querySelector(".nd-gantt")).toBe(renderer); await act(async () => root.unmount()); });
   it("[I143] applies React option changes reactively", async () => { const element = mountHost(); const root = createRoot(element); await act(async () => root.render(createElement(ReactGantt, { data: tasks, zoom: "month" }))); await act(async () => root.render(createElement(ReactGantt, { data: tasks, zoom: "day" }))); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(24); await act(async () => root.unmount()); });
@@ -36,6 +44,22 @@ describe("React adapter", () => {
 });
 
 describe("Vue adapter", () => {
+  it("resets deleted nested options", async () => {
+    const element = mountHost(); const options = reactive<{ stacked?: boolean }>({ stacked: true });
+    const app = createApp({ setup: () => () => h(NodaraChart, { series: chart, options }) }); app.mount(element);
+    delete options.stacked; await nextTick(); await nextTick();
+    expect(element.querySelector(".nd-chart")?.getAttribute("data-nd-stacked")).toBe("false"); app.unmount();
+  });
+  it("forwards real calendar change events", async () => {
+    const element = mountHost(); const change = vi.fn();
+    const app = createApp({ render: () => h(NodaraCalendar, { events, options: { date: "2026-01-01" }, onEventChange: change }) }); app.mount(element); await nextTick();
+    element.querySelector(".nd-calendar__event")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    expect(change).toHaveBeenCalledWith(expect.objectContaining({ change: "move", source: "keyboard" })); app.unmount();
+  });
+  it("forwards topology viewport events", async () => {
+    const element = mountHost(); const change = vi.fn(); const app = createApp({ render: () => h(NodaraTopology, { data: topology, onViewportChange: change }) }); app.mount(element); await nextTick();
+    element.querySelector("canvas")!.dispatchEvent(new WheelEvent("wheel", { deltaY: -100 })); expect(change).toHaveBeenCalled(); app.unmount();
+  });
   it("[I147] mounts the real Vue gantt renderer", async () => { const element = mountHost(); const app = createApp({ render: () => h(NodaraGantt, { data: tasks }) }); app.mount(element); await nextTick(); expect(element.querySelector(".nd-gantt")).not.toBeNull(); app.unmount(); });
   it("[I148] updates Vue gantt data", async () => { const element = mountHost(); const data = ref(tasks); const app = createApp({ setup: () => () => h(NodaraGantt, { data: data.value }) }); app.mount(element); data.value = [...tasks, { id: "b", label: "Beta", start: "2026-01-05", end: "2026-01-06" }]; await nextTick(); await nextTick(); expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(2); app.unmount(); });
   it("[I149] applies Vue option changes reactively", async () => { const element = mountHost(); const options = reactive({ zoom: "month" as "month" | "day" }); const app = createApp({ setup: () => () => h(NodaraGantt, { data: tasks, options }) }); app.mount(element); options.zoom = "day"; await nextTick(); await nextTick(); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(24); app.unmount(); });
@@ -43,6 +67,22 @@ describe("Vue adapter", () => {
 });
 
 describe("Angular adapter", () => {
+  it("resets removed Angular options", () => {
+    const element = mountHost(); const component = new NodaraChartComponent(); component.host = new ElementRef(element); component.series = chart; component.options = { stacked: true }; component.ngAfterViewInit(); component.options = {};
+    component.ngOnChanges({ options: { previousValue: { stacked: true }, currentValue: {}, firstChange: false, isFirstChange: () => false } });
+    expect(element.getAttribute("data-nd-stacked")).toBe("false"); component.ngOnDestroy();
+  });
+  it("forwards Angular calendar change events", () => {
+    const element = mountHost(); const component = new NodaraCalendarComponent(); component.host = new ElementRef(element); component.events = events; component.options = { date: "2026-01-01" }; const change = vi.fn(); component.eventChange.subscribe(change); component.ngAfterViewInit();
+    element.querySelector(".nd-calendar__event")!.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" })); expect(change).toHaveBeenCalled(); component.ngOnDestroy();
+  });
+  it("forwards Angular map and topology viewport events", () => {
+    for (const component of [new NodaraGeoMapComponent(), new NodaraTopologyComponent()]) {
+      const element = mountHost(); component.host = new ElementRef(element);
+      if (component instanceof NodaraGeoMapComponent) component.data = geo; else component.data = topology;
+      const change = vi.fn(); component.viewportChange.subscribe(change); component.ngAfterViewInit(); element.querySelector("canvas")!.dispatchEvent(new WheelEvent("wheel", { deltaY: -100 })); expect(change).toHaveBeenCalled(); component.ngOnDestroy();
+    }
+  });
   it("[I151] mounts and updates Angular gantt data", () => { const element = mountHost(); const component = new NodaraGanttComponent(); component.host = new ElementRef(element); component.data = tasks; component.ngAfterViewInit(); component.data = [...tasks, { id: "b", label: "Beta", start: "2026-01-05", end: "2026-01-06" }]; component.ngOnChanges({ data: {} as never }); expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(2); component.ngOnDestroy(); });
   it("[I152] applies Angular options reactively", () => { const element = mountHost(); const component = new NodaraGanttComponent(); component.host = new ElementRef(element); component.data = tasks; component.options = { zoom: "month" }; component.ngAfterViewInit(); component.options = { zoom: "day" }; component.ngOnChanges({ options: {} as never }); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(24); component.ngOnDestroy(); });
   it("[I153] mounts Angular chart", () => { const element = mountHost(); const component = new NodaraChartComponent(); component.host = new ElementRef(element); component.series = chart; component.ngAfterViewInit(); expect(element.classList.contains("nd-chart")).toBe(true); component.ngOnDestroy(); });
@@ -53,6 +93,10 @@ describe("Angular adapter", () => {
 });
 
 describe("Web Components adapter", () => {
+  it("resets removed custom-element options", () => {
+    defineNodaraElements("audit"); const element = document.createElement("audit-chart") as NodaraElement; element.data = chart; element.options = { stacked: true }; document.body.append(element); element.options = {};
+    expect(element.getAttribute("data-nd-stacked")).toBe("false"); element.remove();
+  });
   it("[I156] registers all custom elements", () => { defineNodaraElements("test156"); expect(customElements.get("test156-gantt")).toBeDefined(); expect(customElements.get("test156-chart")).toBeDefined(); expect(customElements.get("test156-topology")).toBeDefined(); expect(customElements.get("test156-calendar")).toBeDefined(); expect(customElements.get("test156-geo-map")).toBeDefined(); expect(customElements.get("test156-diagram")).toBeDefined(); });
   it("[I218] renders geographic and diagram custom elements", () => { defineNodaraElements("test218"); const map = document.createElement("test218-geo-map") as NodaraElement; map.data = geo; const flow = document.createElement("test218-diagram") as NodaraElement; flow.data = diagram; document.body.append(map, flow); expect(map.querySelector("canvas")).not.toBeNull(); expect(flow.querySelector("canvas")).not.toBeNull(); });
   it("[I157] renders data assigned before connection", () => { defineNodaraElements("test157"); const element = document.createElement("test157-gantt") as NodaraElement; element.data = tasks; document.body.append(element); expect(element.querySelectorAll(".nd-gantt__bar")).toHaveLength(1); });

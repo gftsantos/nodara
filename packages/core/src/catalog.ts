@@ -50,7 +50,7 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
   gantt("campaign-plan", "Campanha multicanal", "Conteúdo, media e lançamento coordenados por semana.", "week", { snap: "day" }, ["marketing"]),
   gantt("construction-plan", "Plano de construção", "Fases longas, predecessoras e percentagem concluída.", "month", { dependencyRouting: "straight" }, ["construction"]),
   gantt("migration-plan", "Migração técnica", "Cutover detalhado e tarefas editáveis ao dia.", "day", { snap: "day" }, ["migration"]),
-  gantt("critical-path", "Caminho crítico", "Dependências críticas, folgas e tarefas bloqueadoras.", "week", { dependencyRouting: "orthogonal", rowHeight: 58 }, ["critical"]),
+  gantt("critical-path", "Caminho crítico", "Preset de dependências; não calcula caminho crítico ou folgas.", "week", { dependencyRouting: "orthogonal", rowHeight: 58 }, ["critical"]),
   gantt("capacity-plan", "Plano de capacidade", "Ocupação de equipas e janelas de execução.", "month", { rowHeight: 54 }, ["capacity"]),
 
   chart("line-chart", "Line chart", "Tendências contínuas e comparação entre séries.", "line", {}, ["trend"]),
@@ -73,7 +73,7 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
   chart("sparkline", "Sparkline", "Tendência compacta sem eixos, grelha ou legenda.", "line", { showAxes: false, showGrid: false, showLegend: false }, ["compact"]),
   chart("time-series", "Time series", "Série temporal com Date ou timestamp no eixo x.", "line", {}, ["time"]),
   chart("negative-bars", "Positive / negative bars", "Valores divergentes em torno da baseline zero.", "bar", {}, ["variance"]),
-  chart("histogram", "Histogram", "Distribuição de frequências por intervalos contíguos.", "histogram", {}, ["scientific"]),
+  chart("histogram", "Histogram", "Barras de frequência com bins previamente agregados.", "histogram", {}, ["scientific"]),
   chart("boxplot", "Box plot", "Quartis, mediana, extremos e dispersão.", "boxplot", {}, ["scientific", "statistics"]),
   chart("error-bars", "Error bars", "Estimativas com erro, limites inferior e superior.", "error-bar", {}, ["scientific"]),
   chart("range-area", "Range area", "Banda entre limites low e high ao longo do tempo.", "range-area", {}, ["forecast"]),
@@ -84,7 +84,7 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
   chart("radial-bars", "Radial bars", "Vários indicadores em anéis concêntricos.", "radial-bar", { showAxes: false }, ["kpi"]),
   chart("ohlc", "OHLC", "Ticks financeiros para abertura, máximo, mínimo e fecho.", "ohlc", {}, ["finance"]),
   chart("violin", "Violin plot", "Forma de distribuição e densidade espelhada.", "violin", {}, ["scientific", "statistics"]),
-  chart("contour", "Contour plot", "Isolinhas para superfícies e campos de intensidade.", "contour", { showAxes: false }, ["scientific"]),
+  chart("contour", "Contour plot", "Demonstração de intensidade; não calcula isolinhas científicas.", "contour", { showAxes: false }, ["scientific"]),
 
   topology("service-map", "Mapa de serviços", "Serviços distribuídos por forças e relações observáveis.", "force", { layoutIterations: 90 }, ["services"]),
   topology("architecture-map", "Arquitetura hierárquica", "Camadas técnicas organizadas da origem ao consumidor.", "hierarchical", {}, ["architecture"]),
@@ -133,7 +133,7 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
 
   diagram("sankey", "Sankey", "Fluxos ponderados com largura proporcional ao valor.", "sankey", {}, ["flow"]),
   diagram("alluvial", "Alluvial", "Mudanças de composição entre várias etapas.", "alluvial", {}, ["flow"]),
-  diagram("treemap", "Treemap", "Hierarquia quantitativa em retângulos proporcionais.", "treemap", {}, ["hierarchy"]),
+  diagram("treemap", "Treemap", "Retângulos proporcionais; encaixe hierárquico ainda limitado.", "treemap", {}, ["hierarchy"]),
   diagram("sunburst", "Sunburst", "Hierarquia radial organizada por profundidade.", "sunburst", {}, ["hierarchy"]),
   diagram("icicle", "Icicle", "Hierarquia por níveis e blocos proporcionais.", "icicle", {}, ["hierarchy"]),
   diagram("circle-pack", "Circle packing", "Nós quantitativos em círculos proporcionais.", "circle-pack", {}, ["hierarchy"]),
@@ -142,8 +142,8 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
   diagram("mindmap", "Mind map", "Ideias e relações organizadas radialmente.", "mindmap", {}, ["ideation"]),
   diagram("flowchart", "Flowchart", "Processos dirigidos entre passos e decisões.", "flowchart", {}, ["process"]),
   diagram("org-chart", "Org chart", "Estrutura de reporte e equipas.", "org-chart", { orientation: "vertical" }, ["organization"]),
-  diagram("er-diagram", "ER diagram", "Entidades e relações para modelos de dados.", "er", {}, ["database"]),
-  diagram("state-diagram", "State diagram", "Estados, transições e condições do sistema.", "state", {}, ["state"]),
+  diagram("er-diagram", "ER diagram", "Preset de caixas e relações; sem notação ER especializada.", "er", {}, ["database"]),
+  diagram("state-diagram", "State diagram", "Preset de nós e transições; sem execução de máquina de estados.", "state", {}, ["state"]),
   diagram("chord", "Chord diagram", "Relações circulares entre grupos.", "chord", {}, ["relations"]),
 ] as const;
 
