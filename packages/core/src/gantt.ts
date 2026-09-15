@@ -15,14 +15,19 @@ import {
 import type { GanttChangeKind, GanttOptions, GanttTask, GanttTaskEvent, NodaraController } from "./types";
 import { createElement, empty, formatDate, resolveElement, toTimestamp } from "./utils";
 import { normalizeGanttTasks } from "./validation";
-import { renderWebGLPoints, replaceWebGLCanvas, webGLColor } from "./webgl";
+import { createWebGLSurface, replaceWebGLCanvas, webGLColor } from "./webgl";
 import { trackPointer } from "./interaction";
 
 function tickFormat(timestamp: number, locale: string, zoom: NonNullable<GanttOptions["zoom"]>): string {
-  if (zoom === "day") return formatDate(timestamp, locale, { hour: "2-digit", minute: "2-digit" });
-  if (zoom === "week") return formatDate(timestamp, locale, { weekday: "short", day: "2-digit" });
-  if (zoom === "quarter") return formatDate(timestamp, locale, { month: "short", year: "numeric" });
-  return formatDate(timestamp, locale, { month: "short", year: "2-digit" });
+  if (zoom === "day" || zoom === "week") return formatDate(timestamp, locale, { day: "2-digit", month: "short", timeZone: "UTC" });
+  if (zoom === "quarter") return formatDate(timestamp, locale, { month: "short", year: "numeric", timeZone: "UTC" });
+  return formatDate(timestamp, locale, { month: "short", year: "2-digit", timeZone: "UTC" });
+}
+
+function taskDescription(task: GanttTask, locale: string): string {
+  const portuguese = locale.toLowerCase().startsWith("pt");
+  const date = (value: GanttTask["start"]) => formatDate(toTimestamp(value), locale, { day: "2-digit", month: "short", timeZone: "UTC" });
+  return `${task.label}, ${date(task.start)} ${portuguese ? "até" : "to"} ${date(task.end)}, ${task.progress ?? 0}% ${portuguese ? "concluído" : "complete"}`;
 }
 
 function renderAccessibleTaskList(root: HTMLElement, data: GanttTask[], locale: string, limit: number, select?: (task: GanttTask, source: "keyboard") => void): () => void {
@@ -31,7 +36,7 @@ function renderAccessibleTaskList(root: HTMLElement, data: GanttTask[], locale: 
   const accessibleLimit = Math.max(1, Math.floor(limit));
   data.slice(0, accessibleLimit).forEach((task) => {
     const item = createElement("li");
-    const button = createElement("button", "", `${task.label}, ${formatDate(toTimestamp(task.start), locale)} to ${formatDate(toTimestamp(task.end), locale)}, ${task.progress ?? 0}% complete`);
+    const button = createElement("button", "", taskDescription(task, locale));
     button.type = "button";
     button.disabled = task.disabled === true;
     button.tabIndex = select ? 0 : -1;
@@ -41,7 +46,7 @@ function renderAccessibleTaskList(root: HTMLElement, data: GanttTask[], locale: 
     list.append(item);
   });
   if (data.length > accessibleLimit) {
-    list.append(createElement("li", "", `${data.length - accessibleLimit} additional tasks are available through the data API.`));
+    list.append(createElement("li", "", `${data.length - accessibleLimit} ${locale.toLowerCase().startsWith("pt") ? "tarefas adicionais disponíveis através da API de dados." : "additional tasks are available through the data API."}`));
   }
   root.append(list);
   return () => cleanups.forEach(cleanup => cleanup());
@@ -54,16 +59,17 @@ function renderLargeGantt(
   mode: "canvas" | "webgl",
   select: (task: GanttTask, source: "pointer" | "keyboard") => void,
   onContextLost: () => void,
+  gpu: ReturnType<typeof createWebGLSurface>,
 ): () => void {
   const locale = options.locale ?? "en";
   const range = resolveGanttRange(data, options.start, options.end);
   const scale = buildTimeScale(range.start, range.end, options.zoom ?? "month");
-  let canvas = createElement("canvas", "nd-gantt__density-canvas");
+  let canvas = gpu.acquire(mode, "nd-gantt__density-canvas");
   const width = Math.max(root.clientWidth, 640);
   const height = Math.max(root.clientHeight - 44, 300);
   const pixelRatio = Math.min(globalThis.devicePixelRatio ?? 1, options.performance?.maxDevicePixelRatio ?? 2);
-  canvas.width = width * pixelRatio;
-  canvas.height = height * pixelRatio;
+  if (canvas.width !== Math.floor(width * pixelRatio)) canvas.width = width * pixelRatio;
+  if (canvas.height !== Math.floor(height * pixelRatio)) canvas.height = height * pixelRatio;
   canvas.style.width = `${width}px`;
   canvas.style.height = `${height}px`;
   canvas.setAttribute("aria-hidden", "true");
@@ -73,8 +79,8 @@ function renderLargeGantt(
     const end = (timestampToPercent(toTimestamp(task.end), scale) / 100) * width;
     return { x, y: 12 + (index % Math.max(1, Math.floor((height - 24) / 7))) * 7, width: Math.max(1, end - x), height: 3, color: webGLColor(task.color ?? "#7884ff") };
   });
-  const usedWebGL = mode === "webgl" && renderWebGLPoints(canvas, [], width, height, [0.47, 0.52, 1, 1], [], rectangles);
-  if (mode === "webgl" && !usedWebGL) { canvas = replaceWebGLCanvas(canvas); root.dataset.ndRenderer = "canvas"; }
+  const usedWebGL = mode === "webgl" && gpu.draw([], width, height, [0.47, 0.52, 1, 1], [], rectangles);
+  if (mode === "webgl" && !usedWebGL) { gpu.dispose(); canvas = replaceWebGLCanvas(canvas); root.dataset.ndRenderer = "canvas"; }
   const hitAreas: Array<{ task: GanttTask; x: number; y: number; width: number; height: number }> = [];
   if (!usedWebGL) {
     const context = canvas.getContext("2d");
@@ -113,14 +119,16 @@ export function createGantt(
 ): NodaraController<GanttTask[], GanttOptions> {
   const container = resolveElement(target);
   let gpuLost = false;
+  const gpu = createWebGLSurface();
   const controller = createController(container, options.data, options, ({ container: root, data, options: currentOptions, emit, commit }) => {
     empty(root);
     root.className = `nd-root nd-gantt ${currentOptions.className ?? ""}`.trim();
     root.setAttribute("role", "region");
     if (root.getAttribute("aria-label") !== (currentOptions.ariaLabel ?? "Gantt chart")) root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Gantt chart");
     const locale = currentOptions.locale ?? "en";
+    const portuguese = /^pt(?:-|$)/i.test(locale);
     const zoom = currentOptions.zoom ?? "month";
-    const requestedMode = resolveRenderMode(currentOptions.renderer, data.length, currentOptions.performance);
+    const requestedMode = resolveRenderMode(currentOptions.renderer, data.length, currentOptions.performance, true);
     const mode = gpuLost && requestedMode === "webgl" ? "canvas" : requestedMode;
     root.dataset.ndRenderer = mode;
     root.dataset.ndZoom = zoom;
@@ -134,12 +142,13 @@ export function createGantt(
     };
 
     const header = createElement("div", "nd-gantt__header");
-    header.append(createElement("strong", "", `${data.length} tasks`));
+    header.append(createElement("strong", "", `${data.length} ${portuguese ? data.length === 1 ? "tarefa" : "tarefas" : "tasks"}`));
     const range = resolveGanttRange(data, currentOptions.start, currentOptions.end);
-    header.append(createElement("span", "", `${formatDate(range.start, locale)} — ${formatDate(range.end, locale)} · ${zoom}`));
+    header.append(createElement("span", "", `${formatDate(range.start, locale, { day: "2-digit", month: "short", timeZone: "UTC" })} — ${formatDate(range.end, locale, { day: "2-digit", month: "short", timeZone: "UTC" })} · ${portuguese ? ({ day: "Dia", week: "Semana", month: "Mês", quarter: "Trimestre" })[zoom] : zoom}`));
     root.append(header);
 
-    if (mode !== "dom") return renderLargeGantt(root, data, currentOptions, mode, selectTask, () => { gpuLost = true; controller.resize(); });
+    if (mode !== "dom") return renderLargeGantt(root, data, currentOptions, mode, selectTask, () => { gpuLost = true; controller.resize(); }, gpu);
+    gpu.dispose();
 
     const scaleModel = buildTimeScale(range.start, range.end, zoom);
     const body = createElement("div", "nd-gantt__body");
@@ -149,11 +158,14 @@ export function createGantt(
     labels.style.setProperty("--nd-row-height", `${rowHeight}px`);
     timeline.style.setProperty("--nd-row-height", `${rowHeight}px`);
     timeline.style.setProperty("--nd-tick-count", String(scaleModel.ticks.length - 1));
+    const stops = scaleModel.ticks.slice(1, -1).flatMap(tick => [`transparent calc(${tick.position}% - 1px)`, `var(--nd-border) calc(${tick.position}% - 1px)`, `var(--nd-border) ${tick.position}%`, `transparent ${tick.position}%`]);
+    timeline.style.backgroundImage = stops.length ? `linear-gradient(to right, transparent 0%, ${stops.join(",")}, transparent 100%)` : "none";
+    timeline.style.backgroundSize = "100% 100%";
 
-    labels.append(createElement("div", "nd-gantt__labels-head", "Task"));
+    labels.append(createElement("div", "nd-gantt__labels-head", portuguese ? "Tarefa" : "Task"));
     const scale = createElement("div", "nd-gantt__scale");
-    scale.style.gridTemplateColumns = `repeat(${scaleModel.ticks.length - 1}, minmax(56px, 1fr))`;
-    scaleModel.ticks.slice(0, -1).forEach((tick) => scale.append(createElement("span", "", tickFormat(tick.timestamp, locale, zoom))));
+    scale.style.gridTemplateColumns = scaleModel.ticks.slice(0, -1).map((tick, index) => `${scaleModel.ticks[index + 1]!.position - tick.position}fr`).join(" ");
+    scaleModel.ticks.slice(0, -1).forEach((tick) => { const label = createElement("span", "", tickFormat(tick.timestamp, locale, zoom)); label.title = new Date(tick.timestamp).toISOString(); label.dataset.timestamp = String(tick.timestamp); scale.append(label); });
     timeline.append(scale);
 
     const listenerCleanups: Array<() => void> = [];
@@ -164,7 +176,7 @@ export function createGantt(
       if (task.owner?.color) owner.style.background = task.owner.color;
       const labelText = createElement("span", "nd-gantt__label-text");
       labelText.append(createElement("strong", "", task.label));
-      labelText.append(createElement("small", "", `${Math.round(task.progress ?? 0)}% complete`));
+      labelText.append(createElement("small", "", `${Math.round(task.progress ?? 0)}% ${portuguese ? "concluído" : "complete"}`));
       label.append(owner, labelText);
       labels.append(label);
 
@@ -182,7 +194,7 @@ export function createGantt(
       if (task.color) bar.style.setProperty("--nd-task-color", task.color);
       bar.disabled = task.disabled === true;
       bar.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
-      bar.setAttribute("aria-label", `${task.label}, ${formatDate(toTimestamp(task.start), locale)} to ${formatDate(toTimestamp(task.end), locale)}, ${task.progress ?? 0}% complete`);
+      bar.setAttribute("aria-label", taskDescription(task, locale));
       const progress = createElement("span", "nd-gantt__progress");
       progress.style.width = `${task.progress ?? 0}%`;
       bar.append(progress);
@@ -190,7 +202,7 @@ export function createGantt(
       startHandle.dataset.resize = "start";
       const endHandle = createElement("span", "nd-gantt__resize nd-gantt__resize--end");
       endHandle.dataset.resize = "end";
-      if (isInteractionEnabled(currentOptions.interactive, "pointer") && !task.disabled) bar.append(startHandle, endHandle);
+      if (currentOptions.editable !== false && isInteractionEnabled(currentOptions.interactive, "pointer") && !task.disabled) bar.append(startHandle, endHandle);
 
       const changeTask = (nextTask: GanttTask, change: GanttChangeKind, source: "pointer" | "keyboard") => {
         const payload = { task: nextTask, previousTask: task, change, source } satisfies GanttTaskEvent;
@@ -205,7 +217,7 @@ export function createGantt(
           selectTask(task, "keyboard");
           return;
         }
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        if (currentOptions.editable === false || event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
         event.preventDefault();
         const delta = (event.key === "ArrowRight" ? 1 : -1) * resolveSnap(currentOptions.snap);
         if (event.shiftKey) changeTask(resizeTask(task, "end", delta), "resize-end", "keyboard");
@@ -214,7 +226,7 @@ export function createGantt(
       };
       const onClick = () => { if (isInteractionEnabled(currentOptions.interactive, "pointer")) selectTask(task, "pointer"); };
       const onPointerDown = (event: PointerEvent) => {
-        if (!isInteractionEnabled(currentOptions.interactive, "pointer") || task.disabled || event.button !== 0) return;
+        if (currentOptions.editable === false || !isInteractionEnabled(currentOptions.interactive, "pointer") || task.disabled || event.button !== 0) return;
         event.preventDefault();
         const targetElement = event.target instanceof HTMLElement ? event.target : bar;
         const edge = targetElement.dataset.resize;
@@ -254,11 +266,11 @@ export function createGantt(
       svg.setAttribute("viewBox", `0 0 100 ${height}`);
       svg.setAttribute("preserveAspectRatio", "none");
       svg.setAttribute("aria-hidden", "true");
-      dependencies.forEach(({ from, to }) => {
+      dependencies.forEach(({ from, to, kind = "FS", lagMs = 0 }) => {
         const fromIndex = data.findIndex((task) => task.id === from.id);
         const toIndex = data.findIndex((task) => task.id === to.id);
-        const x1 = timestampToPercent(toTimestamp(from.end), scaleModel);
-        const x2 = timestampToPercent(toTimestamp(to.start), scaleModel);
+        const x1 = timestampToPercent(toTimestamp(kind[0] === "F" ? from.end : from.start), scaleModel);
+        const x2 = timestampToPercent(toTimestamp(kind[1] === "F" ? to.end : to.start), scaleModel);
         const y1 = 35 + fromIndex * rowHeight + rowHeight / 2;
         const y2 = 35 + toIndex * rowHeight + rowHeight / 2;
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -266,6 +278,7 @@ export function createGantt(
         path.setAttribute("d", currentOptions.dependencyRouting === "straight" ? `M ${x1} ${y1} L ${x2} ${y2}` : `M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`);
         path.dataset.from = from.id;
         path.dataset.to = to.id;
+        path.dataset.kind = kind; path.dataset.lagMs = String(lagMs);
         svg.append(path);
       });
       timeline.append(svg);
@@ -274,6 +287,6 @@ export function createGantt(
     body.append(labels, timeline);
     root.append(body);
     return () => listenerCleanups.forEach((cleanup) => cleanup());
-  }, { normalize: normalizeGanttTasks, validate: validateGanttOptions });
+  }, { normalize: normalizeGanttTasks, validate: validateGanttOptions, dispose: gpu.dispose });
   return controller;
 }

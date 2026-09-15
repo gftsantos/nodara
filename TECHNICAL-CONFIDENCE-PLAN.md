@@ -33,7 +33,7 @@ Cada iteração: **requisito/bug → implementação → regressão automatizada
 ## Contrato implementado — schema 1 e limitações
 
 - Identificadores estáveis; tarefas, recursos e locais referenciados explicitamente.
-- Datas normalizadas; intervalos semiabertos `[início,fim)`; duração e capacidade em inteiros seguros não negativos (duração zero representa um marco); alocações positivas e lag FS não negativo.
+- Datas normalizadas; intervalos semiabertos `[início,fim)`; duração e capacidade em inteiros seguros não negativos (duração zero representa um marco); alocações positivas. Relações FS/SS/FF/SF com lag inteiro com sinal (evolução de 14/09/2026, segunda ronda).
 - Um único estado autoritativo; as vistas são projeções, não cópias concorrentes.
 - Comandos transacionais; validação antes de publicar alterações; dependências cíclicas rejeitadas.
 - Histórico limitado e snapshots isolados; seleção partilhada na UI, separada do histórico; importação/exportação JSON com versão.
@@ -73,12 +73,30 @@ Cada iteração: **requisito/bug → implementação → regressão automatizada
 
 ## Sequência operacional seguinte
 
+### Incremento de 15/09/2026
+
+- Catálogo em três níveis: seis APIs de componentes, 69 variantes de configuração
+  e 100 exemplos. Presets de domínio não são componentes especializados adicionais.
+- Chord ponderado, mindmap bilateral, radial-tree por profundidade, atributos e
+  cardinalidades ER, estados inicial/final e transições curvas. Gantt com fronteiras
+  UTC reais e textos localizados; sprint/release com horizontes e dados distintos.
+- Schema 2 laboral: calendário partilhado, dependências FS/SS/FF/SF, capacidade por
+  segmentos úteis, prévia, aplicação atómica e histórico transversal. Cinco vistas
+  recebem o mesmo plano; JSON editável e integração completa copiável.
+- A validação final é registada em `outputs/technical-confidence/`; a CI preserva
+  os mesmos relatórios como artefactos. Não reutilizar contagens históricas como
+  prova da revisão atual nem equiparar emulação a leitores de ecrã físicos.
+
+### Trabalho que continua aberto
+
 1. Medir e reduzir o custo dos updates grandes: retenção de recursos, updates
    incrementais e trabalho assíncrono, com paint/input e soak de memória/GPU.
-2. Definir calendários laborais, feriados e fusos; validar DST antes de alargar o
-   scheduling para SS/FF/SF, restrições, baselines e nivelamento de recursos.
-3. Aprofundar grafos/diagramas com ports, routing com obstáculos, grupos e layouts
-   assíncronos, usando fixtures e métricas de qualidade próprias.
+2. Evoluir o calendário laboral partilhado para calendários por recurso e CPM
+   laboral, sem confundir horas úteis com duração elapsed. As quatro relações e
+   lag com sinal existem nos dois modelos; baselines e nivelamento de recursos
+   continuam abertos.
+3. Evoluir os ports e routing com obstáculos agora implementados: grupos, ciclos
+   semânticos, qualidade de layout e processamento assíncrono permanecem abertos.
 4. Separar módulos científicos, financeiros e geográficos opcionais, com contratos,
    licenças, atribuição e orçamento de tamanho definidos antes de integrar.
 5. Executar CI Ubuntu e validação com leitores de ecrã/dispositivos reais; confirmar

@@ -25,7 +25,7 @@ describe("Operational schema and graph integrity", () => {
   it("rejects a self-cycle", () => { expect(() => normalizeOperationalPlan(plan({ dependencies: [dependency("A", "A")] }))).toThrow(/cycle/); });
   it("rejects a multi-node cycle", () => { expect(() => normalizeOperationalPlan(plan({ dependencies: [dependency("A", "B"), dependency("B", "C"), dependency("C", "A")] }))).toThrow(/cycle/); });
   it("rejects parallel duplicated dependency pairs", () => { expect(() => normalizeOperationalPlan(plan({ dependencies: [dependency("A", "B"), { ...dependency("A", "B"), id: "different" }] }))).toThrow(/Duplicate/); });
-  it("rejects unsupported dependency kinds and negative lag", () => { for (const change of [{ kind: "SS" }, { lagMs: -1 }]) expect(() => normalizeOperationalPlan(plan({ dependencies: [{ ...dependency("A", "B"), ...change } as never] }))).toThrow(); });
+  it("rejects unsupported dependency kinds and noninteger lag", () => { for (const change of [{ kind: "invalid" }, { lagMs: -0.1 }]) expect(() => normalizeOperationalPlan(plan({ dependencies: [{ ...dependency("A", "B"), ...change } as never] }))).toThrow(); });
   it("sorts a reversed 10,000-task chain without recursive stack overflow", () => { const tasks = Array.from({ length: 10_000 }, (_, i) => task(String(i), i, 1)).reverse(); const dependencies = Array.from({ length: 9_999 }, (_, i) => dependency(String(i), String(i + 1))); const order = operationalOrder(normalizeOperationalPlan(plan({ tasks, dependencies }))); expect(order[0]).toBe("0"); expect(order.at(-1)).toBe("9999"); });
 });
 

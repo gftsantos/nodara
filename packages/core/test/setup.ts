@@ -23,6 +23,8 @@ export function createCanvas2DContext() {
     fillText: vi.fn(),
     lineTo: vi.fn(),
     moveTo: vi.fn(),
+    measureText: vi.fn((text: string) => ({ width: text.length * 7 })),
+    roundRect: vi.fn(),
     quadraticCurveTo: vi.fn(),
     rect: vi.fn(),
     restore: vi.fn(),

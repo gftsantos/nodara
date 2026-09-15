@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { visualCatalog } from "@nodara/core";
+import { sampleData } from "../../app/catalog/catalog-data";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -245,12 +246,12 @@ test("catalog separates unique visual types from all recipes", async ({ page }) 
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Copia e integra.");
-  await expect(page.getByText("69 configurações", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Tipos e vistas/ })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: /Todas as receitas/ }).click();
-  await expect(page.getByText("100 receitas", { exact: true })).toBeVisible();
+  await expect(page.getByText("6 componentes", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Componentes.*6 APIs/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: /^Exemplos/ }).click();
+  await expect(page.getByText("100 exemplos", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Gráficos 32", exact: true }).click();
-  await expect(page.getByText("32 receitas", { exact: true })).toBeVisible();
+  await expect(page.getByText("32 exemplos", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Abrir demonstração: Line chart/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Abrir demonstração: Candlestick/ })).toBeVisible();
 });
@@ -258,7 +259,7 @@ test("catalog separates unique visual types from all recipes", async ({ page }) 
 test("catalog groups presets and lets users switch recipe inside one visual type", async ({ page }) => {
   await page.goto("/catalog#bar-chart");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
-  const picker = page.getByRole("combobox", { name: "Escolher receita deste tipo visual" });
+  const picker = page.getByRole("combobox", { name: "Escolher exemplo desta variante" });
   await expect(picker.locator("option")).toHaveCount(4);
   await picker.selectOption("stacked-bars");
   await expect(page.locator("aside[data-active-id='stacked-bars'] .nd-chart")).toHaveAttribute("data-nd-stacked", "true");
@@ -271,7 +272,7 @@ test("all 100 catalog recipes mount and paint real renderers without runtime err
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
-  await page.getByRole("button", { name: /Todas as receitas/ }).click();
+  await page.getByRole("button", { name: /^Exemplos/ }).click();
   await expect(page.locator('[data-catalog-id="resource-plan"]')).toBeAttached();
   const rootByFamily = { gantt: ".nd-gantt", charts: ".nd-chart", topology: ".nd-topology", calendar: ".nd-calendar", maps: ".nd-geo-map", diagrams: ".nd-diagram" } as const;
   for (const item of visualCatalog) {
@@ -300,7 +301,7 @@ test("all 100 catalog recipes mount and paint real renderers without runtime err
     } else if (item.family === "gantt") await expect(root.locator(".nd-gantt__bar")).toHaveCount(6);
     else if (item.options.view === "year") await expect(root.locator(".nd-calendar__month-card")).toHaveCount(12);
     else expect(await root.locator("button").count(), `${item.id} has visible sample events`).toBeGreaterThan(0);
-    expect(await demo.getByRole("textbox", { name: "Editar dados da demonstração" }).inputValue()).toContain(item.name);
+    expect(JSON.parse(await demo.getByRole("textbox", { name: "Editar dados da demonstração" }).inputValue())).toEqual(sampleData(item));
   }
   expect(errors).toEqual([]);
 });
@@ -335,8 +336,12 @@ test("catalog search, typography and responsive width remain usable", async ({ p
   await page.goto("/catalog");
   await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible();
   await page.getByRole("textbox", { name: "Procurar no catálogo" }).fill("recorrentes");
-  await expect(page.getByText("1 configurações", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: /Eventos recorrentes/ })).toBeVisible();
+  await expect(page.getByText("1 componente", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Explorar componente: Calendários", exact: true }).click();
+  await expect(page.getByText("1 variante", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /^Exemplos/ }).click();
+  await expect(page.getByText("1 exemplo", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Abrir demonstração: Eventos recorrentes", exact: true })).toBeVisible();
   const audit = await page.evaluate(() => {
     const sizes = [...document.body.querySelectorAll("*")].filter((element) => {
       const style = getComputedStyle(element);

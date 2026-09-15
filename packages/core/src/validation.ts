@@ -48,6 +48,14 @@ export function normalizeGanttTasks(input: GanttTask[]): GanttTask[] {
     if (end < start) throw new NodaraError("ND_INVALID_RANGE", `Task ${task.id} ends before it starts.`);
     if (task.dependencies !== undefined) assertArray(task.dependencies, "dependencies");
     if (task.dependencies?.some(id => typeof id !== "string" || !id.trim())) throw new NodaraError("ND_INVALID_DEPENDENCY", "Dependencies require non-empty string identifiers.");
+    if (task.dependencyLinks !== undefined) assertArray(task.dependencyLinks, "dependencyLinks");
+    const linkKeys = new Set<string>();
+    const dependencyLinks = task.dependencyLinks?.map(link => {
+      assertRecord(link, "dependencyLink");
+      if (typeof link.taskId !== "string" || !ids.has(link.taskId) || link.taskId === task.id || !["FS", "SS", "FF", "SF"].includes(link.kind) || (link.lagMs !== undefined && !Number.isSafeInteger(link.lagMs))) throw new NodaraError("ND_INVALID_DEPENDENCY", "Invalid typed dependency endpoint, kind or lag.");
+      const key = JSON.stringify([link.taskId, link.kind]); if (linkKeys.has(key)) throw new NodaraError("ND_INVALID_DEPENDENCY", "Duplicate typed dependency."); linkKeys.add(key);
+      return { taskId: link.taskId, kind: link.kind, ...(link.lagMs !== undefined ? { lagMs: link.lagMs } : {}) };
+    });
     if (task.owner !== undefined) {
       assertRecord(task.owner, "task owner");
       if (typeof task.owner.name !== "string" || !task.owner.name.trim()) throw new NodaraError("ND_INVALID_OWNER", "Task owner requires a name.");
@@ -58,7 +66,7 @@ export function normalizeGanttTasks(input: GanttTask[]): GanttTask[] {
     if (dependencies.includes(task.id)) throw new NodaraError("ND_SELF_DEPENDENCY", `Task ${task.id} cannot depend on itself.`);
     const missing = dependencies.find((id) => !ids.has(id));
     if (missing !== undefined) throw new NodaraError("ND_DANGLING_DEPENDENCY", `Task ${task.id} depends on unknown task ${missing}.`);
-    return { ...task, progress: clamp(task.progress ?? 0, 0, 100), dependencies };
+    return { ...task, progress: clamp(task.progress ?? 0, 0, 100), dependencies, ...(dependencyLinks ? { dependencyLinks } : {}) };
   });
 }
 
@@ -166,7 +174,20 @@ export function normalizeDiagram(input: DiagramData): DiagramData {
     if (node.parentId === node.id) throw new NodaraError("ND_SELF_DEPENDENCY", `Diagram node ${node.id} cannot parent itself.`);
     if (node.parentId && !ids.has(node.parentId)) throw new NodaraError("ND_DANGLING_PARENT", `Diagram node ${node.id} references unknown parent ${node.parentId}.`);
     if (node.value !== undefined && !Number.isFinite(node.value)) throw new NodaraError("ND_INVALID_VALUE", `Diagram node ${node.id} contains a non-finite value.`);
-    return { ...node, ...(node.meta ? { meta: { ...node.meta } } : {}) };
+    if (node.ports !== undefined) assertArray(node.ports, "diagram ports");
+    if (node.branchSide !== undefined && !["left", "right"].includes(node.branchSide) || node.stateKind !== undefined && !["normal", "initial", "final"].includes(node.stateKind)) throw new NodaraError("ND_INVALID_DIAGRAM", "Invalid branchSide or stateKind.");
+    if (node.attributes !== undefined) {
+      assertArray(node.attributes, "entity attributes"); const names = new Set<string>();
+      if (node.attributes.length > 100) throw new NodaraError("ND_INVALID_DIAGRAM", "At most 100 attributes per entity.");
+      for (const attribute of node.attributes) { assertRecord(attribute, "attribute"); if (typeof attribute.name !== "string" || !attribute.name.trim() || names.has(attribute.name) || attribute.type !== undefined && typeof attribute.type !== "string" || attribute.key !== undefined && (typeof attribute.key !== "string" || !["PK", "FK", "PK/FK"].includes(attribute.key))) throw new NodaraError("ND_INVALID_DIAGRAM", "Invalid or duplicate entity attribute."); names.add(attribute.name); }
+    }
+    const portIds = new Set<string>();
+    const ports = node.ports?.map(port => {
+      assertRecord(port, "diagram port");
+      if (typeof port.id !== "string" || !port.id.trim() || portIds.has(port.id) || !["top", "right", "bottom", "left"].includes(port.side) || port.offset !== undefined && (!Number.isFinite(port.offset) || port.offset < 0 || port.offset > 1) || port.label !== undefined && typeof port.label !== "string") throw new NodaraError("ND_INVALID_PORT", `Invalid port on diagram node ${node.id}.`);
+      portIds.add(port.id); return { ...port };
+    });
+    return { ...node, ...(node.attributes ? { attributes: node.attributes.map(attribute => ({ ...attribute })) } : {}), ...(ports ? { ports } : {}), ...(node.meta ? { meta: { ...node.meta } } : {}) };
   });
   const linkIds = new Set<string>();
   const parentById = new Map(nodes.filter(node => node.parentId).map(node => [node.id, node.parentId!]));
@@ -183,6 +204,8 @@ export function normalizeDiagram(input: DiagramData): DiagramData {
     if (linkIds.has(id)) throw new NodaraError("ND_DUPLICATE_LINK", `Duplicate diagram link id: ${id}.`);
     linkIds.add(id);
     if (link.value !== undefined && !Number.isFinite(link.value)) throw new NodaraError("ND_INVALID_VALUE", `Diagram link ${id} contains a non-finite value.`);
+    for (const cardinality of [link.fromCardinality, link.toCardinality]) if (cardinality !== undefined && !["1", "0..1", "0..*", "1..*"].includes(cardinality)) throw new NodaraError("ND_INVALID_DIAGRAM", "Invalid ER cardinality.");
+    for (const [endpoint, portId] of [[link.from, link.fromPort], [link.to, link.toPort]]) if (portId !== undefined && (typeof portId !== "string" || !nodes.find(node => node.id === endpoint)?.ports?.some(port => port.id === portId))) throw new NodaraError("ND_INVALID_PORT", `Unknown port on diagram link ${id}.`);
     return { ...link, ...(link.meta ? { meta: { ...link.meta } } : {}) };
   });
   return { nodes, links };

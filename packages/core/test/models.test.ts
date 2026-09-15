@@ -28,10 +28,10 @@ describe("time scale and gantt model", () => {
     expect(range.end - range.start).toBe(DAY);
   });
   it("[I030] respects explicit gantt range", () => expect(resolveGanttRange([baseTask], 10, 20)).toEqual({ start: 10, end: 20 }));
-  it("[I031] creates 24 day ticks", () => expect(buildTimeScale(0, DAY, "day").ticks).toHaveLength(25));
-  it("[I032] creates 14 week ticks", () => expect(buildTimeScale(0, DAY * 7, "week").ticks).toHaveLength(15));
-  it("[I033] creates 12 month ticks", () => expect(buildTimeScale(0, DAY * 30, "month").ticks).toHaveLength(13));
-  it("[I034] creates 8 quarter ticks", () => expect(buildTimeScale(0, DAY * 90, "quarter").ticks).toHaveLength(9));
+  it("[I031] aligns daily ticks to UTC midnight", () => expect(buildTimeScale(0, DAY, "day").ticks.map(t => t.timestamp)).toEqual([0, DAY]));
+  it("[I032] clips a week to Monday boundaries", () => expect(buildTimeScale(0, DAY * 7, "week").ticks.map(t => t.timestamp)).toEqual([0, DAY * 4, DAY * 7]));
+  it("[I033] uses true month boundaries", () => expect(buildTimeScale(0, Date.UTC(1970, 2, 1), "month").ticks.map(t => t.timestamp)).toEqual([0, Date.UTC(1970, 1, 1), Date.UTC(1970, 2, 1)]));
+  it("[I034] uses true quarter boundaries", () => expect(buildTimeScale(0, Date.UTC(1970, 6, 1), "quarter").ticks.map(t => t.timestamp)).toEqual([0, Date.UTC(1970, 3, 1), Date.UTC(1970, 6, 1)]));
   it("[I035] positions first and last ticks", () => { const ticks = buildTimeScale(0, DAY).ticks; expect(ticks[0]?.position).toBe(0); expect(ticks.at(-1)?.position).toBe(100); });
   it("[I036] converts timestamps to percentages", () => expect(timestampToPercent(50, { start: 0, duration: 100 })).toBe(50));
   it("[I037] converts percentages to timestamps", () => expect(percentToTimestamp(25, { start: 100, duration: 200 })).toBe(150));

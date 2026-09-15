@@ -86,7 +86,7 @@ describe("controller lifecycle", () => {
 
 describe("real renderers and interactions", () => {
   it("[I119] renders an accessible gantt region", () => { const element = host(); createGantt(element, { data: tasks }); expect(element.getAttribute("role")).toBe("region"); expect(element.getAttribute("aria-label")).toBe("Gantt chart"); });
-  it("[I120] makes gantt zoom change tick density", () => { const element = host(); const controller = createGantt(element, { data: tasks, zoom: "month" }); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(12); controller.setOptions({ zoom: "day" }); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(24); });
+  it("[I120] makes gantt zoom change calendar tick density", () => { const element = host(); const controller = createGantt(element, { data: tasks, start: "2026-01-01", end: "2026-02-01", zoom: "month" }); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(1); controller.setOptions({ zoom: "day" }); expect(element.querySelectorAll(".nd-gantt__scale span")).toHaveLength(31); });
   it("[I121] renders visual gantt dependencies", () => { const element = host(); createGantt(element, { data: tasks }); expect(element.querySelector("path[data-from='a'][data-to='b']")).not.toBeNull(); });
   it("[I122] honors non-interactive gantt mode", () => { const element = host(); createGantt(element, { data: tasks, interactive: false }); expect(element.querySelector<HTMLButtonElement>(".nd-gantt__bar")?.tabIndex).toBe(-1); });
   it("[I123] selects gantt tasks with the keyboard", () => { const element = host(); const onTaskSelect = vi.fn(); createGantt(element, { data: tasks, onTaskSelect }); element.querySelector<HTMLButtonElement>(".nd-gantt__bar")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); expect(onTaskSelect).toHaveBeenCalledWith(expect.objectContaining({ source: "keyboard" })); });
@@ -150,7 +150,7 @@ describe("WebGL and large-volume primitives", () => {
   it("[I137] renders WebGL point buffers when supported", () => {
     const gl = {
       ARRAY_BUFFER: 1, STATIC_DRAW: 2, FLOAT: 3, VERTEX_SHADER: 4, FRAGMENT_SHADER: 5, COMPILE_STATUS: 6, LINK_STATUS: 7, COLOR_BUFFER_BIT: 8, POINTS: 9,
-      enable: vi.fn(), blendFuncSeparate: vi.fn(), uniform1f: vi.fn(),
+      enable: vi.fn(), blendFuncSeparate: vi.fn(), uniform1f: vi.fn(), bufferSubData: vi.fn(),
       attachShader: vi.fn(), bindBuffer: vi.fn(), bufferData: vi.fn(), clear: vi.fn(), clearColor: vi.fn(), compileShader: vi.fn(), createBuffer: vi.fn(() => ({})), createProgram: vi.fn(() => ({})), createShader: vi.fn(() => ({})), deleteBuffer: vi.fn(), deleteProgram: vi.fn(), deleteShader: vi.fn(), drawArrays: vi.fn(), enableVertexAttribArray: vi.fn(), getAttribLocation: vi.fn((_p, name) => name === "a_position" ? 0 : 1), getProgramParameter: vi.fn(() => true), getShaderParameter: vi.fn(() => true), getUniformLocation: vi.fn(() => ({})), linkProgram: vi.fn(), shaderSource: vi.fn(), uniform2f: vi.fn(), uniform4fv: vi.fn(), useProgram: vi.fn(), vertexAttribPointer: vi.fn(), viewport: vi.fn(),
     };
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(((type: string) => type.startsWith("webgl") ? gl : null) as typeof HTMLCanvasElement.prototype.getContext);

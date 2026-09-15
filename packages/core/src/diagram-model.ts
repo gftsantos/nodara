@@ -4,6 +4,7 @@ import type { DiagramData, DiagramLink, DiagramNode, DiagramType } from "./types
 import type { HitRegion } from "./geometry";
 import { normalizeDiagram } from "./validation";
 import { NodaraError } from "./utils";
+import { layoutDiagramChord, layoutDiagramTree } from "./diagram-specialized";
 
 export interface DiagramLayoutBox { node: DiagramNode; value: number; depth: number; x: number; y: number; width: number; height: number; region: HitRegion }
 export interface SankeyLayoutLink { link: DiagramLink; x0: number; y0: number; x1: number; y1: number; width: number }
@@ -26,6 +27,8 @@ function flowOrder(data: DiagramData): string[] {
 }
 
 export function validateDiagramLayout(data: DiagramData, type: DiagramType = "flowchart"): void {
+  if (type === "chord") layoutDiagramChord(data);
+  if (type === "radial-tree" || type === "mindmap") layoutDiagramTree(data, type, 800, 500);
   if (["treemap", "icicle", "sunburst", "circle-pack", "sankey", "alluvial"].includes(type)) {
     for (const node of data.nodes) if ((node.value ?? 0) < 0) throw new NodaraError("ND_NEGATIVE_WEIGHT", "Area and flow layouts require non-negative node weights.");
   }

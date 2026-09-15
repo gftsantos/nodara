@@ -33,7 +33,9 @@ export function createCalendar(
 
     const header = createElement("div", "nd-calendar__header");
     header.append(createElement("strong", "", formatDate(anchor, locale, { month: "long", year: "numeric", ...(currentOptions.timeZone ? { timeZone: currentOptions.timeZone } : {}) })));
-    header.append(createElement("span", "", `${view} · ${visibleEvents.length} events`));
+    const portuguese = locale.toLowerCase().startsWith("pt");
+    const viewLabel = portuguese ? ({ day: "Dia", week: "Semana", month: "Mês", year: "Ano", agenda: "Agenda", "work-week": "Semana laboral", "timeline-day": "Linha diária", "timeline-week": "Linha semanal", "resource-day": "Recursos · dia", "resource-week": "Recursos · semana" } as Record<string, string>)[view] ?? view : view;
+    header.append(createElement("span", "", `${viewLabel} · ${visibleEvents.length} ${portuguese ? "eventos" : "events"}`));
     root.append(header);
 
     const grid = createElement("div", `nd-calendar__grid nd-calendar__grid--${view}`);
@@ -96,7 +98,7 @@ export function createCalendar(
         button.type = "button";
         button.disabled = event.disabled === true;
         button.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
-        button.append(createElement("time", "", formatDate(toTimestamp(event.start), locale, { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })));
+        button.append(createElement("time", "", formatDate(toTimestamp(event.start), locale, { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", ...(currentOptions.timeZone ? { timeZone: currentOptions.timeZone } : {}) })));
         button.append(createElement("strong", "", event.title));
         const resource = event.resourceId ? resourceById.get(event.resourceId) : undefined;
         if (resource) button.append(createElement("small", "", resource.label));
@@ -105,7 +107,7 @@ export function createCalendar(
         listeners.push(() => button.removeEventListener("click", onClick));
         agenda.append(button);
       });
-      if (visibleEvents.length === 0) agenda.append(createElement("p", "nd-calendar__empty", "No events in this range."));
+      if (visibleEvents.length === 0) agenda.append(createElement("p", "nd-calendar__empty", portuguese ? "Sem eventos neste intervalo." : "No events in this range."));
       root.append(agenda);
       return () => listeners.forEach((listener) => listener());
     }

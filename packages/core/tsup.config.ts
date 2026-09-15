@@ -1,4 +1,5 @@
 import { defineConfig } from "tsup";
 
-// Keep the distributed browser ESM and CJS self-contained; include notices in the tarball.
-export default defineConfig({ noExternal: [/^d3-/] });
+// Main entry is self-contained. working-time resolves Temporal and the main
+// entry externally, sharing NodaraError identity without loading Temporal in charts.
+export default defineConfig({ noExternal: [/^d3-/], external: ["@nodara/core"], splitting: false });

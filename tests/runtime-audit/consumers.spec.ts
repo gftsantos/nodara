@@ -7,6 +7,20 @@ const consumerRequire = createRequire(resolve(consumerDirectory, "package.json")
 const consumerStyles = consumerRequire.resolve("@nodara/core/styles.css");
 type AdapterWindow = typeof window & { __adapter: { events: unknown[]; mount(kind: string, data: unknown, options: Record<string, unknown>): Promise<void>; update(data: unknown): Promise<void>; setOptions(options: Record<string, unknown>): Promise<void>; setState(data: unknown, options: Record<string, unknown>): Promise<void>; destroy(): Promise<void> } }
 
+test("working-time tarball resolves Temporal and shared errors inside a browser", async ({ page }) => {
+  await page.setContent('<!doctype html><html lang="en"><head><title>Working time consumer</title></head><body><main>Working time</main></body></html>');
+  await page.addScriptTag({ type: "module", path: resolve(consumerDirectory, "working-time.js") });
+  type WorkingWindow = typeof window & { __workingTime: typeof import("@nodara/core/working-time") & Pick<typeof import("@nodara/core"), "NodaraError"> };
+  await page.waitForFunction(() => Boolean((window as WorkingWindow).__workingTime));
+  const result = await page.evaluate(() => {
+    const { createWorkingClock, NodaraError } = (window as WorkingWindow).__workingTime;
+    const clock = createWorkingClock({ id: "dst", timeZone: "Europe/Lisbon", week: [{ day: 7, periods: [{ start: "00:00", end: "04:00" }] }] }, { startDate: "2026-03-29", endDate: "2026-03-30" });
+    let sharedError = false; try { clock.fromLocal("2026-03-29T01:30"); } catch (error) { sharedError = error instanceof NodaraError && error.code === "ND_WORKING_CALENDAR"; }
+    return { duration: clock.between(clock.horizon.startMs, clock.horizon.endMs), sharedError };
+  });
+  expect(result).toEqual({ duration: 10_800_000, sharedError: true });
+});
+
 for (const framework of ["react", "vue", "angular", "web-components"]) {
   test(`${framework}: switches chart data and its schema-dependent type atomically`, async ({ page }) => {
     const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));

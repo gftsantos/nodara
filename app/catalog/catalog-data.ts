@@ -145,6 +145,19 @@ function chartDataFor(item: VisualCatalogItem): ChartSeries[] {
 }
 
 export function sampleData(item: VisualCatalogItem): CatalogData {
+  if (item.id === "sprint-board" || item.id === "release-train") {
+    const sprint = item.id === "sprint-board", day = 86_400_000, start = Date.UTC(2026, 8, 14);
+    const names = sprint ? ["Sprint timeline · objetivo", "Pesquisa com utilizadores", "Implementar formulário", "Integrar API", "Testes de aceitação", "Demonstração do sprint"] : ["Release train · alinhamento", "Equipa API · contrato", "Equipa Web · integração", "Equipa Mobile · integração", "Validação conjunta", "Entrega coordenada"];
+    const windows = sprint ? [[0, 1], [1, 3], [3, 5], [5, 8], [8, 10], [10, 11]] : [[0, 7], [7, 14], [14, 28], [14, 35], [35, 49], [49, 56]];
+    return names.map((label, index) => ({ id: `task-${index}`, label, start: start + windows[index]![0]! * day, end: start + windows[index]![1]! * day, progress: Math.max(0, 100 - index * 25), owner: { name: sprint ? "Produto" : ["Programa", "API", "Web", "Mobile", "Qualidade", "Operações"][index]! }, ...(index ? { dependencies: [sprint || index < 3 ? `task-${index - 1}` : index === 3 ? "task-1" : `task-${index - 1}`] } : {}) }));
+  }
+  if (item.family === "diagrams") {
+    const type = item.options.type;
+    if (type === "radial-tree" || type === "mindmap") return { nodes: [{ id: "root", label: item.name }, { id: "product", label: "Produto", parentId: "root", branchSide: "left" }, { id: "tech", label: "Tecnologia", parentId: "root", branchSide: "right" }, { id: "research", label: "Pesquisa", parentId: "product" }, { id: "design", label: "Design", parentId: "product" }, { id: "api", label: "API", parentId: "tech" }, { id: "web", label: "Web", parentId: "tech" }], links: [] };
+    if (type === "er") return { nodes: [{ id: "customer", label: "Cliente", attributes: [{ name: "id", type: "uuid", key: "PK" }, { name: "nome", type: "text" }] }, { id: "order", label: "Encomenda", attributes: [{ name: "id", type: "uuid", key: "PK" }, { name: "cliente_id", type: "uuid", key: "FK" }, { name: "total", type: "decimal" }] }], links: [{ from: "customer", to: "order", fromCardinality: "1", toCardinality: "0..*", label: "faz" }] };
+    if (type === "state") return { nodes: [{ id: "start", label: "Início", stateKind: "initial" }, { id: "pending", label: "Pendente" }, { id: "paid", label: "Pago" }, { id: "end", label: "Fim", stateKind: "final" }], links: [{ from: "start", to: "pending", label: "criar" }, { from: "pending", to: "pending", label: "tentar novamente" }, { from: "pending", to: "paid", label: "pagar" }, { from: "paid", to: "end", label: "enviar" }] };
+    if (type === "chord") return { nodes: [{ id: "web", label: "Web" }, { id: "mobile", label: "Mobile" }, { id: "api", label: "API" }, { id: "data", label: "Dados" }], links: [{ from: "web", to: "api", value: 60 }, { from: "mobile", to: "api", value: 30 }, { from: "api", to: "data", value: 80 }, { from: "web", to: "data", value: 10 }] };
+  }
   if (item.family === "gantt") return structuredClone(ganttData).map((task, index) => index === 0 ? { ...task, label: item.name } : task);
   if (item.family === "charts") return chartDataFor(item).map((series, index) => index === 0 ? { ...series, label: item.name } : series);
   if (item.family === "topology") {

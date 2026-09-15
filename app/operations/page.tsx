@@ -8,6 +8,8 @@ import { createOperationalStore, NodaraError, operationalCalendar, operationalCa
 import { ArrowLeft, ArrowRight, Check, ChevronRight, Code2, Copy, Download, GitBranch, Layers3, MapPin, Moon, Redo2, RotateCcw, Sun, Undo2 } from "lucide-react";
 import { demoPlan, OPERATIONAL_DAY } from "./demo-plan";
 import styles from "./operations.module.css";
+import { DependencyEditor, DiagramRoutingLab, WorkingTimeLab } from "./advanced-labs";
+import WorkingWorkspace from "./working-workspace";
 
 type View = "gantt" | "calendar" | "topology" | "map";
 const viewLabels: Record<View, string> = { gantt: "Gantt", calendar: "Calendário", topology: "Dependências", map: "Locais" };
@@ -22,6 +24,8 @@ export default function OperationsPage() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [cascade, setCascade] = useState(true);
   const [allowConflicts, setAllowConflicts] = useState(false);
+  const [planningMode, setPlanningMode] = useState<"elapsed" | "working">("elapsed");
+  const [workingVisited, setWorkingVisited] = useState(false);
   const [notice, setNotice] = useState("Seleciona uma tarefa ou arrasta uma barra. As cinco vistas partilham o mesmo plano.");
   const [error, setError] = useState("");
   const [rollback, setRollback] = useState(0);
@@ -103,6 +107,9 @@ export default function OperationsPage() {
         <div><p className={styles.eyebrow}>UM PLANO. TODAS AS PERSPETIVAS.</p><h1 id="plan-title">Planeamento operacional<span> integrado.</span></h1><p>Edita uma vez. Vê o impacto nas datas, nas equipas e nos locais.</p></div>
         <div className={styles.planBadge}><span className={styles.dot} /> WORKSPACE DEMONSTRATIVO<strong>Portugal · entrega técnica</strong><small>Dados fictícios · estado local à sessão</small></div>
       </section>
+      <div className={styles.tabs} role="group" aria-label="Modelo de planeamento"><button aria-pressed={planningMode === "elapsed"} onClick={() => setPlanningMode("elapsed")}>Planeamento contínuo · CPM</button><button aria-pressed={planningMode === "working"} onClick={() => { setWorkingVisited(true); setPlanningMode("working"); }}>Planeamento laboral · impacto</button></div>
+      {workingVisited && <div hidden={planningMode !== "working"}><WorkingWorkspace theme={theme} /></div>}
+      <div hidden={planningMode !== "elapsed"}>
       <section className={styles.metrics} aria-label="Resumo do plano">
         <div><span>TAREFAS NO PLANO</span><strong data-testid="task-count">{plan.tasks.length}<small> / {plan.tasks.filter(task => task.progress === 100).length} concluídas</small></strong><p>Identidade comum em todas as vistas</p></div>
         <div><span>CAMINHO CRÍTICO</span><strong>{critical.criticalTaskIds.length}<small> tarefas · CPM</small></strong><p>Precedências, sem nivelamento de recursos</p></div>
@@ -146,7 +153,9 @@ export default function OperationsPage() {
       </section>
       <section className={styles.developer} aria-labelledby="developer-title"><div><p className={styles.eyebrow}>DO PLAYGROUND PARA O TEU PRODUTO</p><h2 id="developer-title">O plano é teu.<br /><span>A integração também.</span></h2><p>O motor de domínio funciona sem DOM. Usa as mesmas transações em React, Vue, Angular, Web Components ou JavaScript.</p><a href="/docs#operations">Contratos, pressupostos e limitações <ArrowRight size={16} /></a><p className={styles.persistence}>Sem conta ou persistência cloud. Exporta o JSON antes de fechar ou recarregar esta página.</p></div><div className={styles.codePanel}><div><span><Code2 size={16} /> JavaScript · motor real</span><button onClick={async () => { try { await navigator.clipboard.writeText(snippet); setCopied(true); setNotice("Código copiado. Inclui no teu HTML um elemento #gantt e coloca o JSON exportado ao lado da página."); } catch { setError("Não foi possível copiar automaticamente. Seleciona e copia o código apresentado."); } }}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "Copiado" : "Copiar código"}</button></div><pre tabIndex={0} aria-label="Código de integração operacional"><code>{snippet}</code></pre><p>Instala os pacotes disponíveis em <a href="/docs#installation">Instalação</a> e adiciona <code>{'<div id="gantt"></div>'}</code> ao HTML.</p></div></section>
       <details className={styles.jsonPanel}><summary>Editar / importar plano JSON <span>Schema 1 · validação atómica</span></summary><label htmlFor="plan-json">Plano completo</label><textarea id="plan-json" value={json} onChange={event => setJson(event.target.value)} spellCheck={false} /><div><button onClick={() => { setJson(store.exportJSON()); setNotice("Editor atualizado com o plano atual."); }}>Carregar estado atual</button><button className={styles.primary} onClick={() => { try { transact([{ type: "replacePlan", plan: JSON.parse(json) }], "Plano importado"); } catch { setError("JSON inválido. O plano atual foi preservado."); } }}>Validar e importar</button></div></details>
-      <footer className={styles.footer}><span>NODARA / OPERATIONS</span><p>Elapsed time · FS + lag · CPM · capacidade · transações · undo/redo</p><a href="/catalog">Explorar componentes <ArrowRight size={14} /></a></footer>
+      <section className={styles.labs} aria-label="Ferramentas avançadas"><h2>Experimentar regras e integração</h2><DependencyEditor plan={plan} transact={transact} /><WorkingTimeLab /><DiagramRoutingLab theme={theme} /></section>
+      <footer className={styles.footer}><span>NODARA / OPERATIONS</span><p>Elapsed time · FS/SS/FF/SF · CPM · capacidade · transações · undo/redo</p><a href="/catalog">Explorar componentes <ArrowRight size={14} /></a></footer>
+      </div>
     </div>
   </main>;
 }

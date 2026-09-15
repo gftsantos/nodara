@@ -14,7 +14,8 @@ export interface OperationalTask {
 }
 export interface OperationalResource { readonly id: string; readonly label: string; readonly capacityUnits: number }
 export interface OperationalAssignment { readonly taskId: string; readonly resourceId: string; readonly units: number }
-export interface OperationalDependency { readonly id: string; readonly fromTaskId: string; readonly toTaskId: string; readonly kind: "FS"; readonly lagMs: number }
+export type OperationalDependencyKind = "FS" | "SS" | "FF" | "SF";
+export interface OperationalDependency { readonly id: string; readonly fromTaskId: string; readonly toTaskId: string; readonly kind: OperationalDependencyKind; readonly lagMs: number }
 export interface OperationalLocation { readonly id: string; readonly label: string; readonly longitude: number; readonly latitude: number }
 export interface OperationalPlan {
   readonly schemaVersion: 1;
@@ -92,12 +93,12 @@ export function normalizeOperationalPlan(input: unknown): OperationalPlan {
   });
   const dependencyIds = new Set<string>(); const pairs = new Set<string>();
   const dependencies = entries(input.dependencies, "dependencies").map(dependency => {
-    text(dependency.id, "dependency.id"); text(dependency.fromTaskId, "dependency.fromTaskId"); text(dependency.toTaskId, "dependency.toTaskId"); integer(dependency.lagMs, "dependency.lagMs");
-    if (dependency.kind !== "FS") fail("Only finish-to-start dependencies are supported by schema 1.");
+    text(dependency.id, "dependency.id"); text(dependency.fromTaskId, "dependency.fromTaskId"); text(dependency.toTaskId, "dependency.toTaskId"); integer(dependency.lagMs, "dependency.lagMs", -Number.MAX_SAFE_INTEGER);
+    if (typeof dependency.kind !== "string" || !["FS", "SS", "FF", "SF"].includes(dependency.kind)) fail("Expected an FS, SS, FF or SF dependency.");
     if (!taskIds.has(dependency.fromTaskId) || !taskIds.has(dependency.toTaskId)) fail("Dependency references an unknown task.");
-    const pair = JSON.stringify([dependency.fromTaskId, dependency.toTaskId]);
+    const pair = JSON.stringify([dependency.fromTaskId, dependency.toTaskId, dependency.kind]);
     if (dependencyIds.has(dependency.id) || pairs.has(pair)) fail("Duplicate dependency id or task pair."); dependencyIds.add(dependency.id); pairs.add(pair);
-    return { id: dependency.id, fromTaskId: dependency.fromTaskId, toTaskId: dependency.toTaskId, kind: "FS" as const, lagMs: dependency.lagMs };
+    return { id: dependency.id, fromTaskId: dependency.fromTaskId, toTaskId: dependency.toTaskId, kind: dependency.kind as OperationalDependencyKind, lagMs: dependency.lagMs };
   });
   const plan: OperationalPlan = { schemaVersion: 1, timeBasis: "elapsed", projectStartMs: input.projectStartMs as number, tasks, resources, locations, assignments, dependencies };
   operationalOrder(plan);
@@ -137,10 +138,25 @@ export function operationalCapacity(plan: OperationalPlan): CapacitySegment[] {
   return result;
 }
 
+// All four elapsed relations reduce to S_to >= S_from + weight. BigInt prevents
+// rounding in intermediate offsets before cancellation with an epoch value.
+function dependencyOffset(edge: OperationalDependency, from: OperationalTask, to: OperationalTask): bigint {
+  return BigInt(edge.lagMs) + (edge.kind[0] === "F" ? BigInt(from.durationMs) : 0n) - (edge.kind[1] === "F" ? BigInt(to.durationMs) : 0n);
+}
+function exactEpoch(value: bigint): number {
+  if (value < -8_640_000_000_000_000n || value > 8_640_000_000_000_000n) fail("Dependency date exceeds the supported epoch range.");
+  return Number(value);
+}
+function dependencyStart(edge: OperationalDependency, from: OperationalTask, to: OperationalTask, fromStart = from.startMs): bigint {
+  return BigInt(fromStart) + dependencyOffset(edge, from, to);
+}
+const laterEpoch = (current: number, bound: bigint) => bound > BigInt(current) ? exactEpoch(bound) : current;
+const earlierEpoch = (current: number, bound: bigint) => bound < BigInt(current) ? exactEpoch(bound) : current;
+
 export function operationalConflicts(plan: OperationalPlan): OperationalConflict[] {
   const tasks = new Map(plan.tasks.map(task => [task.id, task])); const conflicts: OperationalConflict[] = [];
   for (const task of plan.tasks) { const minimum = Math.max(plan.projectStartMs, task.notBeforeMs ?? -Infinity); if (task.startMs < minimum) conflicts.push({ code: "NOT_BEFORE", taskIds: [task.id], requiredStartMs: minimum, message: `${task.label} starts before its earliest permitted date.` }); }
-  for (const edge of plan.dependencies) { const predecessor = tasks.get(edge.fromTaskId)!; const successor = tasks.get(edge.toTaskId)!; const required = predecessor.startMs + predecessor.durationMs + edge.lagMs; epoch(required, "dependency.requiredStartMs"); if (successor.startMs < required) conflicts.push({ code: "DEPENDENCY", taskIds: [predecessor.id, successor.id], dependencyId: edge.id, requiredStartMs: required, message: `${successor.label} must start after ${predecessor.label} finishes, including lag.` }); }
+  for (const edge of plan.dependencies) { const predecessor = tasks.get(edge.fromTaskId)!; const successor = tasks.get(edge.toTaskId)!; const required = dependencyStart(edge, predecessor, successor); if (BigInt(successor.startMs) < required) conflicts.push({ code: "DEPENDENCY", taskIds: [predecessor.id, successor.id], dependencyId: edge.id, requiredStartMs: exactEpoch(required), message: `${successor.label}: ${edge.kind} constraint from ${predecessor.label}, lag ${edge.lagMs} ms; required start ${required}.` }); }
   for (const segment of operationalCapacity(plan)) if (segment.demandUnits > segment.capacityUnits) conflicts.push({ code: "CAPACITY", taskIds: segment.taskIds, resourceId: segment.resourceId, startMs: segment.startMs, endMs: segment.endMs, message: `${segment.resourceId}: demand ${segment.demandUnits} exceeds capacity ${segment.capacityUnits}.` });
   return conflicts;
 }
@@ -151,13 +167,13 @@ export function operationalCriticalPath(plan: OperationalPlan): CriticalPathResu
   const outgoing = new Map<string, OperationalDependency[]>();
   for (const edge of plan.dependencies) { const edges = outgoing.get(edge.fromTaskId) ?? []; edges.push(edge); outgoing.set(edge.fromTaskId, edges); }
   const earliest = new Map(plan.tasks.map(task => [task.id, Math.max(plan.projectStartMs, task.notBeforeMs ?? -Infinity)])); let finishMs = plan.projectStartMs;
-  for (const id of ordered) { const end = earliest.get(id)! + tasks.get(id)!.durationMs; epoch(end, "criticalPath.end"); finishMs = Math.max(finishMs, end); for (const edge of outgoing.get(id) ?? []) { const next = end + edge.lagMs; epoch(next, "criticalPath.lagEnd"); earliest.set(edge.toTaskId, Math.max(earliest.get(edge.toTaskId)!, next)); } }
+  for (const id of ordered) { const end = earliest.get(id)! + tasks.get(id)!.durationMs; epoch(end, "criticalPath.end"); finishMs = Math.max(finishMs, end); for (const edge of outgoing.get(id) ?? []) { const next = dependencyStart(edge, tasks.get(id)!, tasks.get(edge.toTaskId)!, earliest.get(id)!); earliest.set(edge.toTaskId, laterEpoch(earliest.get(edge.toTaskId)!, next)); } }
   const latest = new Map<string, number>();
-  for (const id of [...ordered].reverse()) { let end = finishMs; for (const edge of outgoing.get(id) ?? []) end = Math.min(end, latest.get(edge.toTaskId)! - edge.lagMs); latest.set(id, end - tasks.get(id)!.durationMs); }
+  for (const id of [...ordered].reverse()) { let start = finishMs - tasks.get(id)!.durationMs; for (const edge of outgoing.get(id) ?? []) start = earlierEpoch(start, BigInt(latest.get(edge.toTaskId)!) - dependencyOffset(edge, tasks.get(id)!, tasks.get(edge.toTaskId)!)); latest.set(id, start); }
   const result = plan.tasks.map(task => ({ taskId: task.id, earliestStartMs: earliest.get(task.id)!, earliestEndMs: earliest.get(task.id)! + task.durationMs, latestStartMs: latest.get(task.id)!, latestEndMs: latest.get(task.id)! + task.durationMs, totalFloatMs: latest.get(task.id)! - earliest.get(task.id)!, critical: latest.get(task.id) === earliest.get(task.id) }));
   for (const task of result) integer(task.totalFloatMs, "criticalPath.float");
   const criticalTaskIds = result.filter(task => task.critical).map(task => task.taskId); const criticalIds = new Set(criticalTaskIds);
-  const criticalDependencyIds = plan.dependencies.filter(edge => criticalIds.has(edge.fromTaskId) && criticalIds.has(edge.toTaskId) && earliest.get(edge.fromTaskId)! + tasks.get(edge.fromTaskId)!.durationMs + edge.lagMs === earliest.get(edge.toTaskId)).map(edge => edge.id);
+  const criticalDependencyIds = plan.dependencies.filter(edge => criticalIds.has(edge.fromTaskId) && criticalIds.has(edge.toTaskId) && dependencyStart(edge, tasks.get(edge.fromTaskId)!, tasks.get(edge.toTaskId)!, earliest.get(edge.fromTaskId)!) === BigInt(earliest.get(edge.toTaskId)!)).map(edge => edge.id);
   return { basis: "precedence-only-elapsed", finishMs, tasks: result, criticalTaskIds, criticalDependencyIds };
 }
 
@@ -167,23 +183,27 @@ export function cascadeOperationalPlan(plan: OperationalPlan): { plan: Operation
   for (const edge of plan.dependencies) { const edges = incoming.get(edge.toTaskId) ?? []; edges.push(edge); incoming.set(edge.toTaskId, edges); }
   for (const id of operationalOrder(plan)) {
     const task = tasks.get(id)!; const predecessors = incoming.get(id) ?? []; let startMs = Math.max(task.startMs, plan.projectStartMs, task.notBeforeMs ?? -Infinity);
-    for (const edge of predecessors) { const predecessor = tasks.get(edge.fromTaskId)!; startMs = Math.max(startMs, predecessor.startMs + predecessor.durationMs + edge.lagMs); }
+    for (const edge of predecessors) { const predecessor = tasks.get(edge.fromTaskId)!; startMs = laterEpoch(startMs, dependencyStart(edge, predecessor, task)); }
     epoch(startMs + task.durationMs, "cascade.end");
     if (startMs !== task.startMs) {
       if (task.locked) throw new NodaraError("ND_PLAN_LOCKED", `Cannot move locked task ${task.id}.`, { taskIds: [task.id], requiredStartMs: startMs });
-      moves.push({ taskId: id, previousStartMs: task.startMs, startMs, dependencyIds: predecessors.filter(edge => { const predecessor = tasks.get(edge.fromTaskId)!; return predecessor.startMs + predecessor.durationMs + edge.lagMs === startMs; }).map(edge => edge.id) }); tasks.set(id, { ...task, startMs });
+      moves.push({ taskId: id, previousStartMs: task.startMs, startMs, dependencyIds: predecessors.filter(edge => dependencyStart(edge, tasks.get(edge.fromTaskId)!, task) === BigInt(startMs)).map(edge => edge.id) }); tasks.set(id, { ...task, startMs });
     }
   }
   return { plan: { ...plan, tasks: plan.tasks.map(task => tasks.get(task.id)!) }, moves };
 }
 
 export function operationalGantt(plan: OperationalPlan): GanttTask[] {
-  const dependencies = new Map<string, string[]>(); for (const edge of plan.dependencies) { const ids = dependencies.get(edge.toTaskId) ?? []; ids.push(edge.fromTaskId); dependencies.set(edge.toTaskId, ids); }
+  const dependencies = new Map<string, string[]>(); const links = new Map<string, NonNullable<GanttTask["dependencyLinks"]>>();
+  for (const edge of plan.dependencies) {
+    if (edge.kind === "FS") { const ids = dependencies.get(edge.toTaskId) ?? []; ids.push(edge.fromTaskId); dependencies.set(edge.toTaskId, ids); }
+    const list = links.get(edge.toTaskId) ?? []; list.push({ taskId: edge.fromTaskId, kind: edge.kind, lagMs: edge.lagMs }); links.set(edge.toTaskId, list);
+  }
   const critical = new Set(operationalCriticalPath(plan).criticalTaskIds);
-  return plan.tasks.map(task => ({ id: task.id, label: task.label, start: task.startMs, end: task.startMs + task.durationMs, progress: task.progress, dependencies: dependencies.get(task.id) ?? [], disabled: task.locked ?? false, color: critical.has(task.id) ? "#f1856a" : "#7884ff", meta: { taskId: task.id, critical: critical.has(task.id) } }));
+  return plan.tasks.map(task => ({ id: task.id, label: task.label, start: task.startMs, end: task.startMs + task.durationMs, progress: task.progress, dependencies: dependencies.get(task.id) ?? [], dependencyLinks: links.get(task.id) ?? [], disabled: task.locked ?? false, color: critical.has(task.id) ? "#f1856a" : "#7884ff", meta: { taskId: task.id, critical: critical.has(task.id) } }));
 }
 export function operationalCalendar(plan: OperationalPlan): CalendarEvent[] { return plan.tasks.map(task => ({ id: task.id, title: task.label, start: task.startMs, end: task.startMs + task.durationMs, disabled: task.locked ?? false, meta: { taskId: task.id } })); }
-export function operationalTopology(plan: OperationalPlan): TopologyData { return { nodes: plan.tasks.map(task => ({ id: task.id, label: task.label, status: task.progress === 100 ? "healthy" : "unknown", meta: { taskId: task.id } })), edges: plan.dependencies.map(edge => ({ id: edge.id, from: edge.fromTaskId, to: edge.toTaskId, directed: true })) }; }
+export function operationalTopology(plan: OperationalPlan): TopologyData { return { nodes: plan.tasks.map(task => ({ id: task.id, label: task.label, status: task.progress === 100 ? "healthy" : "unknown", meta: { taskId: task.id } })), edges: plan.dependencies.map(edge => ({ id: edge.id, from: edge.fromTaskId, to: edge.toTaskId, directed: true, label: `${edge.kind} ${edge.lagMs >= 0 ? "+" : ""}${edge.lagMs} ms`, meta: { kind: edge.kind, lagMs: edge.lagMs } })) }; }
 export function operationalMap(plan: OperationalPlan): GeoMapData { return { points: plan.locations.map(location => ({ ...location, value: plan.tasks.filter(task => task.locationId === location.id).length, meta: { taskIds: plan.tasks.filter(task => task.locationId === location.id).map(task => task.id) } })) }; }
 /** Resource demand per elapsed-time bucket: peak concurrent units, not a sum of disjoint tasks. */
 export function operationalLoadChart(plan: OperationalPlan, startMs: number, endMs: number, bucketMs = 86_400_000): ChartSeries[] {

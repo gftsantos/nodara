@@ -7,11 +7,27 @@ import { execFileSync } from "node:child_process";
 import { visualCatalog } from "../src/catalog";
 import { sampleData, normalizeData } from "../../../app/catalog/catalog-data";
 import { integrationFiles, integrationFrameworks, previewOptions, serializeCode, type IntegrationFramework } from "../../../app/catalog/integration";
+import { workingTimeExample } from "../../../app/operations/advanced-examples";
+import { workingIntegrationExample } from "../../../app/operations/working-example";
+import { workingDemo } from "../../../app/operations/working-demo";
 
 const settings = { theme: "light" as const, interactive: true, height: 420 };
 const frameworks = Object.keys(integrationFrameworks) as IntegrationFramework[];
 
 describe("Complete copy-and-paste integrations", () => {
+  it("typechecks the complete five-view working-plan integration as JS and TS", () => {
+    const directory = resolve("work/integration-checks/working-plan"); mkdirSync(directory, { recursive: true });
+    for (const extension of ["ts", "js"]) { const path = resolve(directory, `example.${extension}`); writeFileSync(path, workingIntegrationExample(workingDemo)); const program = ts.createProgram([path], { strict: true, noEmit: true, skipLibCheck: true, allowJs: true, checkJs: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler }); expect(ts.getPreEmitDiagnostics(program).map(error => ts.flattenDiagnosticMessageText(error.messageText, "\n"))).toEqual([]); }
+  }, 120000);
+  it("typechecks the exact generated working-time example as JavaScript and TypeScript", () => {
+    const directory = resolve("work/integration-checks/working-time"); mkdirSync(directory, { recursive: true });
+    const code = workingTimeExample({ id: "office", timeZone: "Europe/Lisbon", disambiguation: "reject", week: [{ day: 1, periods: [{ start: "09:00", end: "17:00" }] }] }, { startDate: "2026-01-01", endDate: "2027-01-01" }, "2026-09-14T09:00", 3_600_000);
+    for (const extension of ["ts", "js"]) {
+      const path = resolve(directory, `example.${extension}`); writeFileSync(path, code);
+      const program = ts.createProgram([path], { strict: true, noEmit: true, skipLibCheck: true, allowJs: true, checkJs: true, target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler });
+      expect(ts.getPreEmitDiagnostics(program).map(error => ts.flattenDiagnosticMessageText(error.messageText, "\n"))).toEqual([]);
+    }
+  }, 120_000);
   it.each(visualCatalog)("generates and parses all five integrations for $id", item => {
     const data = normalizeData(item, JSON.stringify(sampleData(item)));
     for (const framework of frameworks) {
@@ -20,7 +36,8 @@ describe("Complete copy-and-paste integrations", () => {
       expect(files.map(file => file.code).join("\n")).toContain("@nodara/core/styles.css");
       expect(files[0]!.code).toContain('"theme": "light"');
       expect(files[0]!.code).toContain('"interactive": true');
-      expect(files[0]!.code).toContain(item.name);
+      const first = Array.isArray(data) ? data[0] : "nodes" in data ? data.nodes[0] : data.points[0];
+      if (first) expect(files[0]!.code).toContain(first.id);
       expect(files[0]!.code).not.toContain("inspect(point)");
       for (const file of files) {
         let code = file.code;

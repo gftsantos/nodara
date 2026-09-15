@@ -10,8 +10,10 @@ async function expectUtcStart(page: import("@playwright/test").Page, value: stri
 }
 
 async function importPlan(page: import("@playwright/test").Page, value: unknown) {
-  await page.locator("details").evaluate(node => { (node as HTMLDetailsElement).open = true; });
-  await page.getByLabel("Plano completo", { exact: true }).fill(JSON.stringify(value));
+  const editor = page.getByLabel("Plano completo", { exact: true });
+  const panel = page.locator("details").filter({ has: editor });
+  if (!await editor.isVisible()) await panel.locator("summary").click();
+  await editor.fill(JSON.stringify(value));
   await page.getByRole("button", { name: "Validar e importar", exact: true }).click();
 }
 
@@ -66,7 +68,8 @@ test("the load chart selects a task in the selected time bucket", async ({ page 
 test("importing a distant location fits the map around the actual data", async ({ page }) => {
   const plan = { ...structuredClone(demoPlan), locations: [{ id: "tokyo", label: "Tokyo", longitude: 139.69, latitude: 35.68 }], tasks: demoPlan.tasks.map(task => ({ ...task, locationId: "tokyo" })) };
   await importPlan(page, plan); await page.getByRole("tab", { name: "Locais", exact: true }).click();
-  const canvas = (await page.locator(".nd-geo-map canvas").boundingBox())!;
+  const surface = page.locator(".nd-geo-map canvas"); await expect(surface).toBeVisible();
+  const canvas = (await surface.boundingBox())!;
   await page.mouse.click(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
   await expect(page.getByTestId("task-architecture")).toHaveAttribute("aria-pressed", "true");
 });

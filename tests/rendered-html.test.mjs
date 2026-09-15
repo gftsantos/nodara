@@ -54,11 +54,11 @@ test("renders the organized visual catalog", async () => {
   assert.match(html, /Copia e integra/);
   assert.match(html, /Framework de integração/);
   assert.match(html, /downloads\/nodara-core/);
-  assert.match(html, /Line chart/);
-  assert.match(html, /Candlestick/);
-  assert.match(html, /Calendário semanal/);
-  assert.match(html, /Orthographic globe/);
-  assert.match(html, /Sankey/);
+  for (const family of ["Gantt", "Gráficos", "Topologias", "Calendários", "Mapas", "Diagramas"]) assert.match(html, new RegExp(`Explorar componente: ${family}`));
+  assert.equal([...html.matchAll(/data-catalog-id="/g)].length, 6);
+  assert.match(html, /Componentes/);
+  assert.match(html, /Variantes/);
+  assert.match(html, /Exemplos/);
 });
 
 test("renders the shared operational planning workspace", async () => {

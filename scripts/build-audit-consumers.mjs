@@ -36,6 +36,8 @@ for (const entry of manifest) {
   if (actual.version !== entry.version) throw new Error(`Wrong consumer version for ${entry.name}.`);
 }
 const angularRequire = createRequire(resolve(directory, "package.json"));
+const entryCheck = spawnSync(process.execPath, [resolve("scripts/verify-working-entry.mjs"), directory], { stdio: "inherit" });
+if (entryCheck.status !== 0) throw new Error("Working-time package entry failed its runtime/type contract.");
 const shared = `
 const events = [];
 const selectionNames = ['taskSelect','pointSelect','nodeSelect','eventSelect'];
@@ -45,6 +47,7 @@ const dataProp = kind => kind === 'chart' ? 'series' : kind === 'calendar' ? 'ev
 const host = document.getElementById('host');
 `;
 const sources = {
+  'working-time': `import { createWorkingClock } from '@nodara/core/working-time'; import { NodaraError } from '@nodara/core'; window.__workingTime = { createWorkingClock, NodaraError };`,
   react: `import React from 'react'; import {createRoot} from 'react-dom/client'; import {flushSync} from 'react-dom'; import * as components from '@nodara/react'; ${shared}
 let root, kind, data, options;
 function render(){flushSync(()=>root.render(React.createElement(components[componentNames[kind]],{[dataProp(kind)]:data,...options,style:{height:420},...Object.fromEntries(callbackNames.map(name=>[name,event=>events.push(event)]))})));}

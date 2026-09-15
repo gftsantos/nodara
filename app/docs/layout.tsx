@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: "Referência completa de Gantt, Chart, Topology, Calendar, GeoMap, Diagram, schedulers, frameworks, acessibilidade e performance.",
   openGraph: {
     title: "Nodara Docs — Referência completa",
-    description: "Seis componentes, 69 tipos visuais, 100 receitas, cinco pacotes e uma API TypeScript documentada de ponta a ponta.",
+    description: "Seis componentes, 69 variantes de configuração e 100 exemplos de utilização, com contratos TypeScript e limites documentados.",
   },
 };
 

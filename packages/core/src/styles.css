@@ -142,7 +142,7 @@
 
 .nd-gantt__timeline {
   position: relative;
-  min-width: max(100%, calc(var(--nd-tick-count, 4) * 56px));
+  min-width: max(100%, calc(var(--nd-tick-count, 4) * 80px));
   background-image: linear-gradient(90deg, transparent calc(100% - 1px), var(--nd-border) 100%);
   background-size: calc(100% / var(--nd-tick-count, 4)) 100%;
 }
@@ -153,7 +153,14 @@
 }
 
 .nd-gantt__scale span {
-  padding-left: 10px;
+  padding: 0 8px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .nd-gantt__row {
@@ -462,3 +469,6 @@
   .nd-gantt__bar, .nd-calendar__event { border: 2px solid ButtonText; }
   .nd-gantt__dependencies path { stroke: CanvasText; }
 }
+.nd-diagram:is([data-nd-type="er"], [data-nd-type="mindmap"]) { overflow: auto; }
+.nd-diagram:is([data-nd-type="er"], [data-nd-type="mindmap"]) > .nd-diagram__canvas { max-width: none; touch-action: pan-x pan-y; }
+.nd-diagram__routing-warning { position: absolute; z-index: 1; inset: auto 8px 8px; margin: 0; max-height: 40%; overflow: auto; font: 14px/1.5 var(--nd-font, sans-serif); color: var(--nd-fg); background: var(--nd-bg); padding: 8px; border: 1px solid currentColor; overflow-wrap: anywhere; }

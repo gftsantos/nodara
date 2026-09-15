@@ -205,7 +205,7 @@
 
 .viewSwitch {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   margin-top: 10px;
 }
@@ -480,6 +480,7 @@
   .realBadge { align-self: flex-start; }
   .preview { min-height: 390px; padding: 8px; overflow-x: auto; }
   .preview :global(.nd-root) { min-width: 560px; }
+  .preview :global(.nd-diagram) { min-width: 0; }
   .liveBar { align-items: flex-start; flex-direction: column; gap: 4px; }
   .demoTabs > section { padding: 12px; }
   .editorFooter { align-items: flex-start; flex-direction: column; }

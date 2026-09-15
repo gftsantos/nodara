@@ -1,5 +1,11 @@
 # Bundled mathematical layouts
 
+The separate `@nodara/core/working-time` entry depends on (rather than embeds)
+`@js-temporal/polyfill` 0.5.1, ISC, and its transitive dependency `jsbi`.
+Their complete license notices are distributed in their respective npm packages.
+The main visualization entry does not include or load these modules.
+Source: https://github.com/js-temporal/temporal-polyfill
+
 Nodara's public API and renderers include the following third-party algorithms.
 These notices accompany the self-contained distributions; Nodara's own code
 continues to be licensed under the MIT license in LICENSE.

@@ -22,7 +22,11 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./working-time": {
+      "import": { "types": "./dist/working-time.d.ts", "default": "./dist/working-time.js" },
+      "require": { "types": "./dist/working-time.d.cts", "default": "./dist/working-time.cjs" }
+    }
   },
   "files": [
     "dist",
@@ -34,7 +38,7 @@
     "**/*.css"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake",
+    "build": "tsup src/index.ts src/working-time.ts --format esm,cjs --dts --clean --sourcemap --treeshake",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "publishConfig": {
@@ -50,6 +54,7 @@
     "visualization"
   ],
   "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
     "d3-hierarchy": "3.1.2",
     "d3-sankey": "0.12.3"
   }

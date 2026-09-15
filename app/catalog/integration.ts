@@ -26,7 +26,7 @@ export function serializeCode(value: unknown): string {
 export function previewOptions(item: IntegrationSource, settings: IntegrationSettings): Record<string, unknown> {
   return {
     ...item.options, theme: settings.theme, locale: "pt-PT", interactive: settings.interactive,
-    ...(item.family === "gantt" ? { start: "2026-01-01", end: "2026-04-30" } : {}),
+    ...(item.family === "gantt" ? { start: item.options.start ?? "2026-01-01", end: item.options.end ?? "2026-04-30" } : {}),
     ...(item.family === "charts" ? { showTooltip: true } : {}),
     ...(item.family === "calendar" ? { date: "2026-08-20", resources: [{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }] } : {}),
   };

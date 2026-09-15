@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "src",
-    "outDir": "dist"
+    "outDir": "dist",
+    "paths": { "@nodara/core": ["./src/index.ts"] }
   },
   "include": ["src/**/*.ts"]
 }

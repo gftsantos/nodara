@@ -9,7 +9,9 @@ export function supportsWebGL(): boolean {
   if (typeof document === "undefined") return false;
   try {
     const canvas = document.createElement("canvas");
-    return Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl"));
+    const context = canvas.getContext("webgl2") || canvas.getContext("webgl");
+    context?.getExtension("WEBGL_lose_context")?.loseContext();
+    return Boolean(context);
   } catch {
     return false;
   }
@@ -19,13 +21,13 @@ export function resolveRenderMode(
   requested: RenderMode = "auto",
   itemCount = 0,
   thresholds: RenderModeThresholds = {},
-  webglAvailable = supportsWebGL(),
+  webglAvailable?: boolean,
 ): Exclude<RenderMode, "auto"> {
-  if (requested === "webgl") return webglAvailable ? "webgl" : "canvas";
+  if (requested === "webgl") return (webglAvailable ?? supportsWebGL()) ? "webgl" : "canvas";
   if (requested !== "auto") return requested;
   const canvasThreshold = thresholds.canvasThreshold ?? 750;
   const webglThreshold = thresholds.webglThreshold ?? 5_000;
-  if (itemCount >= webglThreshold && webglAvailable) return "webgl";
+  if (itemCount >= webglThreshold && (webglAvailable ?? supportsWebGL())) return "webgl";
   if (itemCount >= canvasThreshold) return "canvas";
   return "dom";
 }

@@ -18,6 +18,8 @@ export type Renderer<TData, TOptions> = (
 ) => void | (() => void);
 
 export interface ControllerConfig<TData, TOptions> {
+  /** Private engine resources, retained across render cleanups. */
+  dispose?: () => void;
   normalize?: (data: TData) => TData;
   validate?: (data: TData, options: TOptions) => void;
   getPlugins?: (options: TOptions) => NodaraPlugin<TData, TOptions>[];
@@ -94,7 +96,7 @@ export function createController<TData, TOptions extends BaseOptions>(
       for (const plugin of activePlugins) { plugin.beforeRender?.(context); if (destroyed) return; }
       hasRendered = true;
       cleanup = renderer({ container, data: currentData, options: currentOptions, emit, commit });
-      if (destroyed) { const lateCleanup = cleanup; cleanup = undefined; lateCleanup?.(); empty(container); return; }
+      if (destroyed) { const lateCleanup = cleanup; cleanup = undefined; try { lateCleanup?.(); } finally { config.dispose?.(); empty(container); } return; }
       for (const name of originalAttributes.get("class")?.split(/\s+/).filter(Boolean) ?? []) container.classList.add(name);
       if (focused && !focused.isConnected) {
         const controls = [...container.querySelectorAll<HTMLElement>("button, [tabindex]")];
@@ -134,6 +136,7 @@ export function createController<TData, TOptions extends BaseOptions>(
     const attempt = (operation: () => void) => { try { operation(); } catch (cause) { failures.push(cause); } };
     const lastCleanup = cleanup; cleanup = undefined;
     attempt(() => lastCleanup?.());
+    attempt(() => config.dispose?.());
     attempt(() => resizeObserver?.disconnect());
     attempt(() => media?.removeEventListener?.("change", onThemeChange));
     const plugins = [...activePlugins]; activePlugins.clear();

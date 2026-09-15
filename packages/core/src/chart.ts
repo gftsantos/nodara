@@ -7,7 +7,7 @@ import { applyTheme } from "./theme";
 import type { ChartOptions, ChartPoint, ChartPointEvent, ChartSeries, ChartType, NodaraController } from "./types";
 import { clamp, createElement, empty, resolveElement } from "./utils";
 import { normalizeChartSeries } from "./validation";
-import { renderWebGLPoints, replaceWebGLCanvas, webGLColor } from "./webgl";
+import { createWebGLSurface, replaceWebGLCanvas, webGLColor } from "./webgl";
 import { containsPoint, type HitRegion } from "./geometry";
 
 let tooltipSequence = 0;
@@ -30,6 +30,7 @@ export function createChart(
   const container = resolveElement(target);
   const tooltipId = `nd-chart-tooltip-${++tooltipSequence}`;
   let gpuLost = false;
+  const gpu = createWebGLSurface();
   const controller = createController(container, options.series, options, ({ container: root, data, options: currentOptions, emit }) => {
     let active = true;
     const cleanups: Array<() => void> = [];
@@ -40,7 +41,7 @@ export function createChart(
     if (root.getAttribute("aria-label") !== (currentOptions.ariaLabel ?? "Data chart")) root.setAttribute("aria-label", currentOptions.ariaLabel ?? "Data chart");
     const tokens = applyTheme(root, currentOptions.theme, currentOptions.tokens);
     const chartType = currentOptions.type ?? "line";
-    const requestedMode = resolveRenderMode(currentOptions.renderer, chartPointCount(data), currentOptions.performance);
+    const requestedMode = resolveRenderMode(currentOptions.renderer, chartPointCount(data), currentOptions.performance, true);
     const mode = !gpuLost && requestedMode === "webgl" && chartType === "scatter" && !canvasOnlyTypes.has(chartType) ? "webgl" : "canvas";
     root.dataset.ndRenderer = mode;
     root.dataset.ndStacked = String(currentOptions.stacked === true);
@@ -69,12 +70,13 @@ export function createChart(
     const totalPoints = chartPointCount(data);
     const accessibilityLimit = Math.max(1, Math.floor(currentOptions.performance?.accessibilityLimit ?? 300));
     let accessiblePoints = 0;
-    data.forEach((series) => {
+    for (const series of data) {
+      if (accessiblePoints >= accessibilityLimit) break;
       const row = createElement("tr");
       row.append(createElement("th", "", series.label));
       const duplicateOrdinals = new Map<string, number>();
-      series.data.forEach((point) => {
-        if (accessiblePoints >= accessibilityLimit) return;
+      for (const point of series.data) {
+        if (accessiblePoints >= accessibilityLimit) break;
         const cell = createElement("td");
         const button = createElement("button", "", `${String(point.x)}: ${(currentOptions.valueFormatter ?? String)(point.y)}`);
         button.type = "button";
@@ -91,19 +93,19 @@ export function createChart(
         cell.append(button);
         row.append(cell);
         accessiblePoints += 1;
-      });
+      }
       if (row.children.length > 1) accessibleTable.append(row);
-    });
+    }
     root.append(accessibleTable);
     root.dataset.ndAccessibleItems = String(accessiblePoints);
     if (totalPoints > accessiblePoints) root.append(createElement("p", "nd-sr-only", `${totalPoints - accessiblePoints} additional chart points are available through the data API.`));
 
-    let canvas = createElement("canvas", "nd-chart__canvas");
+    let canvas = gpu.acquire(mode, "nd-chart__canvas");
     const width = Math.max(root.clientWidth, 320);
     const height = Math.max(root.clientHeight - (currentOptions.showLegend === false ? 0 : 38), 220);
     const pixelRatio = Math.min(globalThis.devicePixelRatio ?? 1, currentOptions.performance?.maxDevicePixelRatio ?? 2);
-    canvas.width = width * pixelRatio;
-    canvas.height = height * pixelRatio;
+    if (canvas.width !== Math.floor(width * pixelRatio)) canvas.width = width * pixelRatio;
+    if (canvas.height !== Math.floor(height * pixelRatio)) canvas.height = height * pixelRatio;
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     canvas.tabIndex = -1;
@@ -132,9 +134,10 @@ export function createChart(
     if (chartType === "histogram") for (const series of data) for (const point of series.data) if (typeof point.meta?.binStart === "number" && typeof point.meta?.binEnd === "number") { binMinimum = Math.min(binMinimum, point.meta.binStart); binMaximum = Math.max(binMaximum, point.meta.binEnd); }
     const binX = (value: number) => padding.left + (value - binMinimum) / (binMaximum - binMinimum) * plotWidth;
     const xFor = (point: ChartPoint, index: number) => Number.isFinite(binMinimum) ? binX(Number(point.x)) : baseXFor(point, index);
-    const pointsForWebGL = mode === "webgl" ? chartData.map((item) => ({ x: xFor(item.series.data[item.pointIndex]!, item.pointIndex), y: yFor(item.value), size: 6, color: webGLColor(item.series.color ?? palette[data.indexOf(item.series) % palette.length] ?? tokens.primary) })) : [];
-    const usedWebGL = mode === "webgl" && renderWebGLPoints(canvas, pointsForWebGL, width, height);
-    if (mode === "webgl" && !usedWebGL) { canvas = replaceWebGLCanvas(canvas); root.dataset.ndRenderer = "canvas"; }
+    const seriesColors = mode === "webgl" ? data.map((series, index) => webGLColor(series.color ?? palette[index % palette.length] ?? tokens.primary)) : [];
+    const pointsForWebGL = mode === "webgl" ? chartData.map((item) => ({ x: xFor(item.series.data[item.pointIndex]!, item.pointIndex), y: yFor(item.value), size: 6, color: seriesColors[item.seriesIndex]! })) : [];
+    const usedWebGL = mode === "webgl" && gpu.draw(pointsForWebGL, width, height);
+    if (mode === "webgl" && !usedWebGL) { gpu.dispose(); canvas = replaceWebGLCanvas(canvas); root.dataset.ndRenderer = "canvas"; }
     if (usedWebGL) {
       const onLost = (event: Event) => { event.preventDefault(); if (active) { gpuLost = true; controller.resize(); } };
       canvas.addEventListener("webglcontextlost", onLost);
@@ -638,6 +641,6 @@ export function createChart(
       canvas.removeEventListener("mousemove", onMove);
       canvas.removeEventListener("mouseleave", onLeave);
     };
-  }, { normalize: normalizeChartSeries, validate: validateChartOptions });
+  }, { normalize: normalizeChartSeries, validate: validateChartOptions, dispose: gpu.dispose });
   return controller;
 }

@@ -1,4 +1,6 @@
 export { createGantt } from "./gantt";
+export { layoutDiagramChord, layoutDiagramTree } from "./diagram-specialized";
+export type { ChordGroup, ChordRibbon, ChordSpan, SpecializedBox } from "./diagram-specialized";
 export { createChart } from "./chart";
 export { gaussianKDE, histogram, histogramSeries, marchingSquares, scalarGridSeries, seriesScalarGrid, validateScalarGrid } from "./statistics";
 export type { DensityPoint, DensityEstimate, HistogramBin, Histogram, ScalarGrid, ContourSegment } from "./statistics";
@@ -7,6 +9,8 @@ export { createTopology } from "./topology";
 export { createCalendar } from "./calendar";
 export { createGeoMap } from "./geo-map";
 export { createDiagram } from "./diagram";
+export { routeDiagramLinks, diagramPortPoint } from "./diagram-routing";
+export type { DiagramRoute, DiagramRouteBox, DiagramRoutePoint, DiagramRoutingBudget } from "./diagram-routing";
 export { layoutDiagramHierarchy, layoutDiagramSankey, validateDiagramLayout } from "./diagram-model";
 export type { DiagramLayoutBox, SankeyLayout, SankeyLayoutLink, HierarchyDiagramType } from "./diagram-model";
 export {

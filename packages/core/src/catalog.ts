@@ -42,9 +42,9 @@ const diagram = (id: string, name: string, description: string, type: DiagramTyp
 export const visualCatalog: readonly VisualCatalogItem[] = [
   gantt("project-plan", "Plano de projeto", "Execução de projeto com progresso, responsáveis e dependências.", "month", { dependencyRouting: "orthogonal" }, ["project"]),
   gantt("product-roadmap", "Roadmap de produto", "Iniciativas e releases distribuídas por trimestre.", "quarter", {}, ["roadmap"]),
-  gantt("sprint-board", "Sprint timeline", "Trabalho de curta duração com snap diário.", "day", { snap: "day" }, ["agile"]),
-  gantt("release-train", "Release train", "Cadência semanal de entregas interdependentes.", "week", { snap: "week" }, ["release"]),
-  gantt("resource-plan", "Planeamento de recursos", "Tarefas agrupadas visualmente por responsável.", "week", { rowHeight: 64 }, ["resources"]),
+  gantt("sprint-board", "Sprint timeline", "Sprint de duas semanas: tarefas diárias de uma equipa.", "day", { snap: "day", start: "2026-09-14", end: "2026-09-28" }, ["agile"]),
+  gantt("release-train", "Release train", "Oito semanas de entregas e dependências entre equipas.", "week", { snap: "week", start: "2026-09-14", end: "2026-11-09" }, ["release"]),
+  gantt("resource-plan", "Planeamento de recursos", "Tarefas com responsável identificado por linha.", "week", { rowHeight: 64 }, ["resources"]),
   gantt("dependency-plan", "Mapa de dependências", "Relações ortogonais entre atividades críticas.", "month", { dependencyRouting: "orthogonal" }, ["dependencies"]),
   gantt("portfolio-plan", "Portefólio anual", "Programas executivos condensados em trimestres.", "quarter", { rowHeight: 48 }, ["portfolio"]),
   gantt("campaign-plan", "Campanha multicanal", "Conteúdo, media e lançamento coordenados por semana.", "week", { snap: "day" }, ["marketing"]),
@@ -106,7 +106,7 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
   calendar("resource-schedule", "Agenda de recursos", "Eventos coloridos e filtrados por recurso.", "resource-week", {}, ["resources"]),
   calendar("recurring-events", "Eventos recorrentes", "Expansão segura de regras RRULE na janela visível.", "month", { expandRecurrence: true }, ["rrule"]),
   calendar("all-day-planner", "All-day planner", "Marcos, ausências e eventos de dia inteiro.", "week", {}, ["all-day"]),
-  calendar("timezone-calendar", "Calendário multi-timezone", "Apresentação consistente num fuso IANA explícito.", "week", { timeZone: "Europe/Lisbon" }, ["timezone"]),
+  calendar("timezone-calendar", "Calendário com fuso IANA", "Rótulos no fuso escolhido; a grelha ainda segue o fuso do browser.", "week", { timeZone: "Europe/Lisbon" }, ["timezone"]),
   calendar("agenda-list", "Agenda list", "Lista cronológica, pesquisável e orientada a detalhe.", "agenda", {}, ["list"]),
   calendar("timeline-day", "Timeline diária", "Eventos posicionados numa linha temporal de um dia.", "timeline-day", {}, ["timeline"]),
   calendar("timeline-week", "Timeline semanal", "Planeamento linear de sete dias.", "timeline-week", {}, ["timeline"]),
@@ -139,12 +139,12 @@ export const visualCatalog: readonly VisualCatalogItem[] = [
   diagram("circle-pack", "Circle packing", "Nós quantitativos em círculos proporcionais.", "circle-pack", {}, ["hierarchy"]),
   diagram("tree", "Tree diagram", "Árvore navegável com níveis calculados.", "tree", { orientation: "vertical" }, ["hierarchy"]),
   diagram("radial-tree", "Radial tree", "Estrutura hierárquica distribuída em redor do centro.", "radial-tree", {}, ["hierarchy"]),
-  diagram("mindmap", "Mind map", "Ideias e relações organizadas radialmente.", "mindmap", {}, ["ideation"]),
+  diagram("mindmap", "Mind map", "Ideias em ramos à esquerda e à direita de um conceito central.", "mindmap", {}, ["ideation"]),
   diagram("flowchart", "Flowchart", "Processos dirigidos entre passos e decisões.", "flowchart", {}, ["process"]),
   diagram("org-chart", "Org chart", "Estrutura de reporte e equipas.", "org-chart", { orientation: "vertical" }, ["organization"]),
-  diagram("er-diagram", "ER diagram", "Preset de caixas e relações; sem notação ER especializada.", "er", {}, ["database"]),
-  diagram("state-diagram", "State diagram", "Preset de nós e transições; sem execução de máquina de estados.", "state", {}, ["state"]),
-  diagram("chord", "Chord diagram", "Relações circulares entre grupos.", "chord", {}, ["relations"]),
+  diagram("er-diagram", "ER diagram", "Entidades, atributos PK/FK e cardinalidades explícitas.", "er", {}, ["database"]),
+  diagram("state-diagram", "State diagram", "Estados iniciais/finais e transições rotuladas; sem execução.", "state", {}, ["state"]),
+  diagram("chord", "Chord diagram", "Faixas proporcionais ao volume das relações entre grupos.", "chord", {}, ["relations"]),
 ] as const;
 
 export const visualCatalogCounts: Readonly<Record<VisualFamily, number>> = visualCatalog.reduce<Record<VisualFamily, number>>((counts, item) => {

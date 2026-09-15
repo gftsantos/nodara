@@ -147,7 +147,7 @@ test("catalog: all 100 recipes paint on the additional browser engines", async (
   test.setTimeout(360_000);
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto("/catalog"); await expect(page.locator('[data-catalog-ready="true"]')).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: /Todas as receitas/ }).click();
+  await page.getByRole("button", { name: /^Exemplos/ }).click();
   const selectors = { gantt: ".nd-gantt", charts: ".nd-chart", topology: ".nd-topology", calendar: ".nd-calendar", maps: ".nd-geo-map", diagrams: ".nd-diagram" };
   const visited: string[] = [];
   for (const item of visualCatalog) {

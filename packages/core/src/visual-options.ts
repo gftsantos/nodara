@@ -22,7 +22,7 @@ function zoom(input: Options) {
 }
 
 export function validateGanttOptions(data: GanttTask[], input: GanttOptions): void {
-  const options = common(input, ["onTaskSelect", "onTaskChange"]);
+  const options = common(input, ["onTaskSelect", "onTaskChange"], ["editable"]);
   enumeration(options, "zoom", ["day", "week", "month", "quarter"]);
   enumeration(options, "dependencyRouting", ["straight", "orthogonal"]);
   number(options, "rowHeight", 1, 10_000);
@@ -94,6 +94,8 @@ export function validateDiagramOptions(input: DiagramOptions): void {
   const options = common(input, ["onNodeSelect"]);
   enumeration(options, "type", ["sankey", "alluvial", "treemap", "sunburst", "icicle", "circle-pack", "tree", "radial-tree", "mindmap", "flowchart", "org-chart", "er", "state", "chord"]);
   enumeration(options, "orientation", ["horizontal", "vertical"]);
+  enumeration(options, "linkRouting", ["straight", "orthogonal"]);
+  number(options, "routingClearance", 0, 1000);
   number(options, "nodeWidth", 1, 10_000); number(options, "nodeGap", 0, 10_000); number(options, "linkOpacity", 0, 1);
 }
 

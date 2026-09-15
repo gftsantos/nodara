@@ -8,14 +8,16 @@ export function recipeLimitations(item: VisualCatalogItem): string[] {
     const shared: Record<string, string> = {
       sankey: "Partilha o motor de fluxo com Alluvial.", alluvial: "Preset do motor Sankey; não adiciona estratos temporais próprios.",
       tree: "Partilha o layout com Organograma.", "org-chart": "Preset do layout de árvore.",
-      "radial-tree": "Partilha o layout com Mindmap.", mindmap: "Preset da árvore radial.",
-      flowchart: "Partilha o layout com ER e Estados.", er: "Layout de caixas e ligações; sem atributos, cardinalidades ou notação ER dedicada.",
-      state: "Layout de caixas e ligações; sem semântica de máquina de estados.",
+      "radial-tree": "Raio por profundidade hierárquica; parentId define a árvore. Sem parentId, os links devem definir uma floresta acíclica com um pai por nó.", mindmap: "Raiz central e ramos à esquerda/direita. branchSide nos filhos da raiz controla o lado; descendentes herdam-no.",
+      flowchart: "Caixas e ligações genéricas; não executa processos BPMN.", er: "Atributos e cardinalidades em texto (1, 0..1, 0..*, 1..*). Não gera SQL nem valida uma base de dados.",
+      state: "Estados inicial/final e transições rotuladas, incluindo auto-transições. Não executa guards nem implementa UML completo.",
+      chord: "Arcos proporcionais à soma dos pesos incidentes. Cada ligação contribui nas duas extremidades; auto-ligações contam duas vezes. Faixas mantêm links paralelos e direção explícita. Não é uma matriz D3 agregada. Limite: 1000 grupos e 10000 ligações; valores negativos são rejeitados.",
     };
     if (shared[type]) notes.push(shared[type]!);
     if (["treemap", "sunburst", "icicle", "circle-pack"].includes(type)) notes.push("Hierarquia real por parentId. Os pesos das folhas são agregados; valores nos pais não são contados duas vezes. Ciclos e pesos negativos são rejeitados. Contribuições abaixo da precisão numérica não têm área representável.");
     if (["sankey", "alluvial"].includes(type)) notes.push("Fluxos acíclicos com escala global de largura. A altura dos nós é o máximo entre entrada e saída; desequilíbrios não são inventados como novos fluxos.");
   }
+  if (item.family === "gantt") notes.push("Exemplo configurado do componente Gantt, não um motor independente. Escala em limites UTC; snap diário/semanal. O planeamento entre equipas e a análise de capacidade estão em /operations.");
   if (item.family === "charts" && item.options.type === "histogram") notes.push("Usa histogram(samples, {edges}) + histogramSeries para calcular contagens/densidades. Os limites binStart/binEnd preservam larguras desiguais. Dados x/y sem limites continuam a ser bins pré-agregados.");
   if (item.family === "charts" && item.options.type === "violin") notes.push("KDE gaussiano por série; Y contém amostras brutas. Bandwidth Scott ou absoluto explícito, escala de densidade partilhada. Amostras constantes sem bandwidth mostram apenas marcas, não uma densidade inventada.");
   if (item.family === "charts" && item.options.type === "contour") notes.push("Isolinhas reais de grelha retangular: usa scalarGridSeries({x,y,values}). gridY identifica a coordenada de cada linha. Não interpola pontos dispersos nem calcula densidade 2D; seleção/tooltip refere-se às amostras da grelha.");

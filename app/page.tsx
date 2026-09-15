@@ -805,7 +805,7 @@ export default function Home() {
           <div className="section-heading">
             <div><span className="section-number">01</span><p>O MESMO MOTOR. TODAS AS FORMAS.</p></div>
             <h2>Um playground para<br />dados do mundo real.</h2>
-            <p>Experimenta aqui quatro workspaces centrais ou abre o catálogo organizado por 69 configurações visuais e 100 receitas, todos com demo, dados e integração próprios.</p>
+            <p>Experimenta aqui quatro workspaces centrais ou explora seis componentes, 69 variantes de configuração e 100 exemplos. Cada exemplo tem dados editáveis e código copiável; alguns reutilizam a mesma configuração.</p>
           </div>
 
           <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>

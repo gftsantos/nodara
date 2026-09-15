@@ -18,7 +18,7 @@ export function buildChartData(series: ChartSeries[], stacked = false): ChartDat
   const negative = new Map<string | number, number>();
   return series.flatMap((entry, seriesIndex) => entry.data.map((point, pointIndex) => {
     const baselines = point.y >= 0 ? positive : negative;
-    const key = chartXIdentity(point.x);
+    const key = stacked ? chartXIdentity(point.x) : "";
     const baseline = stacked ? baselines.get(key) ?? 0 : 0;
     const value = stacked ? baseline + point.y : point.y;
     if (stacked) baselines.set(key, value);
@@ -45,8 +45,7 @@ export function chartDomain(data: ChartDatum[], type?: ChartType): { minimum: nu
 
 export function chartXScale(series: ChartSeries[], left: number, width: number): (point: ChartPoint, index: number) => number {
   const numeric = chartNumericX;
-  const categories = new Map(chartCategories(series).map((point, index) => [chartXIdentity(point.x), index]));
-  let minimum = Infinity; let maximum = -Infinity; let continuous = true; const count = Math.max(1, categories.size);
+  let minimum = Infinity; let maximum = -Infinity; let continuous = true;
   for (const entry of series) {
     for (const point of entry.data) {
       const x = numeric(point.x);
@@ -54,6 +53,8 @@ export function chartXScale(series: ChartSeries[], left: number, width: number):
       else { minimum = Math.min(minimum, x); maximum = Math.max(maximum, x); }
     }
   }
+  const categories = continuous ? new Map<string, number>() : new Map(chartCategories(series).map((point, index) => [chartXIdentity(point.x), index]));
+  const count = Math.max(1, categories.size);
   return (point, index) => left + (continuous && Number.isFinite(minimum) ? maximum === minimum ? width / 2 : (numeric(point.x) - minimum) / (maximum - minimum) * width : count === 1 ? width / 2 : (categories.get(chartXIdentity(point.x)) ?? index) / (count - 1) * width);
 }
 

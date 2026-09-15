@@ -74,6 +74,8 @@ export interface GanttTask {
   end: DateInput;
   progress?: number;
   dependencies?: string[];
+  /** Typed predecessors. Explicit FS entries override the same legacy dependency. */
+  dependencyLinks?: { taskId: string; kind: "FS" | "SS" | "FF" | "SF"; lagMs?: number }[];
   owner?: GanttOwner;
   color?: string;
   disabled?: boolean;
@@ -85,6 +87,8 @@ export type GanttChangeKind = "move" | "resize-start" | "resize-end";
 
 export interface GanttOptions extends BaseOptions {
   data: GanttTask[];
+  /** false keeps selection available while preventing date edits. */
+  editable?: boolean;
   start?: DateInput;
   end?: DateInput;
   zoom?: GanttZoom;
@@ -290,6 +294,14 @@ export interface GeoViewportEvent {
   source: InteractionSource;
 }
 
+export interface DiagramPort {
+  id: string;
+  side: "top" | "right" | "bottom" | "left";
+  /** Fraction along the side, from left/top; defaults to 0.5. */
+  offset?: number;
+  label?: string;
+}
+
 export interface DiagramNode {
   id: string;
   label: string;
@@ -297,6 +309,10 @@ export interface DiagramNode {
   value?: number;
   color?: string;
   kind?: string;
+  branchSide?: "left" | "right";
+  attributes?: { name: string; type?: string; key?: "PK" | "FK" | "PK/FK" }[];
+  stateKind?: "normal" | "initial" | "final";
+  ports?: DiagramPort[];
   meta?: Record<string, unknown>;
 }
 
@@ -308,6 +324,10 @@ export interface DiagramLink {
   value?: number;
   color?: string;
   directed?: boolean;
+  fromCardinality?: "1" | "0..1" | "0..*" | "1..*";
+  toCardinality?: "1" | "0..1" | "0..*" | "1..*";
+  fromPort?: string;
+  toPort?: string;
   meta?: Record<string, unknown>;
 }
 
@@ -325,6 +345,8 @@ export interface DiagramOptions extends BaseOptions {
   nodeWidth?: number;
   nodeGap?: number;
   linkOpacity?: number;
+  linkRouting?: "straight" | "orthogonal";
+  routingClearance?: number;
   onNodeSelect?: (event: DiagramNodeEvent) => void;
 }
 

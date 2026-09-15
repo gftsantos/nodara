@@ -38,7 +38,7 @@ import IntegrationWorkbench from "./integration-workbench";
 import { recipeLimitations } from "./capabilities";
 
 type FamilyFilter = "all" | VisualFamily;
-type CatalogView = "types" | "recipes";
+type CatalogView = "components" | "types" | "recipes";
 
 const familyLabels: Record<VisualFamily, string> = {
   gantt: "Gantt",
@@ -86,7 +86,7 @@ function CatalogPreview({ data, item, onDataChange, onEvent, settings }: { data:
 
 export default function CatalogPage() {
   const [activeId, setActiveId] = useState(visualCatalog[0]!.id);
-  const [catalogView, setCatalogView] = useState<CatalogView>("types");
+  const [catalogView, setCatalogView] = useState<CatalogView>("components");
   const [filter, setFilter] = useState<FamilyFilter>("all");
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<VisualTheme>("dark");
@@ -105,11 +105,14 @@ export default function CatalogPage() {
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-PT");
-    return visualCatalog.filter((item) => (filter === "all" || item.family === filter) && (!normalized || `${item.name} ${item.description} ${item.tags.join(" ")}`.toLocaleLowerCase("pt-PT").includes(normalized)));
+    return visualCatalog.filter((item) => (filter === "all" || item.family === filter) && (!normalized || `${familyLabels[item.family]} ${item.family} ${Object.values(item.options).join(" ")} ${item.name} ${item.description} ${item.tags.join(" ")}`.toLocaleLowerCase("pt-PT").includes(normalized)));
   }, [filter, query]);
   const filteredGroups = useMemo(() => groupVisualCatalog(filtered), [filtered]);
   const activeGroup = visualCatalogGroups.find((group) => group.items.some((item) => item.id === activeItem.id)) ?? visualCatalogGroups[0]!;
-  const resultCount = catalogView === "types" ? filteredGroups.length : filtered.length;
+  const componentItems = filtered.filter((item, index, all) => all.findIndex(candidate => candidate.family === item.family) === index);
+  const resultCount = catalogView === "components" ? componentItems.length : catalogView === "types" ? filteredGroups.length : filtered.length;
+  const resultNoun = catalogView === "components" ? "componente" : catalogView === "types" ? "variante" : "exemplo";
+  const variantTitle = (item: VisualCatalogItem) => { const group = visualCatalogGroups.find(group => group.items.some(recipe => recipe.id === item.id))!; const label = ({ day: "diário", week: "semanal", month: "mensal", quarter: "trimestral" } as Record<string, string>)[group.variant] ?? group.variant.replaceAll("-", " "); return `${familyLabels[item.family]} · ${label}`; };
 
   useEffect(() => {
     const selectHash = () => {
@@ -117,6 +120,7 @@ export default function CatalogPage() {
       try { id = decodeURIComponent(window.location.hash.slice(1)); } catch { return; }
       const item = visualCatalog.find((entry) => entry.id === id);
       if (item) {
+        setFilter(item.family); setQuery(""); setCatalogView("types");
         const next = sampleData(item);
         setActiveId(item.id);
         setData(next);
@@ -136,7 +140,7 @@ export default function CatalogPage() {
     };
   }, []);
 
-  const choose = (item: VisualCatalogItem) => {
+  const choose = (item: VisualCatalogItem, scroll = true) => {
     const next = sampleData(item);
     setActiveId(item.id);
     setData(next);
@@ -145,7 +149,7 @@ export default function CatalogPage() {
     setEditorError(false);
     setEventLog("À espera de interação…");
     window.history.pushState(null, "", `#${item.id}`);
-    if (window.innerWidth < 980) requestAnimationFrame(() => demoRef.current?.scrollIntoView({ behavior: "instant", block: "start" }));
+    if (scroll && window.innerWidth < 980) requestAnimationFrame(() => demoRef.current?.scrollIntoView({ behavior: "instant", block: "start" }));
   };
 
   const updateData = (next: CatalogData) => {
@@ -204,17 +208,17 @@ export default function CatalogPage() {
         <p>CATÁLOGO NODARA · ARQUITETURA EXPLICADA</p>
         <h1>Explora. Ajusta.<br /><span>Copia e integra.</span></h1>
         <div className={styles.heroBottom}>
-          <p>100 receitas organizadas em 6 APIs. Experimenta o motor real, altera os dados e leva o código para o teu projeto. As configurações agrupam vistas e presets — não são 69 motores independentes. Consulta os limites de cada receita antes de integrar.</p>
+          <p>Começa pelo componente, escolhe uma variante e experimenta um exemplo editável. São {visualCatalogStats.components} APIs públicas e {visualCatalogStats.recipes} exemplos ilustrativos — não {visualCatalogStats.recipes} componentes independentes. Variantes partilham infraestrutura; os limites estão junto de cada exemplo.</p>
           <div className={styles.metric}><strong>{visualCatalogStats.components}</strong><span>componentes públicos</span></div>
-          <div className={styles.metric}><strong data-contrast-sample="accent">{visualCatalogStats.visualTypes}</strong><span>configurações agrupadas</span></div>
-          <div className={styles.metric}><strong>{visualCatalogStats.recipes}</strong><span>receitas testáveis</span></div>
+          <div className={styles.metric}><strong data-contrast-sample="accent">{visualCatalogStats.visualTypes}</strong><span>variantes configuráveis</span></div>
+          <div className={styles.metric}><strong>{visualCatalogStats.recipes}</strong><span>exemplos editáveis</span></div>
         </div>
         <div className={styles.modelStrip} aria-label="Modelo do catálogo">
           <div><span>01</span><strong>Componente</strong><small>API e contrato comuns</small></div>
           <ChevronRight aria-hidden="true" />
-          <div><span>02</span><strong>Configuração</strong><small>Geometria, vista ou preset</small></div>
+          <div><span>02</span><strong>Variante</strong><small>Geometria, vista ou configuração</small></div>
           <ChevronRight aria-hidden="true" />
-          <div><span>03</span><strong>Receita</strong><small>Dados e opções de um caso real</small></div>
+          <div><span>03</span><strong>Exemplo</strong><small>Dados ilustrativos e opções</small></div>
         </div>
       </section>
 
@@ -223,24 +227,25 @@ export default function CatalogPage() {
           <div className={styles.toolbar}>
             <label><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Procurar visualização…" aria-label="Procurar no catálogo" /></label>
             <div className={styles.viewSwitch} role="group" aria-label="Nível de detalhe do catálogo">
-              <button type="button" aria-pressed={catalogView === "types"} className={catalogView === "types" ? styles.activeView : ""} onClick={() => setCatalogView("types")}><strong>Tipos e vistas</strong><span>69 configurações agrupadas</span></button>
-              <button type="button" aria-pressed={catalogView === "recipes"} className={catalogView === "recipes" ? styles.activeView : ""} onClick={() => setCatalogView("recipes")}><strong>Todas as receitas</strong><span>100 casos de uso</span></button>
+              <button type="button" aria-pressed={catalogView === "components"} className={catalogView === "components" ? styles.activeView : ""} onClick={() => setCatalogView("components")}><strong>Componentes</strong><span>{visualCatalogStats.components} APIs públicas</span></button>
+              <button type="button" aria-pressed={catalogView === "types"} className={catalogView === "types" ? styles.activeView : ""} onClick={() => setCatalogView("types")}><strong>Variantes</strong><span>{visualCatalogStats.visualTypes} configurações</span></button>
+              <button type="button" aria-pressed={catalogView === "recipes"} className={catalogView === "recipes" ? styles.activeView : ""} onClick={() => setCatalogView("recipes")}><strong>Exemplos</strong><span>{visualCatalogStats.recipes} receitas ilustrativas</span></button>
             </div>
             <div className={styles.filters} role="group" aria-label="Filtrar por família">
-              <button type="button" className={filter === "all" ? styles.activeFilter : ""} onClick={() => setFilter("all")}>Todas <span>{catalogView === "types" ? visualCatalogStats.visualTypes : visualCatalogStats.recipes}</span></button>
-              {(Object.keys(familyLabels) as VisualFamily[]).map((family) => <button type="button" className={filter === family ? styles.activeFilter : ""} onClick={() => setFilter(family)} key={family}>{familyLabels[family]} <span>{catalogView === "types" ? visualCatalogUniqueCounts[family] : visualCatalogCounts[family]}</span></button>)}
+              <button type="button" className={filter === "all" ? styles.activeFilter : ""} onClick={() => setFilter("all")}>Todas <span>{catalogView === "components" ? visualCatalogStats.components : catalogView === "types" ? visualCatalogStats.visualTypes : visualCatalogStats.recipes}</span></button>
+              {(Object.keys(familyLabels) as VisualFamily[]).map((family) => <button type="button" className={filter === family ? styles.activeFilter : ""} onClick={() => setFilter(family)} key={family}>{familyLabels[family]} <span>{catalogView === "components" ? 1 : catalogView === "types" ? visualCatalogUniqueCounts[family] : visualCatalogCounts[family]}</span></button>)}
             </div>
           </div>
-          <div className={styles.resultLine}><span>{resultCount} {catalogView === "types" ? "configurações" : "receitas"}</span><span>{catalogView === "types" ? `${filtered.length - filteredGroups.length} presets agrupados` : "Todos ligados ao core público"}</span></div>
+          <div className={styles.resultLine}><span>{resultCount} {resultNoun}{resultCount === 1 ? "" : "s"}</span><span>{catalogView === "types" ? `${filtered.length} ${filtered.length === 1 ? "exemplo disponível" : "exemplos disponíveis"}` : "Todos ligados ao core público"}</span></div>
           <div className={styles.grid}>
-            {(catalogView === "types" ? filteredGroups.map((group) => ({ item: group.items[0]!, recipes: group.items })) : filtered.map((item) => ({ item, recipes: [item] }))).map(({ item, recipes }, index) => (
-              <button type="button" data-catalog-id={item.id} className={`${styles.card} ${recipes.some((recipe) => recipe.id === activeItem.id) ? styles.activeCard : ""}`} onClick={() => choose(item)} key={catalogView === "types" ? `${item.family}-${recipes.map((recipe) => recipe.id).join("-")}` : item.id} style={{ "--family": theme === "light" ? "var(--accent)" : familyColors[item.family] } as React.CSSProperties} aria-label={`Abrir demonstração: ${item.name}`}>
+            {(catalogView === "components" ? componentItems.map(item => ({ item, recipes: filtered.filter(recipe => recipe.family === item.family) })) : catalogView === "types" ? filteredGroups.map((group) => ({ item: group.items[0]!, recipes: group.items })) : filtered.map((item) => ({ item, recipes: [item] }))).map(({ item, recipes }, index) => (
+              <button type="button" data-catalog-id={item.id} className={`${styles.card} ${recipes.some((recipe) => recipe.id === activeItem.id) ? styles.activeCard : ""}`} onClick={() => { if (catalogView === "components") { setFilter(item.family); setCatalogView("types"); } choose(item, catalogView !== "components"); }} key={catalogView === "types" ? `${item.family}-${recipes.map((recipe) => recipe.id).join("-")}` : item.id} style={{ "--family": theme === "light" ? "var(--accent)" : familyColors[item.family] } as React.CSSProperties} aria-label={catalogView === "components" ? `Explorar componente: ${familyLabels[item.family]}` : catalogView === "types" ? `Explorar variante: ${variantTitle(item)}` : `Abrir demonstração: ${item.name}`}>
                 <span className={styles.cardIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span className={styles.cardFamily}>{familyLabels[item.family]} · {catalogView === "types" ? "CONFIGURAÇÃO" : "RECEITA"}</span>
-                <strong>{item.name}</strong>
-                <span className={styles.cardDescription}>{item.description}</span>
+                <span className={styles.cardFamily}>{familyLabels[item.family]} · {catalogView === "components" ? "COMPONENTE" : catalogView === "types" ? "VARIANTE" : "EXEMPLO"}</span>
+                <strong>{catalogView === "components" ? familyLabels[item.family] : catalogView === "types" ? variantTitle(item) : item.name}</strong>
+                <span className={styles.cardDescription}>{catalogView === "components" ? `${item.dataContract} · ${visualCatalogUniqueCounts[item.family]} variantes · ${visualCatalogCounts[item.family]} exemplos` : catalogView === "types" ? `${item.dataContract} · ${recipes.length} exemplo(s) com esta configuração` : item.description}</span>
                 <span className={styles.tags}>{item.tags.slice(0, 3).map((tag, tagIndex) => <i key={`${tag}-${tagIndex}`}>{tag}</i>)}</span>
-                <span className={styles.open}>{recipes.length > 1 ? `${recipes.length} receitas · abrir grupo` : "Abrir demo real"} <ChevronRight size={15} /></span>
+                <span className={styles.open}>{catalogView === "components" ? "Explorar variantes" : recipes.length > 1 ? `${recipes.length} exemplos · abrir grupo` : "Abrir demo real"} <ChevronRight size={15} /></span>
               </button>
             ))}
           </div>
@@ -250,7 +255,8 @@ export default function CatalogPage() {
         <aside className={styles.demo} data-active-id={activeItem.id} ref={demoRef} aria-label={`Demonstração de ${activeItem.name}`}>
           <div className={styles.demoHead}>
             <div><span style={{ color: theme === "light" ? "var(--accent)" : familyColors[activeItem.family] }}>{familyLabels[activeItem.family]} · {activeGroup.variant}</span><h2>{activeItem.name}</h2><p>{activeItem.description}</p>
-              {activeGroup.items.length > 1 && <label className={styles.recipePicker}>Receita deste tipo<select aria-label="Escolher receita deste tipo visual" value={activeItem.id} onChange={(event) => { const item = visualCatalog.find((entry) => entry.id === event.target.value); if (item) choose(item); }}>{activeGroup.items.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>}
+              <p>Componente: {familyLabels[activeItem.family]} · Variante: {activeGroup.variant} · Exemplo ilustrativo</p>
+              {activeGroup.items.length > 1 && <label className={styles.recipePicker}>Exemplo desta variante<select aria-label="Escolher exemplo desta variante" value={activeItem.id} onChange={(event) => { const item = visualCatalog.find((entry) => entry.id === event.target.value); if (item) choose(item); }}>{activeGroup.items.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>}
             </div>
             <span className={styles.realBadge}><Play size={12} fill="currentColor" /> MOTOR REAL</span>
           </div>
