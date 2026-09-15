@@ -4,6 +4,23 @@ import { docsPages } from "../../app/docs/content";
 import { visualCatalog } from "@nodara/core";
 import type { AuditWindow } from "./browser-fixture";
 
+test("theme switches apply final foreground and background colours together", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator('[data-ready="true"]')).toBeVisible({ timeout: 20_000 });
+  for (const theme of ["light", "dark", "light"]) {
+    await page.getByRole("button", { name: "Alternar tema" }).click();
+    await expect(page.locator(".site")).toHaveAttribute("data-theme", theme);
+    const colours = await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => {
+      const site = getComputedStyle(document.querySelector(".site")!);
+      const navigation = getComputedStyle(document.querySelector(".main-nav a")!);
+      resolve({ foreground: site.color, background: site.backgroundColor, navigation: navigation.color, transitions: [site.transitionDuration, navigation.transitionDuration] });
+    })));
+    expect(colours).toEqual(theme === "light"
+      ? { foreground: "rgb(18, 20, 17)", background: "rgb(243, 242, 236)", navigation: "rgb(96, 100, 94)", transitions: ["0s", "0s"] }
+      : { foreground: "rgb(243, 244, 239)", background: "rgb(11, 13, 14)", navigation: "rgb(151, 155, 150)", transitions: ["0s", "0s"] });
+  }
+});
+
 for (const route of ["/", "/catalog", "/docs"]) {
   for (const theme of ["dark", "light"]) {
     test(`${route}: automated accessibility scan in ${theme}`, async ({ page }, testInfo) => {

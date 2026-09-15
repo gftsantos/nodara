@@ -68,7 +68,8 @@ a {
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
-  transition: background 180ms ease, color 180ms ease;
+  /* Theme foregrounds and backgrounds must change together: interpolation
+     passes through low-contrast colours even when both endpoints are valid. */
 }
 
 .site[data-theme="light"] {
@@ -191,7 +192,6 @@ a {
   color: var(--muted);
   font-size: 13px;
   cursor: pointer;
-  transition: color 160ms ease;
 }
 
 .main-nav :is(button, a):hover {
@@ -1526,7 +1526,7 @@ a {
   opacity: 0;
   pointer-events: none;
   transform: translateY(5px);
-  transition: 140ms ease;
+  transition: opacity 140ms ease, transform 140ms ease;
   white-space: nowrap;
 }
 
