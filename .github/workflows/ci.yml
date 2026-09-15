@@ -34,5 +34,6 @@ jobs:
           path: |
             outputs/technical-confidence/
             public/downloads/
+            test-results/
           retention-days: 14
           if-no-files-found: warn
