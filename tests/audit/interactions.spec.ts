@@ -84,6 +84,44 @@ test.describe("Tooltip and geometry contracts", () => {
   });
 });
 
+test("clustered date axis labels stay readable at narrow and wide widths", async ({ page }) => {
+  await mount(page, "createChart", { series });
+  const results = await page.evaluate(() => {
+    const w = window as AuditWindow;
+    const host = document.getElementById("host")!;
+    const xs = [0, 1, 72, 73, 74, 96, 97];
+    w.__controller.update([{ id: "load", label: "Capacity", data: xs.map(x => ({ x, y: 100 })) }]);
+    const original = CanvasRenderingContext2D.prototype.fillText;
+    const results = [];
+    for (const width of [360, 900]) {
+      host.style.width = `${width}px`;
+      const labels: Array<{ left: number; right: number; font: string }> = [];
+      CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+        if (String(text).startsWith("Data ")) {
+          const half = this.measureText(text).width / 2;
+          labels.push({ left: x - half, right: x + half, font: this.font });
+        }
+        if (maxWidth === undefined) original.call(this, text, x, y);
+        else original.call(this, text, x, y, maxWidth);
+      };
+      try { w.__controller.setOptions({ type: "step-line", labelFormatter: (x: unknown) => `Data 26/10 ${String(x)}:00` }); }
+      finally { CanvasRenderingContext2D.prototype.fillText = original; }
+      results.push({ width, labels });
+    }
+    return results;
+  });
+  for (const { width, labels } of results) {
+    expect(labels.length).toBeGreaterThanOrEqual(2);
+    for (const [index, label] of labels.entries()) {
+      expect(label.font).toContain("14px");
+      expect(label.left).toBeGreaterThanOrEqual(3.9);
+      expect(label.right).toBeLessThanOrEqual(width - 3.9);
+      if (index) expect(label.left - labels[index - 1]!.right).toBeGreaterThanOrEqual(9.9);
+    }
+  }
+  await expect(page.locator("#host table button")).toHaveCount(7);
+});
+
 test("every chart type exposes hoverable data in the browser", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   await mount(page, "createChart", { series });

@@ -9,6 +9,7 @@ import { clamp, createElement, empty, resolveElement } from "./utils";
 import { normalizeChartSeries } from "./validation";
 import { createWebGLSurface, replaceWebGLCanvas, webGLColor } from "./webgl";
 import { containsPoint, type HitRegion } from "./geometry";
+import { layoutAxisLabels } from "./axis-labels";
 
 let tooltipSequence = 0;
 
@@ -149,7 +150,7 @@ export function createChart(
       const context = canvas.getContext("2d");
       if (context) {
         context.scale(pixelRatio, pixelRatio);
-        context.font = `12px ${tokens.fontFamily}`;
+        context.font = `14px ${tokens.fontFamily}`;
         context.lineWidth = 1;
         const cartesian = ["line", "area", "bar", "scatter", "bubble", "histogram", "boxplot", "error-bar", "range-area", "step-line", "spline", "lollipop", "bullet", "candlestick", "ohlc", "violin", "contour"].includes(chartType);
 
@@ -172,9 +173,8 @@ export function createChart(
           context.fillStyle = tokens.muted;
           context.textAlign = "center";
           const stride = Math.max(1, Math.ceil(labels.length / 8));
-          labels.forEach((point, index) => {
-            if (index % stride === 0) context.fillText(labelFormatter(point.x), ["bar", "histogram", "boxplot", "candlestick", "ohlc"].includes(chartType) && !Number.isFinite(binMinimum) ? padding.left + (index + 0.5) * plotWidth / maxPoints : xFor(point, index), height - 10);
-          });
+          const candidates = labels.flatMap((point, index) => index % stride === 0 || index === labels.length - 1 ? [{ text: labelFormatter(point.x), x: ["bar", "histogram", "boxplot", "candlestick", "ohlc"].includes(chartType) && !Number.isFinite(binMinimum) ? padding.left + (index + 0.5) * plotWidth / maxPoints : xFor(point, index) }] : []);
+          for (const label of layoutAxisLabels(candidates, width, text => context.measureText(text).width)) context.fillText(label.text, label.x, height - 10);
         }
 
         if (chartType === "pie" || chartType === "donut" || chartType === "polar-area") {

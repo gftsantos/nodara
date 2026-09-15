@@ -14,3 +14,6 @@ Replace the circular-graph chord with weighted ribbons, separate radial trees an
 two-sided mindmaps, and add ER attributes/cardinalities and state semantics.
 Use real UTC Gantt boundaries and localized labels; expose selection-only
 editable:false. Clarify six component APIs versus variants and example recipes.
+
+Measure cartesian axis labels at 14px and cull collisions without removing data,
+keeping clustered working-period timestamps legible within the canvas.
