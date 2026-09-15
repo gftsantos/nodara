@@ -68,9 +68,9 @@ test("the load chart selects a task in the selected time bucket", async ({ page 
 test("importing a distant location fits the map around the actual data", async ({ page }) => {
   const plan = { ...structuredClone(demoPlan), locations: [{ id: "tokyo", label: "Tokyo", longitude: 139.69, latitude: 35.68 }], tasks: demoPlan.tasks.map(task => ({ ...task, locationId: "tokyo" })) };
   await importPlan(page, plan); await page.getByRole("tab", { name: "Locais", exact: true }).click();
-  const surface = page.locator(".nd-geo-map canvas"); await expect(surface).toBeVisible();
-  const canvas = (await surface.boundingBox())!;
-  await page.mouse.click(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2);
+  // Locator.click targets the centre of the current attached canvas. A resize
+  // can replace it between a standalone visibility check and boundingBox().
+  await page.locator(".nd-geo-map canvas").click();
   await expect(page.getByTestId("task-architecture")).toHaveAttribute("aria-pressed", "true");
 });
 
