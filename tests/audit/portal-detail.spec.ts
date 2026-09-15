@@ -66,17 +66,36 @@ test("modal traps focus, Escape closes it and focus returns to trigger", async (
 });
 
 for (const available of [true, false]) test(`documentation copy reports ${available ? "success only after clipboard write" : "a manual fallback when both copy APIs fail"}`, async ({ page }) => {
+  // This checks the clipboard contract, not animated scrolling. Firefox can
+  // otherwise move the below-fold target between pointerdown and pointerup.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  if (available) await page.clock.install({ time: new Date("2026-09-15T12:00:00Z") });
   await page.goto("/docs"); await expect(page.locator('[data-docs-ready="true"]')).toBeVisible({ timeout: 20_000 });
   await page.evaluate(available => {
-    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (text: string) => { if (!available) throw new Error("Blocked by browser policy"); (window as unknown as { copiedCode: string }).copiedCode = text; } } });
+    const state = window as unknown as { attemptedCode?: string; copiedCode?: string; finishCopy?: () => void };
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async (text: string) => {
+      if (!available) throw new Error("Blocked by browser policy");
+      state.attemptedCode = text;
+      await new Promise<void>(resolve => { state.finishCopy = resolve; });
+      state.copiedCode = text;
+    } } });
     Object.defineProperty(document, "execCommand", { configurable: true, value: () => false });
   }, available);
   const button = page.getByRole("button", { name: "Copiar código", exact: true }).first();
   const expectedCode = await page.locator("pre code").first().textContent();
   await button.click();
   if (available) {
+    await expect.poll(() => page.evaluate(() => (window as unknown as { attemptedCode?: string }).attemptedCode)).toBe(expectedCode);
+    await expect(button).toHaveText("Copiar");
+    expect(await page.evaluate(() => (window as unknown as { copiedCode?: string }).copiedCode)).toBeUndefined();
+    await page.clock.pauseAt(new Date("2026-09-15T13:00:00Z"));
+    await page.evaluate(() => (window as unknown as { finishCopy: () => void }).finishCopy());
     await expect(button).toHaveText("Copiado");
     expect(await page.evaluate(() => (window as unknown as { copiedCode: string }).copiedCode)).toBe(expectedCode);
+    await page.clock.runFor(1499);
+    await expect(button).toHaveText("Copiado");
+    await page.clock.runFor(1);
+    await expect(button).toHaveText("Copiar");
   } else {
     await expect(page.getByRole("status")).toContainText("A cópia foi bloqueada");
     await expect(button).toHaveText("Copiar");
