@@ -29,7 +29,8 @@
     "test:audit": "playwright test --config=playwright.audit.config.ts",
     "test:consumers": "node scripts/build-audit-consumers.mjs && playwright test --config=playwright.runtime-audit.config.ts",
     "security:check": "node scripts/security-gate.mjs",
-    "verify:release": "node scripts/verify-release.mjs"
+    "verify:release": "node scripts/verify-release.mjs",
+    "benchmark": "node scripts/benchmark-beta.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",

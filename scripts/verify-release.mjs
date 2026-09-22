@@ -12,6 +12,7 @@ const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 const stages = [
   ["security", process.execPath, ["scripts/security-gate.mjs"]],
   ["package-builds", npm, ["run", "build:lib"]],
+  ["public-api-surface", process.execPath, ["scripts/check-api-surface.mjs"]],
   ["lint", npm, ["run", "lint"]],
   ["package-types", npm, ["run", "typecheck", "--workspaces", "--if-present"]],
   ["portal-types", process.execPath, ["node_modules/typescript/bin/tsc", "--noEmit", "-p", "tsconfig.portal.json"]],

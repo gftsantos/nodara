@@ -1,7 +1,8 @@
 import { Temporal } from "@js-temporal/polyfill";
 import { NodaraError } from "@nodara/core";
+import { intervalSchedule } from "./working-intervals";
 export { evaluateWorkingPlan, workingPlanViews, createWorkingPlanStore } from "./working-plan";
-export type { WorkingTask, WorkingPlan, WorkingEvaluation, WorkingSnapshot, WorkingPreview } from "./working-plan";
+export type { WorkingTask, WorkingResource, WorkingPlan, WorkingEvaluation, WorkingSnapshot, WorkingPreview } from "./working-plan";
 
 export type TimeDisambiguation = "reject" | "earlier" | "later" | "compatible";
 export interface WorkPeriod { readonly start: string; readonly end: string }
@@ -104,26 +105,6 @@ export function createWorkingClock(input: WorkingCalendar, horizon: { startDate:
       else merged.push(current);
     }
     const checkInstant = (value: number) => { if (!Number.isSafeInteger(value) || value < startMs || value > endMs) failure("Instant is outside the compiled horizon."); };
-    const amount = (value: number) => { if (!Number.isSafeInteger(value) || value < 0) failure("Working duration must be a nonnegative safe integer in milliseconds."); };
-    const window = (value: number, milliseconds: number, reverse: boolean): WorkingWindow => {
-      checkInstant(value); amount(milliseconds);
-      if (!milliseconds) return freeze({ startMs: value, endMs: value, workingMs: 0, segments: [] });
-      let remaining = milliseconds; const segments: WorkingInterval[] = [];
-      for (let i = reverse ? merged.length - 1 : 0; reverse ? i >= 0 : i < merged.length; i += reverse ? -1 : 1) {
-        const interval = merged[i]!;
-        const start = reverse ? interval.startMs : Math.max(interval.startMs, value);
-        const end = reverse ? Math.min(interval.endMs, value) : interval.endMs;
-        if (end <= start) continue;
-        const consume = Math.min(remaining, end - start);
-        segments.push(reverse ? { startMs: end - consume, endMs: end } : { startMs: start, endMs: start + consume });
-        remaining -= consume;
-        if (!remaining) {
-          if (reverse) segments.reverse();
-          return freeze({ startMs: segments[0]!.startMs, endMs: segments.at(-1)!.endMs, workingMs: milliseconds, segments });
-        }
-      }
-      return failure("Insufficient working time in the compiled horizon; extend it explicitly.");
-    };
     return Object.freeze({
       calendar, horizon: freeze({ startDate: startDate.toString(), endDate: endDate.toString(), startMs, endMs }), intervals: freeze(merged),
       fromLocal(local: string, choice: TimeDisambiguation = disambiguation) {
@@ -134,10 +115,7 @@ export function createWorkingClock(input: WorkingCalendar, horizon: { startDate:
         } catch (error) { return failure(`Local time rejected: ${error instanceof Error ? error.message : String(error)}`); }
       },
       toLocal(value: number) { checkInstant(value); return Temporal.Instant.fromEpochMilliseconds(value).toZonedDateTimeISO(calendar.timeZone).toString({ smallestUnit: "millisecond" }); },
-      alignForward(value: number) { checkInstant(value); const interval = merged.find(interval => interval.endMs > value); return interval ? Math.max(value, interval.startMs) : failure("No future work period in the compiled horizon."); },
-      add: (value: number, milliseconds: number) => window(value, milliseconds, false),
-      subtract: (value: number, milliseconds: number) => window(value, milliseconds, true),
-      between(start: number, end: number) { checkInstant(start); checkInstant(end); if (end < start) failure("End precedes start."); return merged.reduce((sum, interval) => sum + Math.max(0, Math.min(end, interval.endMs) - Math.max(start, interval.startMs)), 0); },
+      ...intervalSchedule(merged, { startMs, endMs }),
     });
   } catch (error) {
     if (error instanceof NodaraError) throw error;

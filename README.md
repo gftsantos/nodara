@@ -49,6 +49,12 @@ Os servidores E2E usam `127.0.0.1:4173` e `127.0.0.1:4174`, nunca reutilizam um 
 
 `node scripts/benchmark.mjs` mede operações síncronas com datasets e ambiente registados. Executar sem outras suites em paralelo; não interpretar os resultados como FPS ou comparação de mercado.
 
+`npm run benchmark` acrescenta 18 cargas nas seis famílias (updates realmente
+alterados, teclado e heap após GC) e seis cenários de planeamento com recursos.
+Metodologia e limites: [PERFORMANCE.md](docs/PERFORMANCE.md).
+Preparação da beta e migração: [BETA-READINESS.md](docs/BETA-READINESS.md).
+Leitor de ecrã real: [percurso pendente](docs/SCREEN-READER-CHECKLIST.md).
+
 `npm test` é um subconjunto (biblioteca, build do portal e HTML). Os relatórios brutos estão em `outputs/technical-confidence/`; a baseline histórica não deve ser confundida com a execução atual.
 
 ## Estado e limites

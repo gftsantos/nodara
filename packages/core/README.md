@@ -80,10 +80,26 @@ work and segments thereafter; unlock in a separate transaction. The store provid
 frozen snapshots, subscribe/unsubscribe, undo/redo (100 entries), JSON export and
 destroy. Reentrant writes from observers or candidate getters are rejected.
 
-The example workspace has one shared project calendar, not per-resource calendars,
-resource leveling or working-time CPM. It caps 500 tasks/resources, 5000 dependencies/
-assignments and 200000 work segments. No cloud persistence is implied. Full working
-integration code in the portal uses real components and is JS/TS typechecked.
+Each `WorkingResource` may supply `calendar: WorkingCalendar`. Its UTC shifts
+intersect the project calendar and every other resource assigned to the task.
+Omission inherits the project calendar. Exceptions represent holidays, vacations
+or replacement shifts in that resource's civil timezone. Split overnight shifts
+at midnight. All resources work simultaneously; units do not scale task duration.
+
+`resourceLeveling: 'serial'` enables deterministic, interruptible serial scheduling:
+reserve locked tasks first, then allocate free capacity in stable topological order.
+It may split work around occupied periods. Omission or `'none'` preserves the
+previous scheduling behavior. This is a heuristic, not an optimal deadline solver.
+Impossible capacity or insufficient joint availability throws before any commit;
+overlapping locked tasks remain explicit conflicts. Lags remain elapsed time.
+
+Limits: 500 tasks/resources, 5000 dependencies/assignments, 200000 compiled calendar
+intervals, 200000 cached joint intervals, 200000 work segments, 2000000 resource
+reservations (also when leveling is disabled). Resource horizons
+cover the entire project UTC horizon; different zones may require an extra civil
+day, still subject to the per-calendar 3660-day limit. No working-time CPM, payroll
+hours, alternative-resource search or cloud persistence is implied. The portal's
+complete integration uses real components and is JS/TS typechecked.
 # Working calendars and deeper scheduling
 
 The elapsed operational model supports FS, SS, FF and SF, with signed integer

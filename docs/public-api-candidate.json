@@ -1,0 +1,821 @@
+{
+  "core": {
+    "applyTheme": [
+      "declare function applyTheme(element: HTMLElement, theme?: VisualTheme, overrides?: Partial<ThemeTokens>): ThemeTokens;"
+    ],
+    "BaseOptions": [
+      "interface BaseOptions { ariaLabel?: string; className?: string; interactive?: boolean | InteractionOptions; locale?: string; theme?: VisualTheme; tokens?: Partial<ThemeTokens>; renderer?: RenderMode; performance?: PerformanceOptions; plugins?: NodaraPlugin[]; onError?: (error: Error) => void; }"
+    ],
+    "buildChartData": [
+      "declare function buildChartData(series: ChartSeries[], stacked?: boolean): ChartDatum[];"
+    ],
+    "buildTimeScale": [
+      "declare function buildTimeScale(start: number, end: number, zoom?: GanttZoom): TimeScale;"
+    ],
+    "calculateTopologyLayout": [
+      "declare function calculateTopologyLayout(data: TopologyData, layout?: TopologyLayout, width?: number, height?: number, iterations?: number): PositionMap;"
+    ],
+    "CalendarEvent": [
+      "interface CalendarEvent { id: string; title: string; start: DateInput; end?: DateInput; durationMinutes?: number; resourceId?: string; color?: string; allDay?: boolean; recurrence?: string; excludedOccurrences?: number[]; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "CalendarEventChangeEvent": [
+      "interface CalendarEventChangeEvent extends CalendarEventSelectEvent { previousEvent: CalendarEvent; change: \"move\" | \"resize\"; }"
+    ],
+    "CalendarEventSelectEvent": [
+      "interface CalendarEventSelectEvent { event: CalendarEvent; source: InteractionSource; }"
+    ],
+    "CalendarOptions": [
+      "interface CalendarOptions extends BaseOptions { events: CalendarEvent[]; view?: CalendarView; date?: DateInput; weekStartsOn?: 0 | 1; timeZone?: string; resources?: CalendarResource[]; visibleResourceIds?: string[]; expandRecurrence?: boolean; maxOccurrences?: number; onEventSelect?: (event: CalendarEventSelectEvent) => void; onEventChange?: (event: CalendarEventChangeEvent) => void; }"
+    ],
+    "calendarRange": [
+      "declare function calendarRange(anchor: number, view?: CalendarView, weekStartsOn?: 0 | 1): CalendarRange;"
+    ],
+    "CalendarResource": [
+      "interface CalendarResource { id: string; label: string; color?: string; }"
+    ],
+    "CalendarView": [
+      "type CalendarView = \"day\" | \"week\" | \"workweek\" | \"month\" | \"agenda\" | \"timeline-day\" | \"timeline-week\" | \"resource-day\" | \"resource-week\" | \"year\";"
+    ],
+    "CapacitySegment": [
+      "interface CapacitySegment { readonly resourceId: string; readonly startMs: number; readonly endMs: number; readonly demandUnits: number; readonly capacityUnits: number; readonly taskIds: readonly string[]; }"
+    ],
+    "cascadeOperationalPlan": [
+      "declare function cascadeOperationalPlan(plan: OperationalPlan): { plan: OperationalPlan; moves: { taskId: string; previousStartMs: number; startMs: number; dependencyIds: string[]; }[]; };"
+    ],
+    "chartDomain": [
+      "declare function chartDomain(data: ChartDatum[], type?: ChartType): { minimum: number; maximum: number; range: number; };"
+    ],
+    "ChartOptions": [
+      "interface ChartOptions extends BaseOptions { series: ChartSeries[]; type?: ChartType; stacked?: boolean; showLegend?: boolean; showGrid?: boolean; showAxes?: boolean; showTooltip?: boolean; violinBandwidth?: number | \"scott\"; contourLevels?: number[]; valueFormatter?: (value: number) => string; labelFormatter?: (value: ChartPoint[\"x\"]) => string; onPointSelect?: (event: ChartPointEvent) => void; }"
+    ],
+    "ChartPoint": [
+      "interface ChartPoint { x: string | number | Date; y: number; meta?: Record<string, unknown>; }"
+    ],
+    "chartPointCount": [
+      "declare function chartPointCount(series: ChartSeries[]): number;"
+    ],
+    "ChartPointEvent": [
+      "interface ChartPointEvent { point: ChartPoint; series: ChartSeries; source: InteractionSource; }"
+    ],
+    "ChartSeries": [
+      "interface ChartSeries { id: string; label: string; color?: string; data: ChartPoint[]; gridY?: number; }"
+    ],
+    "ChartType": [
+      "type ChartType = \"line\" | \"area\" | \"bar\" | \"scatter\" | \"bubble\" | \"pie\" | \"donut\" | \"radar\" | \"polar-area\" | \"heatmap\" | \"waterfall\" | \"funnel\" | \"gauge\" | \"candlestick\" | \"histogram\" | \"boxplot\" | \"error-bar\" | \"range-area\" | \"step-line\" | \"spline\" | \"lollipop\" | \"bullet\" | \"radial-bar\" | \"ohlc\" | \"violin\" | \"contour\";"
+    ],
+    "ChordGroup": [
+      "interface ChordGroup extends ChordSpan { node: DiagramNode; value: number; }"
+    ],
+    "ChordRibbon": [
+      "interface ChordRibbon { link: DiagramLink; value: number; source: ChordSpan; target: ChordSpan; }"
+    ],
+    "ChordSpan": [
+      "interface ChordSpan { start: number; end: number; }"
+    ],
+    "ContourSegment": [
+      "interface ContourSegment { level: number; a: { x: number; y: number; }; b: { x: number; y: number; }; }"
+    ],
+    "contrastRatio": [
+      "declare function contrastRatio(first: string, second: string): number;"
+    ],
+    "createCalendar": [
+      "declare function createCalendar(target: string | Element, options: CalendarOptions): NodaraController<CalendarEvent[], CalendarOptions>;"
+    ],
+    "createChart": [
+      "declare function createChart(target: string | Element, options: ChartOptions): NodaraController<ChartSeries[], ChartOptions>;"
+    ],
+    "createDiagram": [
+      "declare function createDiagram(target: string | Element, options: DiagramOptions): NodaraController<DiagramData, DiagramOptions>;"
+    ],
+    "createGantt": [
+      "declare function createGantt(target: string | Element, options: GanttOptions): NodaraController<GanttTask[], GanttOptions>;"
+    ],
+    "createGeoMap": [
+      "declare function createGeoMap(target: string | Element, options: GeoMapOptions): NodaraController<GeoMapData, GeoMapOptions>;"
+    ],
+    "createOperationalStore": [
+      "declare function createOperationalStore(initialPlan: unknown, options?: { historyLimit?: number; onObserverError?: (error: unknown) => void; }): OperationalStore;"
+    ],
+    "createTopology": [
+      "declare function createTopology(target: string | Element, options: TopologyOptions): NodaraController<TopologyData, TopologyOptions>;"
+    ],
+    "CriticalPathResult": [
+      "interface CriticalPathResult { readonly basis: \"precedence-only-elapsed\"; readonly finishMs: number; readonly tasks: readonly CriticalPathTask[]; readonly criticalTaskIds: readonly string[]; readonly criticalDependencyIds: readonly string[]; }"
+    ],
+    "CriticalPathTask": [
+      "interface CriticalPathTask { readonly taskId: string; readonly earliestStartMs: number; readonly earliestEndMs: number; readonly latestStartMs: number; readonly latestEndMs: number; readonly totalFloatMs: number; readonly critical: boolean; }"
+    ],
+    "DateInput": [
+      "type DateInput = string | number | Date;"
+    ],
+    "DAY": [
+      "DAY = 86400000"
+    ],
+    "defaultDarkTokens": [
+      "defaultDarkTokens: ThemeTokens"
+    ],
+    "defaultLightTokens": [
+      "defaultLightTokens: ThemeTokens"
+    ],
+    "DensityEstimate": [
+      "interface DensityEstimate { bandwidth: number | null; sampleCount: number; points: DensityPoint[]; }"
+    ],
+    "DensityPoint": [
+      "interface DensityPoint { value: number; density: number; }"
+    ],
+    "dependencyPairs": [
+      "declare function dependencyPairs(tasks: GanttTask[]): Array<{ from: GanttTask; to: GanttTask; kind?: \"FS\" | \"SS\" | \"FF\" | \"SF\"; lagMs?: number; }>;"
+    ],
+    "DiagramData": [
+      "interface DiagramData { nodes: DiagramNode[]; links: DiagramLink[]; }"
+    ],
+    "DiagramLayoutBox": [
+      "interface DiagramLayoutBox { node: DiagramNode; value: number; depth: number; x: number; y: number; width: number; height: number; region: HitRegion; }"
+    ],
+    "DiagramLink": [
+      "interface DiagramLink { id?: string; from: string; to: string; label?: string; value?: number; color?: string; directed?: boolean; fromCardinality?: \"1\" | \"0..1\" | \"0..*\" | \"1..*\"; toCardinality?: \"1\" | \"0..1\" | \"0..*\" | \"1..*\"; fromPort?: string; toPort?: string; meta?: Record<string, unknown>; }"
+    ],
+    "DiagramNode": [
+      "interface DiagramNode { id: string; label: string; parentId?: string; value?: number; color?: string; kind?: string; branchSide?: \"left\" | \"right\"; attributes?: { name: string; type?: string; key?: \"PK\" | \"FK\" | \"PK/FK\"; }[]; stateKind?: \"normal\" | \"initial\" | \"final\"; ports?: DiagramPort[]; meta?: Record<string, unknown>; }"
+    ],
+    "DiagramNodeEvent": [
+      "interface DiagramNodeEvent { node: DiagramNode; source: InteractionSource; }"
+    ],
+    "DiagramOptions": [
+      "interface DiagramOptions extends BaseOptions { data: DiagramData; type?: DiagramType; orientation?: \"horizontal\" | \"vertical\"; nodeWidth?: number; nodeGap?: number; linkOpacity?: number; linkRouting?: \"straight\" | \"orthogonal\"; routingClearance?: number; onNodeSelect?: (event: DiagramNodeEvent) => void; }"
+    ],
+    "DiagramPort": [
+      "interface DiagramPort { id: string; side: \"top\" | \"right\" | \"bottom\" | \"left\"; offset?: number; label?: string; }"
+    ],
+    "diagramPortPoint": [
+      "declare function diagramPortPoint(box: DiagramRouteBox, port: DiagramPort): DiagramRoutePoint;"
+    ],
+    "DiagramRoute": [
+      "type DiagramRoute = { link: DiagramLink; status: \"routed\"; points: DiagramRoutePoint[]; length: number; bends: number; } | { link: DiagramLink; status: \"unroutable\" | \"limited\"; reason: \"blocked-terminal\" | \"outside-bounds\" | \"no-path\" | \"self-loop\" | \"degenerate\" | \"budget-exceeded\"; };"
+    ],
+    "DiagramRouteBox": [
+      "interface DiagramRouteBox { node: DiagramNode; x: number; y: number; width: number; height: number; }"
+    ],
+    "DiagramRoutePoint": [
+      "interface DiagramRoutePoint { x: number; y: number; }"
+    ],
+    "DiagramRoutingBudget": [
+      "interface DiagramRoutingBudget { maxVertices?: number; maxChecks?: number; maxVisits?: number; }"
+    ],
+    "DiagramType": [
+      "type DiagramType = \"sankey\" | \"alluvial\" | \"treemap\" | \"sunburst\" | \"icicle\" | \"circle-pack\" | \"tree\" | \"radial-tree\" | \"mindmap\" | \"flowchart\" | \"org-chart\" | \"er\" | \"state\" | \"chord\";"
+    ],
+    "expandCalendarEvents": [
+      "declare function expandCalendarEvents(events: CalendarEvent[], rangeStart: number, rangeEnd: number, maximum?: number): CalendarEvent[];"
+    ],
+    "expandRecurringEvent": [
+      "declare function expandRecurringEvent(event: CalendarEvent, rangeStart: number, rangeEnd: number, maximum?: number): CalendarEvent[];"
+    ],
+    "GanttChangeKind": [
+      "type GanttChangeKind = \"move\" | \"resize-start\" | \"resize-end\";"
+    ],
+    "GanttOptions": [
+      "interface GanttOptions extends BaseOptions { data: GanttTask[]; editable?: boolean; start?: DateInput; end?: DateInput; zoom?: GanttZoom; rowHeight?: number; snap?: \"none\" | \"day\" | \"week\" | number; dependencyRouting?: \"straight\" | \"orthogonal\"; onTaskSelect?: (event: GanttTaskEvent) => void; onTaskChange?: (event: GanttTaskEvent) => void; }"
+    ],
+    "GanttOwner": [
+      "interface GanttOwner { id?: string; name: string; avatarUrl?: string; color?: string; }"
+    ],
+    "GanttTask": [
+      "interface GanttTask { id: string; label: string; start: DateInput; end: DateInput; progress?: number; dependencies?: string[]; dependencyLinks?: { taskId: string; kind: \"FS\" | \"SS\" | \"FF\" | \"SF\"; lagMs?: number; }[]; owner?: GanttOwner; color?: string; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "GanttTaskEvent": [
+      "interface GanttTaskEvent { task: GanttTask; previousTask?: GanttTask; change?: GanttChangeKind; source: InteractionSource; }"
+    ],
+    "GanttZoom": [
+      "type GanttZoom = \"day\" | \"week\" | \"month\" | \"quarter\";"
+    ],
+    "gaussianKDE": [
+      "declare function gaussianKDE(samples: readonly number[], options: { bandwidth: number | \"scott\"; evaluationPoints: readonly number[]; }): DensityEstimate;"
+    ],
+    "GeoCoordinate": [
+      "interface GeoCoordinate { longitude: number; latitude: number; }"
+    ],
+    "GeoMapData": [
+      "interface GeoMapData { points: GeoPoint[]; routes?: GeoRoute[]; regions?: GeoRegion[]; }"
+    ],
+    "GeoMapMode": [
+      "type GeoMapMode = \"points\" | \"bubbles\" | \"routes\" | \"heatmap\" | \"choropleth\";"
+    ],
+    "GeoMapOptions": [
+      "interface GeoMapOptions extends BaseOptions { data: GeoMapData; projection?: GeoProjection; mode?: GeoMapMode; center?: GeoCoordinate; initialZoom?: number; minZoom?: number; maxZoom?: number; pointRadius?: number; showGraticule?: boolean; onPointSelect?: (event: GeoPointEvent) => void; onViewportChange?: (event: GeoViewportEvent) => void; }"
+    ],
+    "GeoPoint": [
+      "interface GeoPoint extends GeoCoordinate { id: string; label: string; value?: number; color?: string; meta?: Record<string, unknown>; }"
+    ],
+    "GeoPointEvent": [
+      "interface GeoPointEvent { point: GeoPoint; source: InteractionSource; }"
+    ],
+    "GeoProjection": [
+      "type GeoProjection = \"mercator\" | \"equirectangular\" | \"orthographic\";"
+    ],
+    "GeoRegion": [
+      "interface GeoRegion { id: string; label: string; coordinates: GeoCoordinate[]; value?: number; color?: string; meta?: Record<string, unknown>; }"
+    ],
+    "GeoRoute": [
+      "interface GeoRoute { id?: string; from: string | GeoCoordinate; to: string | GeoCoordinate; label?: string; value?: number; color?: string; directed?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "GeoViewportEvent": [
+      "interface GeoViewportEvent { zoom: number; x: number; y: number; source: InteractionSource; }"
+    ],
+    "getVisualCatalogGroupKey": [
+      "declare function getVisualCatalogGroupKey(item: VisualCatalogItem): string;"
+    ],
+    "getVisualCatalogItem": [
+      "declare function getVisualCatalogItem(id: string): VisualCatalogItem | undefined;"
+    ],
+    "groupVisualCatalog": [
+      "declare function groupVisualCatalog(items?: readonly VisualCatalogItem[]): readonly VisualCatalogGroup[];"
+    ],
+    "hexToRgb": [
+      "declare function hexToRgb(value: string): { r: number; g: number; b: number; } | undefined;"
+    ],
+    "HierarchyDiagramType": [
+      "type HierarchyDiagramType = \"treemap\" | \"icicle\" | \"sunburst\" | \"circle-pack\";"
+    ],
+    "histogram": [
+      "declare function histogram(samples: readonly number[], options: { edges: readonly number[]; }): Histogram;"
+    ],
+    "Histogram": [
+      "interface Histogram { bins: HistogramBin[]; includedCount: number; underflowCount: number; overflowCount: number; }"
+    ],
+    "HistogramBin": [
+      "interface HistogramBin { start: number; end: number; count: number; density: number; }"
+    ],
+    "histogramSeries": [
+      "declare function histogramSeries(result: Histogram, options: { id: string; label: string; measure?: \"count\" | \"density\"; }): ChartSeries;"
+    ],
+    "InteractionOptions": [
+      "interface InteractionOptions { keyboard?: boolean; pointer?: boolean; pan?: boolean; zoom?: boolean; }"
+    ],
+    "InteractionSource": [
+      "type InteractionSource = \"pointer\" | \"keyboard\" | \"api\";"
+    ],
+    "isInteractionEnabled": [
+      "declare function isInteractionEnabled(interactive: boolean | { keyboard?: boolean; pointer?: boolean; pan?: boolean; zoom?: boolean; } | undefined, capability: \"keyboard\" | \"pointer\" | \"pan\" | \"zoom\"): boolean;"
+    ],
+    "layoutDiagramChord": [
+      "declare function layoutDiagramChord(input: DiagramData, padding?: number): { groups: ChordGroup[]; ribbons: ChordRibbon[]; total: number; };"
+    ],
+    "layoutDiagramHierarchy": [
+      "declare function layoutDiagramHierarchy(input: DiagramData, type: HierarchyDiagramType, width: number, height: number, options?: { padding?: number; labelHeight?: number; tiling?: \"squarify\" | \"slice-dice\"; }): DiagramLayoutBox[];"
+    ],
+    "layoutDiagramSankey": [
+      "declare function layoutDiagramSankey(input: DiagramData, width: number, height: number, options?: { nodeWidth?: number; nodeGap?: number; iterations?: number; }): SankeyLayout;"
+    ],
+    "layoutDiagramTree": [
+      "declare function layoutDiagramTree(input: DiagramData, type: \"radial-tree\" | \"mindmap\", width: number, height: number, nodeWidth?: number): SpecializedBox[];"
+    ],
+    "marchingSquares": [
+      "declare function marchingSquares(grid: ScalarGrid, levels: readonly number[]): ContourSegment[];"
+    ],
+    "moveCalendarEvent": [
+      "declare function moveCalendarEvent(event: CalendarEvent, delta: number): CalendarEvent;"
+    ],
+    "NodaraController": [
+      "interface NodaraController<TData, TOptions = unknown> { readonly element: HTMLElement; getData(): TData; getOptions(): TOptions; update(data: TData): void; setOptions(options: Partial<TOptions>): void; setState(data: TData, options: Partial<TOptions>): void; resize(): void; destroy(): void; on<TEvent extends keyof NodaraEvents<TData, TOptions>>(event: TEvent, listener: (payload: NodaraEvents<TData, TOptions>[TEvent]) => void): Unsubscribe; on<TPayload = unknown>(event: string, listener: (payload: TPayload) => void): Unsubscribe; }"
+    ],
+    "NodaraError": [
+      "declare class NodaraError extends Error { readonly code: string; readonly details?: unknown | undefined; constructor(code: string, message: string, details?: unknown | undefined); }"
+    ],
+    "NodaraEvents": [
+      "interface NodaraEvents<TData, TOptions> { \"data:change\": TData; \"options:change\": TOptions; render: { data: TData; options: TOptions; }; error: Error; \"task:select\": GanttTaskEvent; \"task:change\": GanttTaskEvent; \"event:select\": CalendarEventSelectEvent; \"event:change\": CalendarEventChangeEvent; \"point:select\": TData extends GeoMapData ? GeoPointEvent : ChartPointEvent; \"node:select\": TData extends DiagramData ? DiagramNodeEvent : TopologyNodeEvent; \"viewport:change\": TData extends GeoMapData ? GeoViewportEvent : TopologyViewportEvent; }"
+    ],
+    "NodaraPlugin": [
+      "interface NodaraPlugin<TData = unknown, TOptions = unknown> { name: string; beforeRender?(context: NodaraPluginContext<TData, TOptions>): void; afterRender?(context: NodaraPluginContext<TData, TOptions>): void; onDataChange?(context: NodaraPluginContext<TData, TOptions>): void; onOptionsChange?(context: NodaraPluginContext<TData, TOptions>): void; onDestroy?(context: NodaraPluginContext<TData, TOptions>): void; }"
+    ],
+    "NodaraPluginContext": [
+      "interface NodaraPluginContext<TData = unknown, TOptions = unknown> { element: HTMLElement; data: TData; options: TOptions; }"
+    ],
+    "normalizeCalendarEvents": [
+      "declare function normalizeCalendarEvents(input: CalendarEvent[]): CalendarEvent[];"
+    ],
+    "normalizeChartSeries": [
+      "declare function normalizeChartSeries(input: ChartSeries[]): ChartSeries[];"
+    ],
+    "normalizeDiagram": [
+      "declare function normalizeDiagram(input: DiagramData): DiagramData;"
+    ],
+    "normalizeGanttTasks": [
+      "declare function normalizeGanttTasks(input: GanttTask[]): GanttTask[];"
+    ],
+    "normalizeGeoMap": [
+      "declare function normalizeGeoMap(input: GeoMapData): GeoMapData;"
+    ],
+    "normalizeOperationalPlan": [
+      "declare function normalizeOperationalPlan(input: unknown): OperationalPlan;"
+    ],
+    "normalizeTopology": [
+      "declare function normalizeTopology(input: TopologyData): TopologyData;"
+    ],
+    "OperationalAssignment": [
+      "interface OperationalAssignment { readonly taskId: string; readonly resourceId: string; readonly units: number; }"
+    ],
+    "operationalCalendar": [
+      "declare function operationalCalendar(plan: OperationalPlan): CalendarEvent[];"
+    ],
+    "operationalCapacity": [
+      "declare function operationalCapacity(plan: OperationalPlan): CapacitySegment[];"
+    ],
+    "OperationalCommand": [
+      "type OperationalCommand = { type: \"addTask\"; task: OperationalTask; } | { type: \"updateTask\"; taskId: string; changes: Partial<Omit<OperationalTask, \"id\">>; } | { type: \"removeTask\"; taskId: string; } | { type: \"addDependency\"; dependency: OperationalDependency; } | { type: \"removeDependency\"; dependencyId: string; } | { type: \"assign\"; assignment: OperationalAssignment; } | { type: \"unassign\"; taskId: string; resourceId: string; } | { type: \"upsertResource\"; resource: OperationalResource; } | { type: \"removeResource\"; resourceId: string; } | { type: \"upsertLocation\"; location: OperationalLocation; } | { type: \"removeLocation\"; locationId: string; } | { type: \"replacePlan\"; plan: OperationalPlan; };"
+    ],
+    "OperationalConflict": [
+      "interface OperationalConflict { readonly code: \"DEPENDENCY\" | \"NOT_BEFORE\" | \"CAPACITY\" | \"LOCKED\"; readonly taskIds: readonly string[]; readonly message: string; readonly requiredStartMs?: number; readonly dependencyId?: string; readonly resourceId?: string; readonly startMs?: number; readonly endMs?: number; }"
+    ],
+    "operationalConflicts": [
+      "declare function operationalConflicts(plan: OperationalPlan): OperationalConflict[];"
+    ],
+    "operationalCriticalPath": [
+      "declare function operationalCriticalPath(plan: OperationalPlan): CriticalPathResult;"
+    ],
+    "OperationalDependency": [
+      "interface OperationalDependency { readonly id: string; readonly fromTaskId: string; readonly toTaskId: string; readonly kind: OperationalDependencyKind; readonly lagMs: number; }"
+    ],
+    "OperationalDependencyKind": [
+      "type OperationalDependencyKind = \"FS\" | \"SS\" | \"FF\" | \"SF\";"
+    ],
+    "operationalGantt": [
+      "declare function operationalGantt(plan: OperationalPlan): GanttTask[];"
+    ],
+    "operationalLoadChart": [
+      "declare function operationalLoadChart(plan: OperationalPlan, startMs: number, endMs: number, bucketMs?: number): ChartSeries[];"
+    ],
+    "OperationalLocation": [
+      "interface OperationalLocation { readonly id: string; readonly label: string; readonly longitude: number; readonly latitude: number; }"
+    ],
+    "operationalMap": [
+      "declare function operationalMap(plan: OperationalPlan): GeoMapData;"
+    ],
+    "operationalOrder": [
+      "declare function operationalOrder(plan: OperationalPlan): string[];"
+    ],
+    "OperationalPlan": [
+      "interface OperationalPlan { readonly schemaVersion: 1; readonly timeBasis: \"elapsed\"; readonly projectStartMs: number; readonly tasks: readonly OperationalTask[]; readonly resources: readonly OperationalResource[]; readonly assignments: readonly OperationalAssignment[]; readonly dependencies: readonly OperationalDependency[]; readonly locations: readonly OperationalLocation[]; }"
+    ],
+    "OperationalPreview": [
+      "interface OperationalPreview { readonly plan: OperationalPlan; readonly conflicts: readonly OperationalConflict[]; readonly moves: readonly { readonly taskId: string; readonly previousStartMs: number; readonly startMs: number; readonly dependencyIds: readonly string[]; }[]; readonly changed: boolean; }"
+    ],
+    "OperationalResource": [
+      "interface OperationalResource { readonly id: string; readonly label: string; readonly capacityUnits: number; }"
+    ],
+    "OperationalSnapshot": [
+      "interface OperationalSnapshot { readonly revision: number; readonly plan: OperationalPlan; readonly conflicts: readonly OperationalConflict[]; readonly canUndo: boolean; readonly canRedo: boolean; readonly lastTransaction: { readonly id: string; readonly label: string; readonly kind: \"commit\" | \"undo\" | \"redo\"; } | null; }"
+    ],
+    "OperationalStore": [
+      "interface OperationalStore { getSnapshot(): OperationalSnapshot; preview(transaction: OperationalTransaction): OperationalPreview; transact(transaction: OperationalTransaction): OperationalSnapshot; undo(): OperationalSnapshot; redo(): OperationalSnapshot; subscribe(listener: (snapshot: OperationalSnapshot) => void): () => void; exportJSON(): string; destroy(): void; }"
+    ],
+    "OperationalTask": [
+      "interface OperationalTask { readonly id: string; readonly label: string; readonly startMs: number; readonly durationMs: number; readonly progress: number; readonly notBeforeMs?: number | undefined; readonly locked?: boolean; readonly locationId?: string | undefined; }"
+    ],
+    "operationalTopology": [
+      "declare function operationalTopology(plan: OperationalPlan): TopologyData;"
+    ],
+    "OperationalTransaction": [
+      "interface OperationalTransaction { readonly id: string; readonly label?: string; readonly expectedRevision?: number; readonly commands: readonly OperationalCommand[]; readonly scheduling?: \"manual\" | \"cascade-forward\"; readonly conflicts?: \"reject\" | \"report\"; }"
+    ],
+    "parseRecurrence": [
+      "declare function parseRecurrence(input: string): RecurrenceRule;"
+    ],
+    "percentToTimestamp": [
+      "declare function percentToTimestamp(percent: number, scale: Pick<TimeScale, \"start\" | \"duration\">): number;"
+    ],
+    "PerformanceOptions": [
+      "interface PerformanceOptions { canvasThreshold?: number; webglThreshold?: number; maxDevicePixelRatio?: number; accessibilityLimit?: number; }"
+    ],
+    "readableTextColor": [
+      "declare function readableTextColor(background: string, light?: string, dark?: string): string;"
+    ],
+    "relativeLuminance": [
+      "declare function relativeLuminance(value: string): number;"
+    ],
+    "RenderMode": [
+      "type RenderMode = \"auto\" | \"dom\" | \"canvas\" | \"webgl\";"
+    ],
+    "renderWebGLPoints": [
+      "declare function renderWebGLPoints(canvas: HTMLCanvasElement, points: WebGLPoint[], width: number, height: number, defaultColor?: WebGLColor, segments?: WebGLSegment[], rectangles?: WebGLRectangle[]): boolean;"
+    ],
+    "replaceCalendarEvent": [
+      "declare function replaceCalendarEvent(events: CalendarEvent[], previousId: string, next: CalendarEvent): CalendarEvent[];"
+    ],
+    "replaceTask": [
+      "declare function replaceTask(tasks: GanttTask[], nextTask: GanttTask): GanttTask[];"
+    ],
+    "resizeCalendarEvent": [
+      "declare function resizeCalendarEvent(event: CalendarEvent, delta: number, minimumDuration?: number): CalendarEvent;"
+    ],
+    "resizeTask": [
+      "declare function resizeTask(task: GanttTask, edge: \"start\" | \"end\", delta: number, minimumDuration?: number): GanttTask;"
+    ],
+    "resolveGanttRange": [
+      "declare function resolveGanttRange(tasks: GanttTask[], start?: DateInput, end?: DateInput): { start: number; end: number; };"
+    ],
+    "resolveRenderMode": [
+      "declare function resolveRenderMode(requested?: RenderMode, itemCount?: number, thresholds?: RenderModeThresholds, webglAvailable?: boolean): Exclude<RenderMode, \"auto\">;"
+    ],
+    "resolveSnap": [
+      "declare function resolveSnap(snap: \"none\" | \"day\" | \"week\" | number | undefined): number;"
+    ],
+    "resolveTheme": [
+      "declare function resolveTheme(theme?: VisualTheme): \"light\" | \"dark\";"
+    ],
+    "routeDiagramLinks": [
+      "declare function routeDiagramLinks(boxes: readonly DiagramRouteBox[], links: readonly DiagramLink[], bounds: { width: number; height: number; }, clearance?: number, budget?: DiagramRoutingBudget): DiagramRoute[];"
+    ],
+    "SankeyLayout": [
+      "interface SankeyLayout { nodes: DiagramLayoutBox[]; links: SankeyLayoutLink[]; }"
+    ],
+    "SankeyLayoutLink": [
+      "interface SankeyLayoutLink { link: DiagramLink; x0: number; y0: number; x1: number; y1: number; width: number; }"
+    ],
+    "ScalarGrid": [
+      "interface ScalarGrid { x: readonly number[]; y: readonly number[]; values: readonly number[]; }"
+    ],
+    "scalarGridSeries": [
+      "declare function scalarGridSeries(grid: ScalarGrid): ChartSeries[];"
+    ],
+    "seriesScalarGrid": [
+      "declare function seriesScalarGrid(series: ChartSeries[]): ScalarGrid;"
+    ],
+    "shiftTask": [
+      "declare function shiftTask(task: GanttTask, delta: number): GanttTask;"
+    ],
+    "snapTimestamp": [
+      "declare function snapTimestamp(timestamp: number, snap: \"none\" | \"day\" | \"week\" | number | undefined): number;"
+    ],
+    "SpecializedBox": [
+      "interface SpecializedBox { node: DiagramNode; x: number; y: number; width: number; height: number; depth: number; region: HitRegion; }"
+    ],
+    "startOfDay": [
+      "declare function startOfDay(input: number): number;"
+    ],
+    "startOfWeek": [
+      "declare function startOfWeek(input: number, weekStartsOn: 0 | 1): number;"
+    ],
+    "supportsWebGL": [
+      "declare function supportsWebGL(): boolean;"
+    ],
+    "ThemeTokens": [
+      "interface ThemeTokens { background: string; surface: string; foreground: string; muted: string; border: string; primary: string; positive: string; warning: string; danger: string; fontFamily: string; borderRadius: number; }"
+    ],
+    "timestampToPercent": [
+      "declare function timestampToPercent(timestamp: number, scale: Pick<TimeScale, \"start\" | \"duration\">): number;"
+    ],
+    "TopologyData": [
+      "interface TopologyData { nodes: TopologyNode[]; edges: TopologyEdge[]; }"
+    ],
+    "TopologyEdge": [
+      "interface TopologyEdge { id?: string; from: string; to: string; label?: string; value?: number; directed?: boolean; color?: string; meta?: Record<string, unknown>; }"
+    ],
+    "TopologyLayout": [
+      "type TopologyLayout = \"auto\" | \"manual\" | \"radial\" | \"grid\" | \"force\" | \"hierarchical\";"
+    ],
+    "TopologyNode": [
+      "interface TopologyNode { id: string; label: string; kind?: string; status?: \"healthy\" | \"warning\" | \"critical\" | \"unknown\"; x?: number; y?: number; value?: string | number; color?: string; meta?: Record<string, unknown>; }"
+    ],
+    "TopologyNodeEvent": [
+      "interface TopologyNodeEvent { node: TopologyNode; source: InteractionSource; }"
+    ],
+    "TopologyOptions": [
+      "interface TopologyOptions extends BaseOptions { data: TopologyData; layout?: TopologyLayout; nodeRadius?: number; layoutIterations?: number; minZoom?: number; maxZoom?: number; initialZoom?: number; onNodeSelect?: (event: TopologyNodeEvent) => void; onViewportChange?: (event: TopologyViewportEvent) => void; }"
+    ],
+    "TopologyViewportEvent": [
+      "interface TopologyViewportEvent { zoom: number; x: number; y: number; source: InteractionSource; }"
+    ],
+    "Unsubscribe": [
+      "type Unsubscribe = () => void;"
+    ],
+    "validateChartOptions": [
+      "declare function validateChartOptions(data: ChartSeries[], input: ChartOptions): void;"
+    ],
+    "validateDiagramLayout": [
+      "declare function validateDiagramLayout(data: DiagramData, type?: DiagramType): void;"
+    ],
+    "validateScalarGrid": [
+      "declare function validateScalarGrid(grid: ScalarGrid): void;"
+    ],
+    "visualCatalog": [
+      "visualCatalog: readonly VisualCatalogItem[]"
+    ],
+    "visualCatalogCounts": [
+      "visualCatalogCounts: Readonly<Record<VisualFamily, number>>"
+    ],
+    "VisualCatalogGroup": [
+      "interface VisualCatalogGroup { id: string; family: VisualFamily; variant: string; dataContract: VisualCatalogItem[\"dataContract\"]; items: readonly VisualCatalogItem[]; }"
+    ],
+    "visualCatalogGroups": [
+      "visualCatalogGroups: readonly VisualCatalogGroup[]"
+    ],
+    "VisualCatalogItem": [
+      "interface VisualCatalogItem { id: string; family: VisualFamily; name: string; description: string; dataContract: \"GanttTask[]\" | \"ChartSeries[]\" | \"TopologyData\" | \"CalendarEvent[]\" | \"GeoMapData\" | \"DiagramData\"; tags: readonly string[]; options: Readonly<Record<string, string | number | boolean>>; }"
+    ],
+    "visualCatalogStats": [
+      "visualCatalogStats: Readonly<{ components: 6; visualTypes: number; recipes: number; additionalPresets: number; }>"
+    ],
+    "visualCatalogUniqueCounts": [
+      "visualCatalogUniqueCounts: Readonly<Record<VisualFamily, number>>"
+    ],
+    "VisualFamily": [
+      "type VisualFamily = \"gantt\" | \"charts\" | \"topology\" | \"calendar\" | \"maps\" | \"diagrams\";"
+    ],
+    "VisualTheme": [
+      "type VisualTheme = \"light\" | \"dark\" | \"system\";"
+    ]
+  },
+  "working": {
+    "createWorkingClock": [
+      "declare function createWorkingClock(input: WorkingCalendar, horizon: { startDate: string; endDate: string; }): WorkingClock;"
+    ],
+    "createWorkingPlanStore": [
+      "declare function createWorkingPlanStore(initial: WorkingPlan): { getSnapshot: () => WorkingSnapshot; subscribe(listener: () => void): () => void; preview: (candidate: WorkingPlan) => WorkingPreview; apply(candidate: WorkingPlan, expectedRevision: number, allowConflicts?: boolean): WorkingSnapshot; undo(): WorkingSnapshot; redo(): WorkingSnapshot; exportJSON: () => string; destroy(): void; };"
+    ],
+    "evaluateWorkingPlan": [
+      "declare function evaluateWorkingPlan(input: WorkingPlan, previous?: WorkingEvaluation): WorkingEvaluation;"
+    ],
+    "TimeDisambiguation": [
+      "type TimeDisambiguation = \"reject\" | \"earlier\" | \"later\" | \"compatible\";"
+    ],
+    "WorkingCalendar": [
+      "interface WorkingCalendar { readonly id: string; readonly timeZone: string; readonly week: readonly { readonly day: number; readonly periods: readonly WorkPeriod[]; }[]; readonly exceptions?: Readonly<Record<string, readonly WorkPeriod[]>>; readonly disambiguation?: TimeDisambiguation; }"
+    ],
+    "WorkingClock": [
+      "interface WorkingClock { readonly calendar: WorkingCalendar; readonly horizon: { readonly startDate: string; readonly endDate: string; readonly startMs: number; readonly endMs: number; }; readonly intervals: readonly WorkingInterval[]; fromLocal(local: string, disambiguation?: TimeDisambiguation): number; toLocal(epochMs: number): string; alignForward(epochMs: number): number; add(epochMs: number, workingMs: number): WorkingWindow; subtract(epochMs: number, workingMs: number): WorkingWindow; between(startMs: number, endMs: number): number; }"
+    ],
+    "WorkingEvaluation": [
+      "interface WorkingEvaluation { readonly plan: WorkingPlan; readonly windows: readonly (WorkingWindow & { readonly taskId: string; })[]; readonly capacity: readonly CapacitySegment[]; readonly conflicts: readonly OperationalConflict[]; readonly finishMs: number; }"
+    ],
+    "WorkingInterval": [
+      "interface WorkingInterval { readonly startMs: number; readonly endMs: number; }"
+    ],
+    "WorkingPlan": [
+      "interface WorkingPlan extends Omit<OperationalPlan, \"schemaVersion\" | \"timeBasis\" | \"tasks\" | \"resources\"> { readonly schemaVersion: 2; readonly timeBasis: \"working\"; readonly calendar: WorkingCalendar; readonly horizon: { readonly startDate: string; readonly endDate: string; }; readonly tasks: readonly WorkingTask[]; readonly resources: readonly WorkingResource[]; readonly resourceLeveling?: \"none\" | \"serial\"; }"
+    ],
+    "workingPlanViews": [
+      "declare function workingPlanViews(evaluation: WorkingEvaluation): { gantt: GanttTask[]; calendar: CalendarEvent[]; load: ChartSeries[]; topology: _nodara_core.TopologyData; map: _nodara_core.GeoMapData; };"
+    ],
+    "WorkingPreview": [
+      "interface WorkingPreview { readonly expectedRevision: number; readonly evaluation: WorkingEvaluation; readonly changes: readonly { readonly taskId: string; readonly before?: WorkingWindow; readonly after?: WorkingWindow; }[]; }"
+    ],
+    "WorkingResource": [
+      "interface WorkingResource { readonly id: string; readonly label: string; readonly capacityUnits: number; readonly calendar?: WorkingCalendar; }"
+    ],
+    "WorkingSnapshot": [
+      "interface WorkingSnapshot { readonly revision: number; readonly evaluation: WorkingEvaluation; readonly canUndo: boolean; readonly canRedo: boolean; }"
+    ],
+    "WorkingTask": [
+      "interface WorkingTask extends Omit<OperationalTask, \"durationMs\"> { readonly workingMs: number; }"
+    ],
+    "WorkingWindow": [
+      "interface WorkingWindow extends WorkingInterval { readonly workingMs: number; readonly segments: readonly WorkingInterval[]; }"
+    ],
+    "WorkPeriod": [
+      "interface WorkPeriod { readonly start: string; readonly end: string; }"
+    ]
+  },
+  "react": {
+    "Calendar": [
+      "declare function Calendar({ events, onReady, style, ...options }: CalendarProps): react_jsx_runtime.JSX.Element;"
+    ],
+    "CalendarEvent": [
+      "interface CalendarEvent { id: string; title: string; start: DateInput; end?: DateInput; durationMinutes?: number; resourceId?: string; color?: string; allDay?: boolean; recurrence?: string; excludedOccurrences?: number[]; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "CalendarOptions": [
+      "interface CalendarOptions extends BaseOptions { events: CalendarEvent[]; view?: CalendarView; date?: DateInput; weekStartsOn?: 0 | 1; timeZone?: string; resources?: CalendarResource[]; visibleResourceIds?: string[]; expandRecurrence?: boolean; maxOccurrences?: number; onEventSelect?: (event: CalendarEventSelectEvent) => void; onEventChange?: (event: CalendarEventChangeEvent) => void; }"
+    ],
+    "CalendarProps": [
+      "type CalendarProps = CalendarOptions & AdapterProps<CalendarEvent[], CalendarOptions>;"
+    ],
+    "Chart": [
+      "declare function Chart({ series, onReady, style, ...options }: ChartProps): react_jsx_runtime.JSX.Element;"
+    ],
+    "ChartOptions": [
+      "interface ChartOptions extends BaseOptions { series: ChartSeries[]; type?: ChartType; stacked?: boolean; showLegend?: boolean; showGrid?: boolean; showAxes?: boolean; showTooltip?: boolean; violinBandwidth?: number | \"scott\"; contourLevels?: number[]; valueFormatter?: (value: number) => string; labelFormatter?: (value: ChartPoint[\"x\"]) => string; onPointSelect?: (event: ChartPointEvent) => void; }"
+    ],
+    "ChartProps": [
+      "type ChartProps = ChartOptions & AdapterProps<ChartSeries[], ChartOptions>;"
+    ],
+    "ChartSeries": [
+      "interface ChartSeries { id: string; label: string; color?: string; data: ChartPoint[]; gridY?: number; }"
+    ],
+    "Diagram": [
+      "declare function Diagram({ data, onReady, style, ...options }: DiagramProps): react_jsx_runtime.JSX.Element;"
+    ],
+    "DiagramData": [
+      "interface DiagramData { nodes: DiagramNode[]; links: DiagramLink[]; }"
+    ],
+    "DiagramOptions": [
+      "interface DiagramOptions extends BaseOptions { data: DiagramData; type?: DiagramType; orientation?: \"horizontal\" | \"vertical\"; nodeWidth?: number; nodeGap?: number; linkOpacity?: number; linkRouting?: \"straight\" | \"orthogonal\"; routingClearance?: number; onNodeSelect?: (event: DiagramNodeEvent) => void; }"
+    ],
+    "DiagramProps": [
+      "type DiagramProps = DiagramOptions & AdapterProps<DiagramData, DiagramOptions>;"
+    ],
+    "Gantt": [
+      "declare function Gantt({ data, onReady, style, ...options }: GanttProps): react_jsx_runtime.JSX.Element;"
+    ],
+    "GanttOptions": [
+      "interface GanttOptions extends BaseOptions { data: GanttTask[]; editable?: boolean; start?: DateInput; end?: DateInput; zoom?: GanttZoom; rowHeight?: number; snap?: \"none\" | \"day\" | \"week\" | number; dependencyRouting?: \"straight\" | \"orthogonal\"; onTaskSelect?: (event: GanttTaskEvent) => void; onTaskChange?: (event: GanttTaskEvent) => void; }"
+    ],
+    "GanttProps": [
+      "type GanttProps = GanttOptions & AdapterProps<GanttTask[], GanttOptions>;"
+    ],
+    "GanttTask": [
+      "interface GanttTask { id: string; label: string; start: DateInput; end: DateInput; progress?: number; dependencies?: string[]; dependencyLinks?: { taskId: string; kind: \"FS\" | \"SS\" | \"FF\" | \"SF\"; lagMs?: number; }[]; owner?: GanttOwner; color?: string; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "GeoMap": [
+      "declare function GeoMap({ data, onReady, style, ...options }: GeoMapProps): react_jsx_runtime.JSX.Element;"
+    ],
+    "GeoMapData": [
+      "interface GeoMapData { points: GeoPoint[]; routes?: GeoRoute[]; regions?: GeoRegion[]; }"
+    ],
+    "GeoMapOptions": [
+      "interface GeoMapOptions extends BaseOptions { data: GeoMapData; projection?: GeoProjection; mode?: GeoMapMode; center?: GeoCoordinate; initialZoom?: number; minZoom?: number; maxZoom?: number; pointRadius?: number; showGraticule?: boolean; onPointSelect?: (event: GeoPointEvent) => void; onViewportChange?: (event: GeoViewportEvent) => void; }"
+    ],
+    "GeoMapProps": [
+      "type GeoMapProps = GeoMapOptions & AdapterProps<GeoMapData, GeoMapOptions>;"
+    ],
+    "NodaraController": [
+      "interface NodaraController<TData, TOptions = unknown> { readonly element: HTMLElement; getData(): TData; getOptions(): TOptions; update(data: TData): void; setOptions(options: Partial<TOptions>): void; setState(data: TData, options: Partial<TOptions>): void; resize(): void; destroy(): void; on<TEvent extends keyof NodaraEvents<TData, TOptions>>(event: TEvent, listener: (payload: NodaraEvents<TData, TOptions>[TEvent]) => void): Unsubscribe; on<TPayload = unknown>(event: string, listener: (payload: TPayload) => void): Unsubscribe; }"
+    ],
+    "Topology": [
+      "declare function Topology({ data, onReady, style, ...options }: TopologyProps): react_jsx_runtime.JSX.Element;"
+    ],
+    "TopologyData": [
+      "interface TopologyData { nodes: TopologyNode[]; edges: TopologyEdge[]; }"
+    ],
+    "TopologyOptions": [
+      "interface TopologyOptions extends BaseOptions { data: TopologyData; layout?: TopologyLayout; nodeRadius?: number; layoutIterations?: number; minZoom?: number; maxZoom?: number; initialZoom?: number; onNodeSelect?: (event: TopologyNodeEvent) => void; onViewportChange?: (event: TopologyViewportEvent) => void; }"
+    ],
+    "TopologyProps": [
+      "type TopologyProps = TopologyOptions & AdapterProps<TopologyData, TopologyOptions>;"
+    ]
+  },
+  "vue": {
+    "CalendarEvent": [
+      "interface CalendarEvent { id: string; title: string; start: DateInput; end?: DateInput; durationMinutes?: number; resourceId?: string; color?: string; allDay?: boolean; recurrence?: string; excludedOccurrences?: number[]; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "CalendarOptions": [
+      "interface CalendarOptions extends BaseOptions { events: CalendarEvent[]; view?: CalendarView; date?: DateInput; weekStartsOn?: 0 | 1; timeZone?: string; resources?: CalendarResource[]; visibleResourceIds?: string[]; expandRecurrence?: boolean; maxOccurrences?: number; onEventSelect?: (event: CalendarEventSelectEvent) => void; onEventChange?: (event: CalendarEventChangeEvent) => void; }"
+    ],
+    "ChartOptions": [
+      "interface ChartOptions extends BaseOptions { series: ChartSeries[]; type?: ChartType; stacked?: boolean; showLegend?: boolean; showGrid?: boolean; showAxes?: boolean; showTooltip?: boolean; violinBandwidth?: number | \"scott\"; contourLevels?: number[]; valueFormatter?: (value: number) => string; labelFormatter?: (value: ChartPoint[\"x\"]) => string; onPointSelect?: (event: ChartPointEvent) => void; }"
+    ],
+    "ChartSeries": [
+      "interface ChartSeries { id: string; label: string; color?: string; data: ChartPoint[]; gridY?: number; }"
+    ],
+    "DiagramData": [
+      "interface DiagramData { nodes: DiagramNode[]; links: DiagramLink[]; }"
+    ],
+    "DiagramOptions": [
+      "interface DiagramOptions extends BaseOptions { data: DiagramData; type?: DiagramType; orientation?: \"horizontal\" | \"vertical\"; nodeWidth?: number; nodeGap?: number; linkOpacity?: number; linkRouting?: \"straight\" | \"orthogonal\"; routingClearance?: number; onNodeSelect?: (event: DiagramNodeEvent) => void; }"
+    ],
+    "GanttOptions": [
+      "interface GanttOptions extends BaseOptions { data: GanttTask[]; editable?: boolean; start?: DateInput; end?: DateInput; zoom?: GanttZoom; rowHeight?: number; snap?: \"none\" | \"day\" | \"week\" | number; dependencyRouting?: \"straight\" | \"orthogonal\"; onTaskSelect?: (event: GanttTaskEvent) => void; onTaskChange?: (event: GanttTaskEvent) => void; }"
+    ],
+    "GanttTask": [
+      "interface GanttTask { id: string; label: string; start: DateInput; end: DateInput; progress?: number; dependencies?: string[]; dependencyLinks?: { taskId: string; kind: \"FS\" | \"SS\" | \"FF\" | \"SF\"; lagMs?: number; }[]; owner?: GanttOwner; color?: string; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "GeoMapData": [
+      "interface GeoMapData { points: GeoPoint[]; routes?: GeoRoute[]; regions?: GeoRegion[]; }"
+    ],
+    "GeoMapOptions": [
+      "interface GeoMapOptions extends BaseOptions { data: GeoMapData; projection?: GeoProjection; mode?: GeoMapMode; center?: GeoCoordinate; initialZoom?: number; minZoom?: number; maxZoom?: number; pointRadius?: number; showGraticule?: boolean; onPointSelect?: (event: GeoPointEvent) => void; onViewportChange?: (event: GeoViewportEvent) => void; }"
+    ],
+    "NodaraCalendar": [
+      "NodaraCalendar: vue.DefineComponent<vue.ExtractPropTypes<{ events: { type: PropType<CalendarEvent[]>; required: true; }; options: { type: PropType<Omit<CalendarOptions, \"events\">>; default: () => {}; }; }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, { [key: string]: any; }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, (\"ready\" | \"event-select\" | \"event-change\")[], \"ready\" | \"event-select\" | \"event-change\", vue.PublicProps, Readonly<vue.ExtractPropTypes<{ events: { type: PropType<CalendarEvent[]>; required: true; }; options: { type: PropType<Omit<CalendarOptions, \"events\">>; default: () => {}; }; }>> & Readonly<{ onReady?: (...args: any[]) => any; \"onEvent-select\"?: (...args: any[]) => any; \"onEvent-change\"?: (...args: any[]) => any; }>, { options: Omit<CalendarOptions, \"events\">; }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>"
+    ],
+    "NodaraChart": [
+      "NodaraChart: vue.DefineComponent<vue.ExtractPropTypes<{ series: { type: PropType<ChartSeries[]>; required: true; }; options: { type: PropType<Omit<ChartOptions, \"series\">>; default: () => {}; }; }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, { [key: string]: any; }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, (\"ready\" | \"point-select\")[], \"ready\" | \"point-select\", vue.PublicProps, Readonly<vue.ExtractPropTypes<{ series: { type: PropType<ChartSeries[]>; required: true; }; options: { type: PropType<Omit<ChartOptions, \"series\">>; default: () => {}; }; }>> & Readonly<{ onReady?: (...args: any[]) => any; \"onPoint-select\"?: (...args: any[]) => any; }>, { options: Omit<ChartOptions, \"series\">; }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>"
+    ],
+    "NodaraController": [
+      "interface NodaraController<TData, TOptions = unknown> { readonly element: HTMLElement; getData(): TData; getOptions(): TOptions; update(data: TData): void; setOptions(options: Partial<TOptions>): void; setState(data: TData, options: Partial<TOptions>): void; resize(): void; destroy(): void; on<TEvent extends keyof NodaraEvents<TData, TOptions>>(event: TEvent, listener: (payload: NodaraEvents<TData, TOptions>[TEvent]) => void): Unsubscribe; on<TPayload = unknown>(event: string, listener: (payload: TPayload) => void): Unsubscribe; }"
+    ],
+    "NodaraDiagram": [
+      "NodaraDiagram: vue.DefineComponent<vue.ExtractPropTypes<{ data: { type: PropType<DiagramData>; required: true; }; options: { type: PropType<Omit<DiagramOptions, \"data\">>; default: () => {}; }; }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, { [key: string]: any; }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, (\"ready\" | \"node-select\")[], \"ready\" | \"node-select\", vue.PublicProps, Readonly<vue.ExtractPropTypes<{ data: { type: PropType<DiagramData>; required: true; }; options: { type: PropType<Omit<DiagramOptions, \"data\">>; default: () => {}; }; }>> & Readonly<{ onReady?: (...args: any[]) => any; \"onNode-select\"?: (...args: any[]) => any; }>, { options: Omit<DiagramOptions, \"data\">; }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>"
+    ],
+    "NodaraGantt": [
+      "NodaraGantt: vue.DefineComponent<vue.ExtractPropTypes<{ data: { type: PropType<GanttTask[]>; required: true; }; options: { type: PropType<Omit<GanttOptions, \"data\">>; default: () => {}; }; }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, { [key: string]: any; }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, (\"ready\" | \"task-select\" | \"task-change\")[], \"ready\" | \"task-select\" | \"task-change\", vue.PublicProps, Readonly<vue.ExtractPropTypes<{ data: { type: PropType<GanttTask[]>; required: true; }; options: { type: PropType<Omit<GanttOptions, \"data\">>; default: () => {}; }; }>> & Readonly<{ onReady?: (...args: any[]) => any; \"onTask-select\"?: (...args: any[]) => any; \"onTask-change\"?: (...args: any[]) => any; }>, { options: Omit<GanttOptions, \"data\">; }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>"
+    ],
+    "NodaraGeoMap": [
+      "NodaraGeoMap: vue.DefineComponent<vue.ExtractPropTypes<{ data: { type: PropType<GeoMapData>; required: true; }; options: { type: PropType<Omit<GeoMapOptions, \"data\">>; default: () => {}; }; }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, { [key: string]: any; }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, (\"ready\" | \"point-select\" | \"viewport-change\")[], \"ready\" | \"point-select\" | \"viewport-change\", vue.PublicProps, Readonly<vue.ExtractPropTypes<{ data: { type: PropType<GeoMapData>; required: true; }; options: { type: PropType<Omit<GeoMapOptions, \"data\">>; default: () => {}; }; }>> & Readonly<{ onReady?: (...args: any[]) => any; \"onPoint-select\"?: (...args: any[]) => any; \"onViewport-change\"?: (...args: any[]) => any; }>, { options: Omit<GeoMapOptions, \"data\">; }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>"
+    ],
+    "NodaraTopology": [
+      "NodaraTopology: vue.DefineComponent<vue.ExtractPropTypes<{ data: { type: PropType<TopologyData>; required: true; }; options: { type: PropType<Omit<TopologyOptions, \"data\">>; default: () => {}; }; }>, () => vue.VNode<vue.RendererNode, vue.RendererElement, { [key: string]: any; }>, {}, {}, {}, vue.ComponentOptionsMixin, vue.ComponentOptionsMixin, (\"ready\" | \"node-select\" | \"viewport-change\")[], \"ready\" | \"node-select\" | \"viewport-change\", vue.PublicProps, Readonly<vue.ExtractPropTypes<{ data: { type: PropType<TopologyData>; required: true; }; options: { type: PropType<Omit<TopologyOptions, \"data\">>; default: () => {}; }; }>> & Readonly<{ onReady?: (...args: any[]) => any; \"onNode-select\"?: (...args: any[]) => any; \"onViewport-change\"?: (...args: any[]) => any; }>, { options: Omit<TopologyOptions, \"data\">; }, {}, {}, {}, string, vue.ComponentProvideOptions, true, {}, any>"
+    ],
+    "TopologyData": [
+      "interface TopologyData { nodes: TopologyNode[]; edges: TopologyEdge[]; }"
+    ],
+    "TopologyOptions": [
+      "interface TopologyOptions extends BaseOptions { data: TopologyData; layout?: TopologyLayout; nodeRadius?: number; layoutIterations?: number; minZoom?: number; maxZoom?: number; initialZoom?: number; onNodeSelect?: (event: TopologyNodeEvent) => void; onViewportChange?: (event: TopologyViewportEvent) => void; }"
+    ]
+  },
+  "angular": {
+    "CalendarEvent": [
+      "interface CalendarEvent { id: string; title: string; start: DateInput; end?: DateInput; durationMinutes?: number; resourceId?: string; color?: string; allDay?: boolean; recurrence?: string; excludedOccurrences?: number[]; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "CalendarOptions": [
+      "interface CalendarOptions extends BaseOptions { events: CalendarEvent[]; view?: CalendarView; date?: DateInput; weekStartsOn?: 0 | 1; timeZone?: string; resources?: CalendarResource[]; visibleResourceIds?: string[]; expandRecurrence?: boolean; maxOccurrences?: number; onEventSelect?: (event: CalendarEventSelectEvent) => void; onEventChange?: (event: CalendarEventChangeEvent) => void; }"
+    ],
+    "ChartOptions": [
+      "interface ChartOptions extends BaseOptions { series: ChartSeries[]; type?: ChartType; stacked?: boolean; showLegend?: boolean; showGrid?: boolean; showAxes?: boolean; showTooltip?: boolean; violinBandwidth?: number | \"scott\"; contourLevels?: number[]; valueFormatter?: (value: number) => string; labelFormatter?: (value: ChartPoint[\"x\"]) => string; onPointSelect?: (event: ChartPointEvent) => void; }"
+    ],
+    "ChartSeries": [
+      "interface ChartSeries { id: string; label: string; color?: string; data: ChartPoint[]; gridY?: number; }"
+    ],
+    "DiagramData": [
+      "interface DiagramData { nodes: DiagramNode[]; links: DiagramLink[]; }"
+    ],
+    "DiagramOptions": [
+      "interface DiagramOptions extends BaseOptions { data: DiagramData; type?: DiagramType; orientation?: \"horizontal\" | \"vertical\"; nodeWidth?: number; nodeGap?: number; linkOpacity?: number; linkRouting?: \"straight\" | \"orthogonal\"; routingClearance?: number; onNodeSelect?: (event: DiagramNodeEvent) => void; }"
+    ],
+    "GanttOptions": [
+      "interface GanttOptions extends BaseOptions { data: GanttTask[]; editable?: boolean; start?: DateInput; end?: DateInput; zoom?: GanttZoom; rowHeight?: number; snap?: \"none\" | \"day\" | \"week\" | number; dependencyRouting?: \"straight\" | \"orthogonal\"; onTaskSelect?: (event: GanttTaskEvent) => void; onTaskChange?: (event: GanttTaskEvent) => void; }"
+    ],
+    "GanttTask": [
+      "interface GanttTask { id: string; label: string; start: DateInput; end: DateInput; progress?: number; dependencies?: string[]; dependencyLinks?: { taskId: string; kind: \"FS\" | \"SS\" | \"FF\" | \"SF\"; lagMs?: number; }[]; owner?: GanttOwner; color?: string; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "GeoMapData": [
+      "interface GeoMapData { points: GeoPoint[]; routes?: GeoRoute[]; regions?: GeoRegion[]; }"
+    ],
+    "GeoMapOptions": [
+      "interface GeoMapOptions extends BaseOptions { data: GeoMapData; projection?: GeoProjection; mode?: GeoMapMode; center?: GeoCoordinate; initialZoom?: number; minZoom?: number; maxZoom?: number; pointRadius?: number; showGraticule?: boolean; onPointSelect?: (event: GeoPointEvent) => void; onViewportChange?: (event: GeoViewportEvent) => void; }"
+    ],
+    "NodaraCalendarComponent": [
+      "export declare class NodaraCalendarComponent implements AfterViewInit, OnChanges, OnDestroy { host: ElementRef<HTMLElement>; events: CalendarEvent[]; options: Omit<CalendarOptions, \"events\">; ready: EventEmitter<NodaraController<CalendarEvent[], unknown>>; eventSelect: EventEmitter<CalendarEventSelectEvent>; eventChange: EventEmitter<CalendarEventChangeEvent>; private controller?; private appliedOptions; ngAfterViewInit(): void; ngOnChanges(changes: SimpleChanges): void; ngOnDestroy(): void; static ɵfac: i0.ɵɵFactoryDeclaration<NodaraCalendarComponent, never>; static ɵcmp: i0.ɵɵComponentDeclaration<NodaraCalendarComponent, \"nd-calendar\", never, { \"events\": { \"alias\": \"events\"; \"required\": true; }; \"options\": { \"alias\": \"options\"; \"required\": false; }; }, { \"ready\": \"ready\"; \"eventSelect\": \"eventSelect\"; \"eventChange\": \"eventChange\"; }, never, never, true, never>; }"
+    ],
+    "NodaraChartComponent": [
+      "export declare class NodaraChartComponent implements AfterViewInit, OnChanges, OnDestroy { host: ElementRef<HTMLElement>; series: ChartSeries[]; options: Omit<ChartOptions, \"series\">; ready: EventEmitter<NodaraController<ChartSeries[], unknown>>; pointSelect: EventEmitter<ChartPointEvent>; private controller?; private appliedOptions; ngAfterViewInit(): void; ngOnChanges(changes: SimpleChanges): void; ngOnDestroy(): void; static ɵfac: i0.ɵɵFactoryDeclaration<NodaraChartComponent, never>; static ɵcmp: i0.ɵɵComponentDeclaration<NodaraChartComponent, \"nd-chart\", never, { \"series\": { \"alias\": \"series\"; \"required\": true; }; \"options\": { \"alias\": \"options\"; \"required\": false; }; }, { \"ready\": \"ready\"; \"pointSelect\": \"pointSelect\"; }, never, never, true, never>; }"
+    ],
+    "NodaraController": [
+      "interface NodaraController<TData, TOptions = unknown> { readonly element: HTMLElement; getData(): TData; getOptions(): TOptions; update(data: TData): void; setOptions(options: Partial<TOptions>): void; setState(data: TData, options: Partial<TOptions>): void; resize(): void; destroy(): void; on<TEvent extends keyof NodaraEvents<TData, TOptions>>(event: TEvent, listener: (payload: NodaraEvents<TData, TOptions>[TEvent]) => void): Unsubscribe; on<TPayload = unknown>(event: string, listener: (payload: TPayload) => void): Unsubscribe; }"
+    ],
+    "NodaraDiagramComponent": [
+      "export declare class NodaraDiagramComponent implements AfterViewInit, OnChanges, OnDestroy { host: ElementRef<HTMLElement>; data: DiagramData; options: Omit<DiagramOptions, \"data\">; ready: EventEmitter<NodaraController<DiagramData, unknown>>; nodeSelect: EventEmitter<DiagramNodeEvent>; private controller?; private appliedOptions; ngAfterViewInit(): void; ngOnChanges(changes: SimpleChanges): void; ngOnDestroy(): void; static ɵfac: i0.ɵɵFactoryDeclaration<NodaraDiagramComponent, never>; static ɵcmp: i0.ɵɵComponentDeclaration<NodaraDiagramComponent, \"nd-diagram\", never, { \"data\": { \"alias\": \"data\"; \"required\": true; }; \"options\": { \"alias\": \"options\"; \"required\": false; }; }, { \"ready\": \"ready\"; \"nodeSelect\": \"nodeSelect\"; }, never, never, true, never>; }"
+    ],
+    "NodaraGanttComponent": [
+      "export declare class NodaraGanttComponent implements AfterViewInit, OnChanges, OnDestroy { host: ElementRef<HTMLElement>; data: GanttTask[]; options: Omit<GanttOptions, \"data\">; ready: EventEmitter<NodaraController<GanttTask[], unknown>>; taskSelect: EventEmitter<GanttTaskEvent>; taskChange: EventEmitter<GanttTaskEvent>; private controller?; private appliedOptions; ngAfterViewInit(): void; ngOnChanges(changes: SimpleChanges): void; ngOnDestroy(): void; static ɵfac: i0.ɵɵFactoryDeclaration<NodaraGanttComponent, never>; static ɵcmp: i0.ɵɵComponentDeclaration<NodaraGanttComponent, \"nd-gantt\", never, { \"data\": { \"alias\": \"data\"; \"required\": true; }; \"options\": { \"alias\": \"options\"; \"required\": false; }; }, { \"ready\": \"ready\"; \"taskSelect\": \"taskSelect\"; \"taskChange\": \"taskChange\"; }, never, never, true, never>; }"
+    ],
+    "NodaraGeoMapComponent": [
+      "export declare class NodaraGeoMapComponent implements AfterViewInit, OnChanges, OnDestroy { host: ElementRef<HTMLElement>; data: GeoMapData; options: Omit<GeoMapOptions, \"data\">; ready: EventEmitter<NodaraController<GeoMapData, unknown>>; pointSelect: EventEmitter<GeoPointEvent>; viewportChange: EventEmitter<GeoViewportEvent>; private controller?; private appliedOptions; ngAfterViewInit(): void; ngOnChanges(changes: SimpleChanges): void; ngOnDestroy(): void; static ɵfac: i0.ɵɵFactoryDeclaration<NodaraGeoMapComponent, never>; static ɵcmp: i0.ɵɵComponentDeclaration<NodaraGeoMapComponent, \"nd-geo-map\", never, { \"data\": { \"alias\": \"data\"; \"required\": true; }; \"options\": { \"alias\": \"options\"; \"required\": false; }; }, { \"ready\": \"ready\"; \"pointSelect\": \"pointSelect\"; \"viewportChange\": \"viewportChange\"; }, never, never, true, never>; }"
+    ],
+    "NodaraTopologyComponent": [
+      "export declare class NodaraTopologyComponent implements AfterViewInit, OnChanges, OnDestroy { host: ElementRef<HTMLElement>; data: TopologyData; options: Omit<TopologyOptions, \"data\">; ready: EventEmitter<NodaraController<TopologyData, unknown>>; nodeSelect: EventEmitter<TopologyNodeEvent>; viewportChange: EventEmitter<TopologyViewportEvent>; private controller?; private appliedOptions; ngAfterViewInit(): void; ngOnChanges(changes: SimpleChanges): void; ngOnDestroy(): void; static ɵfac: i0.ɵɵFactoryDeclaration<NodaraTopologyComponent, never>; static ɵcmp: i0.ɵɵComponentDeclaration<NodaraTopologyComponent, \"nd-topology\", never, { \"data\": { \"alias\": \"data\"; \"required\": true; }; \"options\": { \"alias\": \"options\"; \"required\": false; }; }, { \"ready\": \"ready\"; \"nodeSelect\": \"nodeSelect\"; \"viewportChange\": \"viewportChange\"; }, never, never, true, never>; }"
+    ],
+    "TopologyData": [
+      "interface TopologyData { nodes: TopologyNode[]; edges: TopologyEdge[]; }"
+    ],
+    "TopologyOptions": [
+      "interface TopologyOptions extends BaseOptions { data: TopologyData; layout?: TopologyLayout; nodeRadius?: number; layoutIterations?: number; minZoom?: number; maxZoom?: number; initialZoom?: number; onNodeSelect?: (event: TopologyNodeEvent) => void; onViewportChange?: (event: TopologyViewportEvent) => void; }"
+    ]
+  },
+  "elements": {
+    "CalendarEvent": [
+      "interface CalendarEvent { id: string; title: string; start: DateInput; end?: DateInput; durationMinutes?: number; resourceId?: string; color?: string; allDay?: boolean; recurrence?: string; excludedOccurrences?: number[]; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "CalendarOptions": [
+      "interface CalendarOptions extends BaseOptions { events: CalendarEvent[]; view?: CalendarView; date?: DateInput; weekStartsOn?: 0 | 1; timeZone?: string; resources?: CalendarResource[]; visibleResourceIds?: string[]; expandRecurrence?: boolean; maxOccurrences?: number; onEventSelect?: (event: CalendarEventSelectEvent) => void; onEventChange?: (event: CalendarEventChangeEvent) => void; }"
+    ],
+    "ChartOptions": [
+      "interface ChartOptions extends BaseOptions { series: ChartSeries[]; type?: ChartType; stacked?: boolean; showLegend?: boolean; showGrid?: boolean; showAxes?: boolean; showTooltip?: boolean; violinBandwidth?: number | \"scott\"; contourLevels?: number[]; valueFormatter?: (value: number) => string; labelFormatter?: (value: ChartPoint[\"x\"]) => string; onPointSelect?: (event: ChartPointEvent) => void; }"
+    ],
+    "ChartSeries": [
+      "interface ChartSeries { id: string; label: string; color?: string; data: ChartPoint[]; gridY?: number; }"
+    ],
+    "defineNodaraElements": [
+      "declare function defineNodaraElements(prefix?: string): void;"
+    ],
+    "DiagramData": [
+      "interface DiagramData { nodes: DiagramNode[]; links: DiagramLink[]; }"
+    ],
+    "DiagramOptions": [
+      "interface DiagramOptions extends BaseOptions { data: DiagramData; type?: DiagramType; orientation?: \"horizontal\" | \"vertical\"; nodeWidth?: number; nodeGap?: number; linkOpacity?: number; linkRouting?: \"straight\" | \"orthogonal\"; routingClearance?: number; onNodeSelect?: (event: DiagramNodeEvent) => void; }"
+    ],
+    "GanttOptions": [
+      "interface GanttOptions extends BaseOptions { data: GanttTask[]; editable?: boolean; start?: DateInput; end?: DateInput; zoom?: GanttZoom; rowHeight?: number; snap?: \"none\" | \"day\" | \"week\" | number; dependencyRouting?: \"straight\" | \"orthogonal\"; onTaskSelect?: (event: GanttTaskEvent) => void; onTaskChange?: (event: GanttTaskEvent) => void; }"
+    ],
+    "GanttTask": [
+      "interface GanttTask { id: string; label: string; start: DateInput; end: DateInput; progress?: number; dependencies?: string[]; dependencyLinks?: { taskId: string; kind: \"FS\" | \"SS\" | \"FF\" | \"SF\"; lagMs?: number; }[]; owner?: GanttOwner; color?: string; disabled?: boolean; meta?: Record<string, unknown>; }"
+    ],
+    "GeoMapData": [
+      "interface GeoMapData { points: GeoPoint[]; routes?: GeoRoute[]; regions?: GeoRegion[]; }"
+    ],
+    "GeoMapOptions": [
+      "interface GeoMapOptions extends BaseOptions { data: GeoMapData; projection?: GeoProjection; mode?: GeoMapMode; center?: GeoCoordinate; initialZoom?: number; minZoom?: number; maxZoom?: number; pointRadius?: number; showGraticule?: boolean; onPointSelect?: (event: GeoPointEvent) => void; onViewportChange?: (event: GeoViewportEvent) => void; }"
+    ],
+    "NodaraController": [
+      "interface NodaraController<TData, TOptions = unknown> { readonly element: HTMLElement; getData(): TData; getOptions(): TOptions; update(data: TData): void; setOptions(options: Partial<TOptions>): void; setState(data: TData, options: Partial<TOptions>): void; resize(): void; destroy(): void; on<TEvent extends keyof NodaraEvents<TData, TOptions>>(event: TEvent, listener: (payload: NodaraEvents<TData, TOptions>[TEvent]) => void): Unsubscribe; on<TPayload = unknown>(event: string, listener: (payload: TPayload) => void): Unsubscribe; }"
+    ],
+    "NodaraElement": [
+      "interface NodaraElement extends HTMLElement { data: ElementData; options: ElementOptions; setState(data: ElementData, options: ElementOptions): void; readonly controller?: NodaraController<ElementData, BaseOptions>; }"
+    ],
+    "TopologyData": [
+      "interface TopologyData { nodes: TopologyNode[]; edges: TopologyEdge[]; }"
+    ],
+    "TopologyOptions": [
+      "interface TopologyOptions extends BaseOptions { data: TopologyData; layout?: TopologyLayout; nodeRadius?: number; layoutIterations?: number; minZoom?: number; maxZoom?: number; initialZoom?: number; onNodeSelect?: (event: TopologyNodeEvent) => void; onViewportChange?: (event: TopologyViewportEvent) => void; }"
+    ]
+  }
+}

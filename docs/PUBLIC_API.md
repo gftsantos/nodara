@@ -84,8 +84,9 @@ without double-counting explicit parent values. `layoutDiagramSankey` uses a
 global flow scale, max(inflow,outflow) node sizes and rejects directed cycles.
 `validateDiagramLayout` applies type-specific constraints. Negatives are invalid
 for area/flow encodings. Contributions below relative machine precision collapse
-visually; original numeric values remain in the output. ER/state/chord are basic
-box/relationship configurations, not full semantic diagram editors.
+visually; original numeric values remain in the output. Chord uses weighted arcs
+and ribbons; ER exposes attributes, keys and cardinalities; state supports initial/
+final states and transitions. These are not full semantic diagram editors.
 
 ## Topology
 
@@ -108,7 +109,7 @@ bounded and `maxOccurrences` is per source event. No complete RFC5545 claim.
 ## Integrated operational planning
 
 `normalizeOperationalPlan` validates schema 1, elapsed-time tasks, resource
-capacity/assignments, locations and acyclic FS dependencies with nonnegative lag.
+capacity/assignments, locations and acyclic FS/SS/FF/SF dependencies with signed lag.
 `createOperationalStore` exposes preview/transact, frozen snapshots, bounded
 undo/redo, subscriptions, monotonic revisions and explicit JSON export.
 `operationalCriticalPath` computes precedence-only CPM; it does not level
@@ -118,6 +119,15 @@ forward and explains each move, rejecting a required move of a locked task.
 `operationalGantt`, `operationalCalendar`, `operationalTopology`, `operationalMap`
 and `operationalLoadChart` project the same state. See `/docs#operations`.
 
+`@nodara/core/working-time` separately exports `WorkingPlan` schema 2 and
+`WorkingResource`, `evaluateWorkingPlan`, `createWorkingPlanStore`, `workingPlanViews`
+and `createWorkingClock`. Resources optionally carry their own calendar; task work
+uses the intersection with the project and all assigned resources. Optional
+`resourceLeveling:'serial'` reserves locked windows first and uses free capacity in
+stable topological order, interrupting work when necessary. Omission/`'none'` keeps
+legacy behavior. Lags remain elapsed. Preview/apply/history preserve these options.
+This is not optimal scheduling or working-time CPM. See the core README for bounds.
+
 ## Compatibility policy
 
 - Patch: fixes and non-observable performance improvements.
@@ -126,6 +136,11 @@ and `operationalLoadChart` project the same state. See `/docs#operations`.
 
 During alpha, all packages remain version-linked. Deprecated fields receive at
 least one minor release before removal.
+
+`docs/public-api-candidate.json` records the built declaration surface across six
+entry points. `scripts/check-api-surface.mjs` checks it in the release gate.
+Review every baseline change alongside migration notes; matching declarations
+alone do not prove behavioral compatibility. Isolated consumer tests remain required.
 ## Interaction callback ordering
 
 `onTaskChange` / `onEventChange` receive a proposed move/resize before the renderer commits it. A thrown callback aborts that interaction. Controller `task:change` / `event:change` subscriptions run after commit. Calling `update` or `setState` does not fabricate interaction events. Synchronous cross-view reconciliation should be scheduled after this local commit (the operational example uses a microtask). Arbitrary consumer side effects are not rolled back by the visual controller.

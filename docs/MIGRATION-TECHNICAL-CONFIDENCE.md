@@ -37,10 +37,14 @@ versioned artifacts; do not overwrite a published npm version.
 ## Operational data
 
 `OperationalPlan` schema 1 uses elapsed UTC instants, safe integer durations and
-resource units, and FS dependencies with non-negative lag. It does not silently
+resource units, and FS/SS/FF/SF dependencies with signed lag. It does not silently
 apply working days, daylight-saving rules, business calendars or resource leveling.
 The portal deliberately has smaller limits than the model. Export JSON explicitly
 before reloading; undo history, selection and revisions are not serialized.
+
+For the additive resource-calendar/leveling candidate of 22 September 2026, see
+`BETA-READINESS.md`. Schema 2 plans without the new optional fields preserve their
+previous behavior. Schema 1 is not converted implicitly.
 
 ## Distribution and verification
 

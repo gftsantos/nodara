@@ -25,6 +25,11 @@ const unsubscribe = store.subscribe(() => {
 // Para aplicar um rascunho completo schema 2:
 // const preview = store.preview(candidatePlan);
 // store.apply(candidatePlan, preview.expectedRevision); // rejeita sobrecarga
+// Nivelamento opcional, sem alterar o plano guardado:
+// const candidate = { ...store.getSnapshot().evaluation.plan, resourceLeveling: 'serial' as const };
+// const leveled = store.preview(candidate);
+// store.apply(leveled.evaluation.plan, leveled.expectedRevision);
+// Cada resource.calendar é opcional; os seus turnos/exceções intersectam o projeto.
 // Ao desmontar:
 // unsubscribe(); [gantt, calendar, chart, topology, map].forEach(view => view.destroy()); store.destroy();`;
 }
