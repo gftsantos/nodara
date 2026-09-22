@@ -40,9 +40,9 @@ for (const activation of ["pointer", "keyboard"] as const) test(`shift and absen
   const scope = page.getByRole("region", { name: "Planeamento laboral integrado", exact: true });
   await scope.getByText("Calendário do recurso · Equipa de entrega", { exact: true }).click();
   await scope.getByLabel("Ausência até · Equipa de entrega").fill("2026-10-25");
-  // Commit the native date editor before activating an action. In WebKit the
-  // date control can retain focus while a programmatic fill is finishing.
-  await scope.getByLabel("Ausência até · Equipa de entrega").press("Tab");
+  // Cover both real paths: pointer users click directly from the native date
+  // editor, while keyboard users commit it by tabbing to the next control.
+  if (activation === "keyboard") await scope.getByLabel("Ausência até · Equipa de entrega").press("Tab");
   await expect(scope.getByLabel("Ausência até · Equipa de entrega")).toHaveValue("2026-10-25");
   const addAbsence = scope.getByRole("button", { name: "Adicionar ausência · Equipa de entrega" });
   if (activation === "keyboard") { await addAbsence.focus(); await page.keyboard.press("Enter"); }
