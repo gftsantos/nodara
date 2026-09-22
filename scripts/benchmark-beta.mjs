@@ -71,12 +71,15 @@ try {
         const response = performance.now() - before, host = document.getElementById("host"), item = host.querySelector("[data-nd-focus]");
         if (!item) throw new Error("Missing semantic data interaction target"); item.focus();
         window.__selection = null; window.__input = null; window.__inputFrame = null;
-        item.addEventListener("keydown", () => { window.__input = performance.now(); requestAnimationFrame(() => requestAnimationFrame(() => { window.__inputFrame = performance.now(); })); }, { once: true });
+        // Capture runs before the component's own keydown handler, which may
+        // synchronously emit selection (not every renderer waits for click).
+        item.addEventListener("keydown", () => { window.__input = performance.now(); requestAnimationFrame(() => requestAnimationFrame(() => { window.__inputFrame = performance.now(); })); }, { once: true, capture: true });
         return { cpu, response, dom: host.querySelectorAll("*").length };
       }, run + warmups + 1);
       await page.keyboard.press("Enter");
       await page.waitForFunction(() => window.__selection !== null && window.__inputFrame !== null, undefined, { timeout: 5000 });
       const input = await page.evaluate(() => ({ selection: window.__selection - window.__input, frame: window.__inputFrame - window.__input }));
+      if (!Number.isFinite(input.selection) || input.selection < 0 || !Number.isFinite(input.frame) || input.frame < input.selection) throw new Error("Invalid keyboard timing order");
       if (run >= 0) { cpuMs.push(update.cpu); responseMs.push(update.response); selectionMs.push(input.selection); inputFrameMs.push(input.frame); domCounts.push(update.dom); }
     }
     await page.evaluate(() => { window.__benchmark.controller.destroy(); window.__benchmark = null; if (document.getElementById("host").childElementCount) throw new Error("Destroy retained DOM"); });
