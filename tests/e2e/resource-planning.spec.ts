@@ -1,8 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.goto("/operations");
+  await expect(page.locator('[data-operations-ready="true"]')).toBeVisible();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+});
+
 test("resource absence and leveling preview, apply and undo without changing capacity", async ({ page }) => {
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
-  await page.goto("/operations"); await page.getByRole("button", { name: "Planeamento laboral · impacto", exact: true }).click();
+  await page.getByRole("button", { name: "Planeamento laboral · impacto", exact: true }).click();
   const scope = page.getByRole("region", { name: "Planeamento laboral integrado", exact: true });
   await scope.getByText("Calendário do recurso · Equipa de entrega", { exact: true }).click();
   await scope.getByRole("button", { name: "Adicionar ausência · Equipa de entrega", exact: true }).click();
@@ -29,12 +35,18 @@ test("resource absence and leveling preview, apply and undo without changing cap
   expect(errors).toEqual([]);
 });
 
-test("shift and absence forms validate, split overnight shifts and preserve saved plan", async ({ page }) => {
-  await page.goto("/operations"); await page.getByRole("button", { name: "Planeamento laboral · impacto", exact: true }).click();
+for (const activation of ["pointer", "keyboard"] as const) test(`shift and absence forms validate, split overnight shifts and preserve saved plan (${activation})`, async ({ page }) => {
+  await page.getByRole("button", { name: "Planeamento laboral · impacto", exact: true }).click();
   const scope = page.getByRole("region", { name: "Planeamento laboral integrado", exact: true });
   await scope.getByText("Calendário do recurso · Equipa de entrega", { exact: true }).click();
   await scope.getByLabel("Ausência até · Equipa de entrega").fill("2026-10-25");
-  await scope.getByRole("button", { name: "Adicionar ausência · Equipa de entrega" }).click();
+  // Commit the native date editor before activating an action. In WebKit the
+  // date control can retain focus while a programmatic fill is finishing.
+  await scope.getByLabel("Ausência até · Equipa de entrega").press("Tab");
+  await expect(scope.getByLabel("Ausência até · Equipa de entrega")).toHaveValue("2026-10-25");
+  const addAbsence = scope.getByRole("button", { name: "Adicionar ausência · Equipa de entrega" });
+  if (activation === "keyboard") { await addAbsence.focus(); await page.keyboard.press("Enter"); }
+  else await addAbsence.click();
   await expect(scope.getByRole("alert")).toContainText("intervalo válido");
   await scope.getByLabel("Início do turno · Equipa de entrega").fill("22:00");
   await scope.getByLabel("Fim do turno · Equipa de entrega").fill("06:00");
