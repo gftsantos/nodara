@@ -160,7 +160,7 @@ test("search supports its visible keyboard shortcuts", async ({ page }) => {
 test("framework tabs and theme controls update the interface", async ({ page }) => {
   await page.locator("#integrar").scrollIntoViewIfNeeded();
   await page.getByRole("tab", { name: "Vue" }).click();
-  await expect(page.locator(".install-command code")).toHaveText("npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-vue-0.1.0-alpha.1.tgz");
+  await expect(page.locator(".install-command code")).toHaveText("npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-vue-0.1.0-beta.1.tgz");
   await page.getByRole("button", { name: "Alternar tema" }).click();
   await expect(page.locator(".site")).toHaveAttribute("data-theme", "light");
 });

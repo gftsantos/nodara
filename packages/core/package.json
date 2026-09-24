@@ -1,6 +1,6 @@
 {
   "name": "@nodara/core",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.1",
   "description": "Framework-agnostic visual engine for Gantt, charts, topologies and calendars.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",

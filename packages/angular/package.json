@@ -1,6 +1,6 @@
 {
   "name": "@nodara/angular",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.1",
   "description": "Official Angular standalone components for Nodara.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",
@@ -22,7 +22,7 @@
     "build": "node ../../scripts/clean-package-dist.mjs angular && ngc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": { "@nodara/core": "0.1.0-alpha.1" },
+  "dependencies": { "@nodara/core": "0.1.0-beta.1" },
   "peerDependencies": { "@angular/core": ">=21.2.21 <22" },
   "publishConfig": { "access": "public" }
 }

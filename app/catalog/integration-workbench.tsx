@@ -27,7 +27,7 @@ export default function IntegrationWorkbench({ item, data, settings, onSettingsC
     }
   };
   return <section className={styles.integration} aria-label="Integração pronta a copiar" id="integrar">
-    <div className={styles.sectionTitle}><span>Do preview para o teu projeto</span><span className={styles.realBadge}>ALPHA · 0.1.0</span></div>
+    <div className={styles.sectionTitle}><span>Do preview para o teu projeto</span><span className={styles.realBadge}>BETA PRIVADA · 0.1.0-beta.1</span></div>
     <p>Escolhe a stack. O código inclui os dados validados, opções, estilos e eventos desta demonstração.</p>
     <div className={styles.integrationControls}>
       <label>Framework<select aria-label="Framework de integração" value={framework} onChange={event => { setFramework(event.target.value as IntegrationFramework); setFileIndex(0); setCopyStatus(""); }}>{Object.entries(integrationFrameworks).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -37,8 +37,8 @@ export default function IntegrationWorkbench({ item, data, settings, onSettingsC
     {pending && <p className={styles.warning} role="status">Há alterações por validar. O código conserva os últimos dados válidos do preview.</p>}
     <details className={styles.installGuide} open>
       <summary>1. Instalar no teu projeto</summary>
-      <p>Os pacotes alpha ainda não estão publicados no npm. Descarrega estes ficheiros para a pasta do teu projeto e executa o comando.</p>
-      <div className={styles.downloads}>{packages.map(name => <a key={name} href={`/downloads/${name}`} download><Download size={14} /> {name.replace("-0.1.0-alpha.1.tgz", "")}</a>)}</div>
+      <p>Os pacotes desta beta privada não estão publicados no npm. Descarrega estes ficheiros para a pasta do teu projeto e executa o comando.</p>
+      <div className={styles.downloads}>{packages.map(name => <a key={name} href={`/downloads/${name}`} download><Download size={14} /> {name.replace("-0.1.0-beta.1.tgz", "")}</a>)}</div>
       <div className={styles.installCommand}><code>{install}</code><button type="button" onClick={() => copy(install, "Comando")} aria-label="Copiar comando de instalação"><Copy size={16} /></button></div>
       <p>{framework === "angular" ? "Requer Angular >=21.2.21 <22. Importa NodaraExampleComponent no componente pai, usa <app-nodara-example /> e adiciona o CSS aos estilos globais." : framework === "vue" ? "Requer Vue 3.3+. Cola o ficheiro .vue, importa-o no componente pai e usa <NodaraExample />." : framework === "react" ? "Requer React >=18.2.0. Cola o ficheiro .tsx, importa-o e usa <NodaraExample />. Em Next.js, mantém a diretiva use client." : "Exemplo para um projeto com bundler, como Vite. Os imports npm não funcionam ao abrir o HTML diretamente como ficheiro."}</p>
     </details>

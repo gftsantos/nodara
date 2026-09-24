@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { integrationFiles } from "./catalog/integration";
+import { parsePortalJSON } from "./safe-json";
 import { Calendar, Chart, Gantt, Topology } from "@nodara/react";
 import {
   normalizeCalendarEvents,
@@ -91,10 +92,10 @@ const featureItems: Array<{
 ];
 
 const frameworks: Array<{ id: FrameworkId; label: string; install: string }> = [
-  { id: "react", label: "React", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-react-0.1.0-alpha.1.tgz" },
-  { id: "angular", label: "Angular", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-angular-0.1.0-alpha.1.tgz" },
-  { id: "vue", label: "Vue", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-vue-0.1.0-alpha.1.tgz" },
-  { id: "vanilla", label: "JavaScript", install: "npm i ./nodara-core-0.1.0-alpha.1.tgz" },
+  { id: "react", label: "React", install: "npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-react-0.1.0-beta.1.tgz" },
+  { id: "angular", label: "Angular", install: "npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-angular-0.1.0-beta.1.tgz" },
+  { id: "vue", label: "Vue", install: "npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-vue-0.1.0-beta.1.tgz" },
+  { id: "vanilla", label: "JavaScript", install: "npm i ./nodara-core-0.1.0-beta.1.tgz" },
 ];
 
 const snippets: Record<FrameworkId, string> = {
@@ -360,7 +361,7 @@ function assertTextField(item: Record<string, unknown>, field: string, context: 
 function parsePlaygroundData(feature: FeatureId, source: string): PlaygroundDataMap[FeatureId] {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(source);
+    parsed = parsePortalJSON(source);
   } catch (error) {
     const message = error instanceof Error ? error.message : "estrutura incompleta";
     throw new Error(`JSON inválido: ${message}`);
@@ -725,7 +726,7 @@ export default function Home() {
         <button className="brand" onClick={() => scrollTo("inicio")} aria-label="Nodara, início">
           <span className="brand-mark"><i /><i /><i /><i /></span>
           <span>NODARA</span>
-          <sup>ALPHA</sup>
+          <sup>BETA</sup>
         </button>
         <nav className={mobileNav ? "main-nav is-open" : "main-nav"} aria-label="Navegação principal">
           <a href="/catalog">Catálogo</a>
@@ -741,7 +742,7 @@ export default function Home() {
           <button className="icon-button theme-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Alternar tema">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-          <a className="github-button" href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer"><Code2 size={16} /><span>GitHub</span><b>ALPHA</b></a>
+          <a className="github-button" href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer"><Code2 size={16} /><span>GitHub</span><b>BETA</b></a>
           <button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav} aria-label={mobileNav ? "Fechar menu" : "Abrir menu"}>
             {mobileNav ? <X /> : <Menu />}
           </button>
@@ -752,12 +753,12 @@ export default function Home() {
         <section className="hero" id="inicio">
           <div className="hero-grid" />
           <div className="hero-copy">
-            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.1 alpha</b></div>
+            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.1 beta privada</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
             <p>Uma biblioteca TypeScript com 6 componentes, 69 configurações visuais e 100 receitas prontas para produtos ambiciosos.</p>
             <div className="hero-actions">
               <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar o catálogo</a>
-              <CopyButton value="npm i ./nodara-core-0.1.0-alpha.1.tgz ./nodara-react-0.1.0-alpha.1.tgz" label="Instalar os pacotes alpha" />
+              <CopyButton value="npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-react-0.1.0-beta.1.tgz" label="Instalar os pacotes beta" />
             </div>
             <div className="framework-proof">
               <span>Funciona onde trabalhas</span>
@@ -794,7 +795,7 @@ export default function Home() {
             <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós testados</strong><small>Canvas / WebGL adaptativo</small></div></div>
           </div>
           <div className="hero-foot">
-            <div><strong>5</strong><span>pacotes alpha</span></div>
+            <div><strong>5</strong><span>pacotes beta</span></div>
             <div><strong>69</strong><span>configurações visuais</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
             <div><strong>200+</strong><span>testes automatizados</span></div>
@@ -900,7 +901,7 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              <div className="workspace-footer"><span className={activeEditorError ? "has-error" : ""}>{activeEditorError ? <X size={14} /> : <CheckCircle2 size={14} />} {activeEditorError ? "JSON com erro · último válido preservado" : "Dados validados"}</span><span>Motor real Nodara</span><span><ShieldCheck size={14} /> Teclado + leitor de ecrã</span><span>Zoom interativo</span></div>
+              <div className="workspace-footer"><span className={activeEditorError ? "has-error" : ""}>{activeEditorError ? <X size={14} /> : <CheckCircle2 size={14} />} {activeEditorError ? "JSON com erro · último válido preservado" : "Dados validados"}</span><span>Motor real Nodara</span><span><ShieldCheck size={14} /> Teclado + semântica</span><span>Zoom interativo</span></div>
             </div>
           </div>
         </section>
@@ -909,7 +910,7 @@ export default function Home() {
           <div className="section-heading integration-heading">
             <div><span className="section-number">02</span><p>INTEGRAÇÃO SEM ATRITO</p></div>
             <h2>A tua stack.<br />A mesma API.</h2>
-            <p>Core agnóstico, adaptadores oficiais e tipos que acompanham cada decisão. Começa em menos de cinco minutos.</p>
+            <p>Core agnóstico, adaptadores oficiais e exemplos tipados. Experimenta a integração com os dados da tua aplicação.</p>
           </div>
 
           <div className="integration-lab">
@@ -943,7 +944,7 @@ export default function Home() {
               <div className="code-window">
                 <div className="code-window-head"><span><i /><i /><i /></span><p>ProductPlan.{activeFramework === "vue" ? "vue" : "tsx"}</p><CopyButton value={snippets[activeFramework]} /></div>
                 <pre><code>{snippets[activeFramework]}</code></pre>
-                <div className="code-status"><span><CheckCircle2 size={14} /> Compilado sem erros</span><b>16.6 kB core + React</b></div>
+                <div className="code-status"><span><CheckCircle2 size={14} /> Exemplos verificados no build</span><b>TypeScript</b></div>
               </div>
             </div>
           </div>
@@ -970,7 +971,7 @@ export default function Home() {
             <span className="section-number">03</span>
             <p className="mini-label">FEITA PARA ESCALAR</p>
             <h2>Bonita por fora.<br /><em>Séria por dentro.</em></h2>
-            <p>Um core independente, renderização adaptativa e contratos públicos estáveis. O tipo de fundação que não obriga a reescrever o produto daqui a dois anos.</p>
+            <p>Um core independente, renderização adaptativa e contratos públicos versionados. A API ainda está em pré-release: consulta os limites e as notas de migração.</p>
             <button className="secondary-button" onClick={event => setActiveDialog({ id: "architecture", opener: event.currentTarget })}>Explorar arquitetura <ArrowRight size={15} /></button>
           </div>
           <div className="architecture-grid">
@@ -981,17 +982,17 @@ export default function Home() {
               <div className="performance-bars"><i><span style={{ width: "24%" }} /></i><i><span style={{ width: "56%" }} /></i><i><span style={{ width: "88%" }} /></i></div>
               <div className="performance-labels"><span>DOM</span><span>CANVAS</span><span>WEBGL</span></div>
             </article>
-            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Cinco pacotes independentes e tree-shaking real.</p><strong className="metric">16.1 <small>kB CORE GZIP</small></strong></article>
-            <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBLE</span><h3>Acessível de raiz.</h3><p>Teclado, leitores de ecrã e contraste testados.</p><strong className="metric">5.9:1 <small>CONTRASTE CLARO</small></strong></article>
-            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>ENGINEERING</span><h3>Validada de forma contínua.</h3><p>Contratos estáveis, testes automatizados e releases controladas.</p><div className="community-row"><span>200+ <small>testes</small></span><span>5 <small>pacotes</small></span><span>4 <small>adaptadores</small></span></div></article>
+            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Pacotes de integração por framework. O tamanho final depende dos imports e do bundler.</p><strong className="metric">5 <small>PACOTES</small></strong></article>
+            <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBILITY</span><h3>Semântica e teclado.</h3><p>Testes automatizados de contraste e interação. Validação com leitor de ecrã real ainda pendente.</p><strong className="metric">A11Y <small>EM VALIDAÇÃO</small></strong></article>
+            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>ENGINEERING</span><h3>Validada de forma contínua.</h3><p>Contratos documentados, testes automatizados e releases controladas.</p><div className="community-row"><span>200+ <small>testes</small></span><span>5 <small>pacotes</small></span><span>4 <small>adaptadores</small></span></div></article>
           </div>
         </section>
 
         <section className="enterprise-section" id="enterprise">
           <div className="enterprise-orbit"><i /><i /><i /><span className="brand-mark"><i /><i /><i /><i /></span></div>
-          <p className="mini-label">ALPHA VALIDADA</p>
+          <p className="mini-label">BETA PRIVADA · EM VALIDAÇÃO</p>
           <h2>Os teus dados já têm uma história.<br /><em>Vamos torná-la visível.</em></h2>
-          <p>Começa com a comunidade. Cresce com suporte, colaboração e segurança enterprise.</p>
+          <p>Explora a avaliação privada. Ainda não existe uma oferta comercial, SLA ou suporte enterprise contratado.</p>
           <div className="enterprise-actions"><a className="primary-button" href="/docs#installation">Explorar integração <ArrowRight size={16} /></a><a className="secondary-button" href="/docs#architecture">Ver arquitetura</a></div>
           <div className="enterprise-note"><span><Check size={14} /> MIT core</span><span><Check size={14} /> Sem cartão</span><span><Check size={14} /> Suporte TypeScript</span></div>
         </section>
@@ -1000,7 +1001,7 @@ export default function Home() {
       <footer>
         <div className="footer-brand"><div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>NODARA</span></div><p>Visual infrastructure for the web.</p></div>
         <div className="footer-links"><div><strong>PRODUTO</strong><a href="/catalog">Catálogo visual</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
-        <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer">GitHub</a><a href="/docs">Documentação</a><a href="/docs#architecture">Arquitetura</a></div></div>
+        <div className="footer-bottom"><span>© 2026 Nodara</span><span>Avaliação privada · em desenvolvimento.</span><div><a href="/legal">Privacidade e condições</a><a href="/docs">Documentação</a><a href="/docs#architecture">Arquitetura</a></div></div>
       </footer>
 
       {showSearch && (

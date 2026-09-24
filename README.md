@@ -1,6 +1,6 @@
 # Nodara
 
-Monorepo alpha da Nodara: seis componentes visuais — Gantt, Chart, Topology, Calendar, GeoMap e Diagram — e um modelo operacional partilhado.
+Monorepo da beta privada Nodara (`0.1.0-beta.1`): seis componentes visuais — Gantt, Chart, Topology, Calendar, GeoMap e Diagram — e um modelo operacional partilhado.
 
 [Portal privado](https://nodara-visual.gftsantos.chatgpt.site) · [Catálogo](https://nodara-visual.gftsantos.chatgpt.site/catalog) · [Referência da API, exemplos e limites](https://nodara-visual.gftsantos.chatgpt.site/docs) · [Planeamento integrado](https://nodara-visual.gftsantos.chatgpt.site/operations)
 
@@ -11,7 +11,7 @@ Monorepo alpha da Nodara: seis componentes visuais — Gantt, Chart, Topology, C
 - Planeamento integrado: plano único, transações, conflitos, caminho crítico por precedências, desfazer/refazer e ficheiro JSON.
 - Histogramas por intervalos, densidades Gaussian KDE, isolinhas, hierarquias proporcionais e Sankey.
 - Temas claro/escuro, pesquisa, navegação por teclado e layout responsivo.
-- Pacotes alpha instaláveis por tarball; publicação npm sujeita à validação e autorização.
+- Pacotes beta instaláveis por tarball; publicação npm sujeita à validação e autorização.
 
 ## Pacotes
 
@@ -59,6 +59,6 @@ Leitor de ecrã real: [percurso pendente](docs/SCREEN-READER-CHECKLIST.md).
 
 ## Estado e limites
 
-A alpha não promete paridade com todos os produtos especializados. O calendário ainda não implementa RRULE completo nem grelhas independentes do fuso do browser. Planeamento schema 1 usa tempo decorrido e precedências FS, não nivelamento automático de recursos, calendários laborais ou colaboração cloud. ER/state/chord e mapas têm limites publicados no catálogo.
+A beta privada não promete paridade com todos os produtos especializados. O calendário ainda não implementa RRULE completo nem grelhas independentes do fuso do browser. Planeamento schema 1 usa tempo decorrido e precedências FS, não nivelamento automático de recursos, calendários laborais ou colaboração cloud. ER/state/chord e mapas têm limites publicados no catálogo.
 
 Ver [plano de execução](TECHNICAL-CONFIDENCE-PLAN.md), [relatório técnico e limites medidos](TECHNICAL-CONFIDENCE-REPORT-2026-09-14.md), [100 unidades de evolução](docs/TECHNICAL-ITERATIONS-2026-09-14.md), [comparação por capacidades](COMPETITIVE-CAPABILITIES.md), [arquitetura](docs/ARCHITECTURE.md), [API](docs/PUBLIC_API.md), [migração](docs/MIGRATION-TECHNICAL-CONFIDENCE.md) e [segurança](SECURITY.md).

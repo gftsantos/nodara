@@ -21,6 +21,7 @@ const stages = [
   ["tarballs", process.execPath, ["scripts/package-downloads.mjs"]],
   ["contracts", process.execPath, ["node_modules/vitest/vitest.mjs", "run", "--config", "vitest.audit.config.ts"]],
   ["site-build", npm, ["run", "build:site"]],
+  ["security-artifacts", process.execPath, ["scripts/security-artifacts.mjs"]],
   ["rendered-html", process.execPath, ["--test", "tests/rendered-html.test.mjs"]],
   ["isolated-consumers-build", process.execPath, ["scripts/build-audit-consumers.mjs"]],
   ["isolated-consumers-browser", process.execPath, ["node_modules/@playwright/test/cli.js", "test", "--config=playwright.runtime-audit.config.ts"]],

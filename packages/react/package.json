@@ -1,6 +1,6 @@
 {
   "name": "@nodara/react",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.1",
   "description": "Official React bindings for Nodara visual components.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",
@@ -22,7 +22,7 @@
     "build": "tsup src/index.tsx --format esm,cjs --dts --clean --sourcemap --treeshake --external react --external @nodara/core",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": { "@nodara/core": "0.1.0-alpha.1" },
+  "dependencies": { "@nodara/core": "0.1.0-beta.1" },
   "peerDependencies": { "react": ">=18.2.0" },
   "publishConfig": { "access": "public" }
 }

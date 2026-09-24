@@ -6,6 +6,7 @@ import { normalizeDiagram, type OperationalCommand, type OperationalPlan, type O
 import { createWorkingClock, type WorkingCalendar } from "@nodara/core/working-time";
 import styles from "./operations.module.css";
 import { workingTimeExample } from "./advanced-examples";
+import { parsePortalJSON } from "../safe-json";
 
 const calendar: WorkingCalendar = { id: "office", timeZone: "Europe/Lisbon", week: [1, 2, 3, 4, 5].map(day => ({ day, periods: [{ start: "09:00", end: "12:00" }, { start: "13:00", end: "17:00" }] })), exceptions: {}, disambiguation: "reject" };
 const diagram = { nodes: [{ id: "request", label: "Pedido", ports: [{ id: "out", side: "bottom" }] }, { id: "review", label: "Revisão", ports: [{ id: "in", side: "top" }, { id: "out", side: "bottom" }] }, { id: "done", label: "Concluído", ports: [{ id: "in", side: "top" }] }], links: [{ from: "request", to: "review", fromPort: "out", toPort: "in", directed: true }, { from: "review", to: "done", fromPort: "out", toPort: "in", directed: true }] };
@@ -17,7 +18,7 @@ export function WorkingTimeLab() {
   const [json, setJson] = useState(JSON.stringify(calendar, null, 2)); const [local, setLocal] = useState("2026-10-23T16:00"); const [hours, setHours] = useState("3");
   const result = useMemo(() => { try {
     const year = Number(local.slice(0, 4)); if (year < 1900 || year > 2198 || !Number.isInteger(year)) throw new Error("Escolhe um ano entre 1900 e 2198.");
-    const horizon = { startDate: `${year}-01-01`, endDate: `${year + 1}-01-01` }; const c = createWorkingClock(JSON.parse(json), horizon);
+    const horizon = { startDate: `${year}-01-01`, endDate: `${year + 1}-01-01` }; const c = createWorkingClock(parsePortalJSON(json), horizon);
     const amount = Number(hours) * 3_600_000; if (!hours.trim() || !Number.isSafeInteger(amount)) throw new Error("A duração deve corresponder a milissegundos inteiros.");
     const window = c.add(c.fromLocal(local), amount);
     return { value: { inicioLocal: c.toLocal(window.startMs), fimLocal: c.toLocal(window.endMs), horasTrabalhadas: window.workingMs / 3_600_000, horasDecorridas: (window.endMs - window.startMs) / 3_600_000, segmentos: window.segments.map(segment => ({ inicio: c.toLocal(segment.startMs), fim: c.toLocal(segment.endMs) })) }, code: workingTimeExample(c.calendar, horizon, local, amount) };
@@ -43,7 +44,7 @@ export function DependencyEditor({ plan, transact }: { plan: OperationalPlan; tr
 }
 export function DiagramRoutingLab({ theme }: { theme: "dark" | "light" }) {
   const [json, setJson] = useState(JSON.stringify(diagram, null, 2)); const [clearance, setClearance] = useState(8);
-  const parsed = useMemo(() => { try { const data = normalizeDiagram(JSON.parse(json)); if (data.nodes.length > 60 || data.links.length > 120) throw new Error("O laboratório admite até 60 nós e 120 ligações."); return { data }; } catch (error) { return { error: error instanceof Error ? error.message : String(error) }; } }, [json]);
+  const parsed = useMemo(() => { try { const data = normalizeDiagram(parsePortalJSON(json)); if (data.nodes.length > 60 || data.links.length > 120) throw new Error("O laboratório admite até 60 nós e 120 ligações."); return { data }; } catch (error) { return { error: error instanceof Error ? error.message : String(error) }; } }, [json]);
   const code = `import { createDiagram } from '@nodara/core';\nimport '@nodara/core/styles.css';\n\nconst diagram = createDiagram('#diagram', {\n  type: 'flowchart', orientation: 'vertical', linkRouting: 'orthogonal', routingClearance: ${clearance},\n  data: ${parsed.data ? JSON.stringify(parsed.data, null, 2) : '{}'}\n});\n// HTML: <div id="diagram" style="height:360px"></div>\n// Ao desmontar: diagram.destroy();`;
   return <details className={styles.lab} id="diagram-routing-lab"><summary>Portas e percursos de diagramas <span>Componentes reais · JSON editável</span></summary><p>As ligações saem de portas nomeadas e contornam os retângulos dos nós. A posição das portas acompanha o layout. Edita os dados e observa o resultado.</p><div className={styles.labGrid}><div className={styles.form}><label>Dados do diagrama<textarea value={json} spellCheck={false} onChange={event => setJson(event.target.value)} /></label><label>Distância aos nós · px<input type="range" min="0" max="24" step="1" value={clearance} onChange={event => setClearance(Number(event.target.value))} /><output>{clearance}px</output></label></div><div>{parsed.error ? <p role="alert">{parsed.error}</p> : <Diagram data={parsed.data!} type="flowchart" orientation="vertical" linkRouting="orthogonal" routingClearance={clearance} theme={theme} style={{ height: 360 }} ariaLabel="Diagrama com portas e percursos ortogonais" />}</div></div>{parsed.data && <CopyCode code={code} label="Integração · portas e percursos" />}<p>Disponível nos diagramas de caixas, não em Sankey ou hierarquias de áreas. Não evita cruzamentos entre ligações nem resolve nós sobrepostos. Ligações sem percurso, auto-ligações e limites de pesquisa geram avisos; não são desenhadas por cima dos obstáculos.</p></details>;
 }

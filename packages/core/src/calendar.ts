@@ -180,7 +180,7 @@ export function createCalendar(
         eventButton.disabled = event.disabled === true;
         eventButton.tabIndex = isInteractionEnabled(currentOptions.interactive, "keyboard") ? 0 : -1;
         eventButton.append(createElement("strong", "", event.title));
-        const timeLabel = event.allDay ? "All day" : new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", ...(currentOptions.timeZone ? { timeZone: currentOptions.timeZone } : {}) }).format(start);
+        const timeLabel = event.allDay ? "All day" : formatDate(start.getTime(), locale, { hour: "2-digit", minute: "2-digit", ...(currentOptions.timeZone ? { timeZone: currentOptions.timeZone } : {}) });
         eventButton.append(createElement("small", "", resource ? `${timeLabel} · ${resource.label}` : timeLabel));
         eventButton.setAttribute("aria-label", `${event.title}, ${formatDate(start.getTime(), locale)}, ${timeLabel}${resource ? `, ${resource.label}` : ""}`);
         const onClick = () => { if (isInteractionEnabled(currentOptions.interactive, "pointer")) selectEvent(event, "pointer"); };

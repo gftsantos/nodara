@@ -58,5 +58,5 @@ export function integrationFiles(item: IntegrationSource, data: CatalogData, set
 
 export function integrationPackages(framework: IntegrationFramework): string[] {
   const packages = ["core", ...(framework === "javascript" ? [] : [framework])];
-  return packages.map(name => `nodara-${name}-0.1.0-alpha.1.tgz`);
+  return packages.map(name => `nodara-${name}-0.1.0-beta.1.tgz`);
 }

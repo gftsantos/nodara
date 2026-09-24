@@ -1,5 +1,6 @@
 import { histogram, histogramSeries, scalarGridSeries, validateChartOptions, validateDiagramLayout, normalizeCalendarEvents, normalizeChartSeries, normalizeDiagram, normalizeGeoMap, normalizeGanttTasks, normalizeTopology } from "@nodara/core";
 import type { CalendarEvent, ChartSeries, ChartType, DiagramData, GanttTask, GeoMapData, TopologyData, VisualCatalogItem } from "@nodara/core";
+import { parsePortalJSON } from "../safe-json";
 export type CatalogData = GanttTask[] | ChartSeries[] | TopologyData | CalendarEvent[] | GeoMapData | DiagramData;
 
 const ganttData: GanttTask[] = [
@@ -177,7 +178,7 @@ export function sampleData(item: VisualCatalogItem): CatalogData {
 }
 
 export function normalizeData(item: VisualCatalogItem, json: string): CatalogData {
-  const parsed: unknown = JSON.parse(json);
+  const parsed: unknown = parsePortalJSON(json);
   if (item.family === "gantt") return normalizeGanttTasks(parsed as GanttTask[]);
   if (item.family === "charts") { const data = normalizeChartSeries(parsed as ChartSeries[]); validateChartOptions(data, { ...item.options, series: data }); return data; }
   if (item.family === "topology") return normalizeTopology(parsed as TopologyData);

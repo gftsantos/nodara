@@ -4,6 +4,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { Calendar, Chart, Gantt, GeoMap, Topology } from "@nodara/react";
 import { createWorkingPlanStore, workingPlanViews, type WorkingPlan, type WorkingPreview } from "@nodara/core/working-time";
 import { workingDemo } from "./working-demo";
+import { parsePortalJSON } from "../safe-json";
 import { workingIntegrationExample } from "./working-example";
 import { ResourceCalendarEditor } from "./resource-calendar";
 import styles from "./operations.module.css";
@@ -27,12 +28,12 @@ export default function WorkingWorkspace({ theme }: { theme: "dark" | "light" })
   const format = (ms: number) => new Intl.DateTimeFormat("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: evaluation.plan.calendar.timeZone }).format(ms);
   let parsed: WorkingPlan | undefined;
   try {
-    const value = JSON.parse(draft) as WorkingPlan;
+    const value = parsePortalJSON<WorkingPlan>(draft);
     if (value && Array.isArray(value.tasks) && Array.isArray(value.resources) && value.calendar && typeof value.calendar === "object" && !Array.isArray(value.calendar) && (value.calendar.exceptions === undefined || value.calendar.exceptions && typeof value.calendar.exceptions === "object" && !Array.isArray(value.calendar.exceptions)) && value.tasks.every(task => task && typeof task.id === "string" && typeof task.label === "string" && Number.isSafeInteger(task.startMs) && Math.abs(task.startMs) <= 8640000000000000 && Number.isFinite(task.workingMs)) && value.resources.every(resource => resource && typeof resource.id === "string" && typeof resource.label === "string" && Number.isFinite(resource.capacityUnits))) parsed = value;
   } catch { /* Invalid drafts never reach controls or overwrite the rendered plan. */ }
   const edit = (next: string) => { setDraft(next); setPreview(undefined); setError(""); setNotice("Rascunho alterado; calcula uma nova prévia."); };
   const change = (update: (plan: WorkingPlan) => WorkingPlan) => { if (parsed) edit(JSON.stringify(update(parsed), null, 2)); };
-  const calculate = () => { try { const result = store.preview(JSON.parse(draft)); setPreview(result); setError(""); setNotice("Prévia calculada. O plano guardado ainda não mudou."); } catch (cause) { setPreview(undefined); setError(cause instanceof Error ? cause.message : String(cause)); } };
+  const calculate = () => { try { const result = store.preview(parsePortalJSON(draft)); setPreview(result); setError(""); setNotice("Prévia calculada. O plano guardado ainda não mudou."); } catch (cause) { setPreview(undefined); setError(cause instanceof Error ? cause.message : String(cause)); } };
   const history = (direction: "undo" | "redo") => { store[direction](); setDraft(store.exportJSON()); setPreview(undefined); setError(""); setNotice(direction === "undo" ? "Plano, calendário e capacidade restaurados." : "Alteração refeita em todas as vistas."); };
   const selectedTask = parsed?.tasks?.find(task => task.id === selected);
   const selectedWindow = evaluation.windows.find(window => window.taskId === selected);

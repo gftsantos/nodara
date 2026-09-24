@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://nodara-visual.gftsantos.chatgpt.site"),
   title: "Nodara — Visual infrastructure for the web",
+  robots: { index: false, follow: false },
   description:
     "Gantt, gráficos, grafos, topologias e calendários para React, Angular, Vue e JavaScript.",
   openGraph: {

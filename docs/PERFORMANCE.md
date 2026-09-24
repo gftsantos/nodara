@@ -53,3 +53,9 @@ O relógio indexado usa pesquisa binária e somas prefixadas: adicionar/subtrair
 trabalho custa O(log I + S), e medir trabalho entre instantes O(log I), onde I é o
 número de intervalos e S os segmentos produzidos. Interseções são lineares. O
 nivelamento serial revê as reservas dos recursos envolvidos; não é um solver ótimo.
+
+## Medição local mais recente
+
+Consultar `VALIDATION-2026-09-24.md`: a cache de formatadores melhorou a agenda,
+mas não resolveu o redesenho de 50k pontos geográficos. O relatório apresenta
+também os cenários que pioraram; não converter estes ensaios em claims de 60 FPS.

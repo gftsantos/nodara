@@ -58,6 +58,7 @@ export function createGeoMap(
     if (currentOptions.initialZoom !== previousInitialZoom) { viewport.zoom = currentOptions.initialZoom ?? 1; previousInitialZoom = currentOptions.initialZoom; }
     viewport.zoom = clamp(viewport.zoom, minimumZoom, maximumZoom);
     const pointRadius = Math.max(2, currentOptions.pointRadius ?? 6);
+    const pointById = mode === "routes" ? new Map(data.points.map(point => [point.id, point])) : undefined;
     const values = data.points.map((point) => point.value ?? 1);
     const maximumValue = values.reduce((maximum, value) => Math.max(maximum, Math.abs(value)), 1);
 
@@ -93,7 +94,7 @@ export function createGeoMap(
       };
     };
     const resolveRouteEnd = (value: string | GeoCoordinate) => typeof value === "string"
-      ? data.points.find((point) => point.id === value)
+      ? pointById?.get(value)
       : value;
 
     const draw = () => {
@@ -189,6 +190,8 @@ export function createGeoMap(
         if (!screen.visible) return;
         const proportionalRadius = pointRadius + Math.sqrt(Math.abs(point.value ?? 1) / maximumValue) * 14;
         const radius = mode === "bubbles" ? proportionalRadius : pointRadius;
+        const extent = mode === "heatmap" ? proportionalRadius * 2.5 : radius + 1;
+        if (data.points.length > 80 && (screen.x + extent < 0 || screen.x - extent > width || screen.y + extent < 0 || screen.y - extent > height)) return;
         if (mode === "heatmap") {
           const gradient = context.createRadialGradient(screen.x, screen.y, 0, screen.x, screen.y, proportionalRadius * 2.5);
           gradient.addColorStop(0, point.color ?? tokens.danger);

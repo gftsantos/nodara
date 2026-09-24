@@ -1,10 +1,13 @@
-# Preparação da beta — 22 setembro 2026
+# Preparação da beta privada — 24 setembro 2026
 
 Esta é uma candidata de desenvolvimento, não uma versão publicada no npm.
-Os pacotes continuam em `0.1.0-alpha.1`. Os arquivos locais têm hashes próprios;
-não identificar duas compilações apenas pelo nome/versionamento alpha partilhado.
-Antes da publicação: atribuir uma versão beta única e usar a mesma nos cinco
-pacotes. Não executar `npm run release` durante a avaliação da candidata.
+Os cinco pacotes usam agora `0.1.0-beta.1`, reservada para esta candidata privada.
+Os arquivos locais têm hashes próprios; não substituir uma versão já distribuída
+com código diferente. Não executar `npm run release` durante esta avaliação.
+O nome beta não significa produto final: continuam pendentes a validação humana,
+a revisão dos controlos do alojamento e os dados legais/contactos do responsável.
+As changesets acumuladas permanecem para revisão antes de uma release pública;
+não as publicar automaticamente. Ver `docs/CHANGELOG-BETA.md`.
 
 ## Contrato de integração
 
@@ -51,6 +54,21 @@ Ativar/desativar nivelamento também produz uma prévia e pode ser desfeito.
    `docs/PERFORMANCE.md`; guardar ambiente, hashes e amostras.
 5. Percurso humano de `docs/SCREEN-READER-CHECKLIST.md`, ainda pendente até existir
    um registo real de execução. Axe e emulação não substituem esta etapa.
+
+Se existir um `vinext dev` aberto neste mesmo projeto, a última etapa do gate não
+pode iniciar um segundo servidor devido ao lock do workspace. Pode usar-se o
+servidor local existente através de `NODARA_PREVIEW_URL`, apontando para a origem
+real apresentada pelo terminal (por exemplo, `http://127.0.0.1:3001`). Em PowerShell:
+
+```powershell
+$env:NODARA_PREVIEW_URL = 'http://127.0.0.1:3001'
+try { npm run verify:release }
+finally { Remove-Item Env:NODARA_PREVIEW_URL -ErrorAction SilentlyContinue }
+```
+
+Não desativar o lock, não terminar processos de outros projetos nem marcar um
+gate interrompido como aprovado. Uma execução separada da etapa deve conservar
+o registo da primeira falha e identificar explicitamente o resultado de seguimento.
 
 ## Condições para distribuição
 

@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-async function render(path = "/") {
+async function render(path = "/", method = "GET") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
     new Request(`http://localhost${path}`, {
+      method,
       headers: { accept: "text/html" },
     }),
     {
@@ -69,4 +70,25 @@ test("renders the shared operational planning workspace", async () => {
   assert.match(html, /Gantt/);
   assert.match(html, /Calendário/);
   assert.match(html, /JSON/);
+});
+
+test("built Worker denies unused image proxies and writes before the router", async () => {
+  for (const path of ["/_vinext/image?url=http://169.254.169.254/&w=640&q=75", "/_next/image?url=https://example.com/", "/.env", "/%252eenv", "/outputs/log.json", "/_next/static/index.js.map"]) {
+    const response = await render(path);
+    assert.equal(response.status, 404, path);
+    assert.equal(response.headers.get("x-content-type-options"), "nosniff");
+  }
+  assert.equal((await render("/operations", "POST")).status, 405);
+});
+
+test("built Worker renders transparency and fresh CSP nonces", async () => {
+  const response = await render("/legal");
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  const csp = response.headers.get("content-security-policy");
+  assert.match(csp, /strict-dynamic/);
+  const nonce = csp.match(/'nonce-([^']+)'/)[1];
+  assert.match(await response.text(), new RegExp(`nonce="${nonce.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
+  const second = await render("/legal");
+  assert.notEqual(second.headers.get("content-security-policy"), csp);
 });

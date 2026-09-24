@@ -159,7 +159,7 @@ describe("Web Components dynamic contract", () => {
 describe("Distribution requirements", () => {
   for (const name of ["core", "react", "vue", "angular", "web-components"]) {
     it(`${name}: distributed archive includes the MIT notice`, () => {
-      const files = execFileSync("tar", ["-tf", `public/downloads/nodara-${name}-0.1.0-alpha.1.tgz`], { encoding: "utf8" });
+      const files = execFileSync("tar", ["-tf", `public/downloads/nodara-${name}-0.1.0-beta.1.tgz`], { encoding: "utf8" });
       expect(files.split(/\r?\n/).some(file => /\/LICENSE(?:\.[^/]*)?$/i.test(file))).toBe(true);
     });
   }

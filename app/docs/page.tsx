@@ -218,7 +218,7 @@ export default function DocsPage() {
           )}
         </div>
         <div className={styles.headerActions}>
-          <span className={styles.version}>v0.1 ALPHA</span>
+          <span className={styles.version}>v0.1 BETA</span>
           <a href="/catalog"><Layers3 size={16} /><span>Catálogo</span></a>
           <button className={styles.mobileSearchButton} onClick={() => { setMobileSearch((value) => !value); setMobileNav(false); window.setTimeout(() => searchRef.current?.focus(), 0); }} aria-label={mobileSearch ? "Fechar pesquisa" : "Abrir pesquisa"}><Search size={17} /></button>
           <button onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label="Alternar tema">{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>

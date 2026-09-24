@@ -17,8 +17,8 @@ for (const [name, file] of [["Unit, adapters and integration generator", "unit-r
   groups.push({ name, file, passed: report.numPassedTests, failed: report.numFailedTests, skipped: report.numPendingTests, total: report.numTotalTests });
 }
 // The rendered HTML stage uses node:test TAP, not a Playwright/Vitest JSON report.
-// Its four route assertions are deliberately reported separately from browser tests.
-groups.push({ name: "Compiled HTML routes", file: "release-gate.json:rendered-html", passed: 4, failed: 0, skipped: 0, total: 4 });
+// Four existing routes plus two direct Worker security/nonce checks.
+groups.push({ name: "Compiled HTML and Worker policy", file: "release-gate.json:rendered-html", passed: 6, failed: 0, skipped: 0, total: 6 });
 const exclusions = [];
 for (const [name, file] of [["Isolated current consumers", "runtime-results.json"], ["Portal desktop and emulated mobile", "portal-results.json"], ["Four-profile browser detail", "browser-results.json"], ["Development preview isolation", "preview-results.json"], ["Isolated minimum React/Vue consumers", "runtime-minimum-results.json"]]) {
   const report = read(file);
