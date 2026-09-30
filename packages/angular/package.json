@@ -1,28 +1,28 @@
 {
   "name": "@nodara/angular",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.1",
   "description": "Official Angular standalone components for Nodara.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",
   "repository": { "type": "git", "url": "https://github.com/gftsantos/nodara.git", "directory": "packages/angular" },
   "bugs": { "url": "https://github.com/gftsantos/nodara/issues" },
   "type": "module",
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "default": "./dist/index.js"
     }
   },
   "files": ["dist", "README.md"],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake --external @angular/core --external @nodara/core",
+    "build": "node ../../scripts/clean-package-dist.mjs angular && ngc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": { "@nodara/core": "0.1.0-alpha.1" },
-  "peerDependencies": { "@angular/core": ">=17.0.0" },
+  "dependencies": { "@nodara/core": "0.1.0-beta.1" },
+  "peerDependencies": { "@angular/core": ">=21.2.21 <22" },
   "publishConfig": { "access": "public" }
 }

@@ -1,31 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { integrationFiles } from "./catalog/integration";
+import { parsePortalJSON } from "./safe-json";
+import { Calendar, Chart, Gantt, Topology } from "@nodara/react";
+import {
+  normalizeCalendarEvents,
+  normalizeChartSeries,
+  normalizeGanttTasks,
+  normalizeTopology,
+  replaceCalendarEvent,
+} from "@nodara/core";
+import type { CalendarEvent, ChartSeries, GanttTask, TopologyData, VisualTheme } from "@nodara/core";
 import {
   ArrowRight,
   BarChart3,
-  Blocks,
   Braces,
   CalendarDays,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   CircleHelp,
   Code2,
   Command,
   Copy,
-  Database,
   ExternalLink,
   FileJson,
   Gauge,
-  Layers3,
   Menu,
   Moon,
   Network,
   PackageCheck,
   PanelLeftClose,
   Play,
+  RotateCcw,
   Rows3,
   Search,
   Settings2,
@@ -39,6 +47,7 @@ import {
 
 type FeatureId = "gantt" | "charts" | "topology" | "calendar";
 type FrameworkId = "react" | "angular" | "vue" | "vanilla";
+type DialogId = "example" | "schemas" | "tokens" | "accessibility" | "help" | "architecture";
 
 const featureItems: Array<{
   id: FeatureId;
@@ -54,7 +63,7 @@ const featureItems: Array<{
     description: "Planos, recursos e dependências",
     icon: Rows3,
     accent: "#6e7dff",
-    count: 14,
+    count: 12,
   },
   {
     id: "charts",
@@ -62,7 +71,7 @@ const featureItems: Array<{
     description: "Dashboards e análise em tempo real",
     icon: BarChart3,
     accent: "#ff7657",
-    count: 42,
+    count: 32,
   },
   {
     id: "topology",
@@ -70,7 +79,7 @@ const featureItems: Array<{
     description: "Sistemas, redes e relações",
     icon: Network,
     accent: "#c8fa63",
-    count: 18,
+    count: 12,
   },
   {
     id: "calendar",
@@ -78,15 +87,15 @@ const featureItems: Array<{
     description: "Agenda, recursos e recorrências",
     icon: CalendarDays,
     accent: "#52d6c7",
-    count: 11,
+    count: 16,
   },
 ];
 
 const frameworks: Array<{ id: FrameworkId; label: string; install: string }> = [
-  { id: "react", label: "React", install: "npm i @nodara/react" },
-  { id: "angular", label: "Angular", install: "npm i @nodara/angular" },
-  { id: "vue", label: "Vue", install: "npm i @nodara/vue" },
-  { id: "vanilla", label: "JavaScript", install: "npm i @nodara/core" },
+  { id: "react", label: "React", install: "npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-react-0.1.0-beta.1.tgz" },
+  { id: "angular", label: "Angular", install: "npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-angular-0.1.0-beta.1.tgz" },
+  { id: "vue", label: "Vue", install: "npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-vue-0.1.0-beta.1.tgz" },
+  { id: "vanilla", label: "JavaScript", install: "npm i ./nodara-core-0.1.0-beta.1.tgz" },
 ];
 
 const snippets: Record<FrameworkId, string> = {
@@ -141,44 +150,58 @@ const gantt = createGantt('#roadmap', {
 gantt.on('task:change', syncTask);`,
 };
 
-const payloads: Record<FeatureId, string> = {
-  gantt: `{
-  "id": "ND-104",
-  "label": "Motor de permissões",
-  "start": "2026-02-03",
-  "end": "2026-03-18",
-  "progress": 72,
-  "dependsOn": ["ND-096"],
-  "owner": { "name": "Inês", "color": "#6E7DFF" }
-}`,
-  charts: `{
-  "series": "Receita recorrente",
-  "points": [
-    { "x": "Jan", "y": 128400 },
-    { "x": "Fev", "y": 164200 },
-    { "x": "Mar", "y": 191800 }
-  ],
-  "format": "EUR",
-  "animate": true
-}`,
-  topology: `{
-  "nodes": [
-    { "id": "gateway", "type": "service", "health": 99.99 },
-    { "id": "billing", "type": "service", "health": 99.97 }
-  ],
-  "edges": [
-    { "from": "gateway", "to": "billing", "traffic": 1240 }
-  ]
-}`,
-  calendar: `{
-  "id": "evt_92",
-  "title": "Design critique",
-  "start": "2026-08-20T10:00:00Z",
-  "duration": 45,
-  "resourceId": "studio-01",
-  "recurrence": "FREQ=WEEKLY;COUNT=6"
-}`,
+const featureOptions: Record<FeatureId, Record<string, unknown>> = {
+  gantt: { zoom: "month", snap: "day", rowHeight: 54, dependencyRouting: "orthogonal" },
+  charts: { type: "area", stacked: true, showTooltip: true },
+  topology: { layout: "hierarchical", renderer: "auto", performance: { canvasThreshold: 80, webglThreshold: 150 } },
+  calendar: { date: "2026-08-20", view: "workweek", weekStartsOn: 1, expandRecurrence: true },
 };
+
+const foundationDetails = {
+  schemas: {
+    eyebrow: "CONTRATO DE DADOS",
+    title: "Tipos & schemas",
+    description: "Contratos TypeScript exportados por cada pacote e validação em runtime antes de qualquer renderização.",
+    items: ["Erros com código, caminho e sugestão de correção", "Normalização imutável em todas as atualizações", "Tipos partilhados entre React, Angular, Vue e JavaScript"],
+    code: `import type { GanttTask } from '@nodara/core';
+
+const task: GanttTask = {
+  id: 'ND-104',
+  label: 'Motor de permissões',
+  start: '2026-02-03',
+  end: '2026-03-18',
+  progress: 72,
+};`,
+  },
+  tokens: {
+    eyebrow: "DESIGN SYSTEM",
+    title: "Temas & tokens",
+    description: "Personaliza cores, tipografia, espaçamento e estados sem alterar a lógica do componente.",
+    items: ["Temas dark e light incluídos", "Tokens globais ou por instância", "Contraste validado para estados críticos"],
+    code: `const theme = {
+  background: '#0b0e0f',
+  surface: '#121617',
+  foreground: '#f3f4ef',
+  primary: '#c8fa63',
+  radius: 8,
+};
+
+<Topology data={services} theme={theme} />`,
+  },
+  accessibility: {
+    eyebrow: "INCLUSÃO POR DEFEITO",
+    title: "Acessibilidade",
+    description: "Cada visualização mantém uma representação semântica paralela ao Canvas ou WebGL.",
+    items: ["Navegação e seleção por teclado", "Rótulos para leitores de ecrã", "Modo de movimento reduzido", "Contraste e foco visível testados"],
+    code: `interactive={{
+  keyboard: true,
+  pointer: true,
+  pan: true,
+  zoom: true,
+}}
+ariaLabel="Topologia dos serviços de produção"`,
+  },
+} as const;
 
 const featureCopy: Record<
   FeatureId,
@@ -219,169 +242,317 @@ const searchEntries = [
   "Tokens de design",
 ];
 
-function CopyButton({ value, label = "Copiar" }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
+function CopyButton({ value, label = "Copiar", text = label }: { value: string; label?: string; text?: string }) {
+  const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
+  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timeout.current) clearTimeout(timeout.current); }, []);
 
-  async function copy() {
+  async function copy(event: ReactMouseEvent<HTMLButtonElement>) {
+    const button = event.currentTarget;
+    let success = false;
     try {
       await navigator.clipboard.writeText(value);
+      success = true;
     } catch {
+      if (!button.isConnected) return;
       const textArea = document.createElement("textarea");
       textArea.value = value;
       document.body.appendChild(textArea);
       textArea.select();
-      document.execCommand("copy");
-      textArea.remove();
+      try { success = document.execCommand("copy"); } catch { success = false; } finally { textArea.remove(); }
     }
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
+    if (!button.isConnected) return;
+    if (timeout.current) clearTimeout(timeout.current);
+    if (success) { setState("copied"); timeout.current = setTimeout(() => setState("idle"), 1600); }
+    else {
+      let container = button.parentElement; let target: HTMLElement | undefined;
+      while (container && !target) { target = [...container.querySelectorAll<HTMLElement>("pre,code")].find(element => element.textContent === value); container = container.parentElement; }
+      if (target) {
+        if (target.tabIndex >= 0) target.focus();
+        const range = document.createRange(); range.selectNodeContents(target);
+        const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+      }
+      setState("manual");
+    }
   }
 
   return (
-    <button className="copy-button" onClick={copy} aria-label={`${label}: ${value}`}>
-      {copied ? <Check size={14} /> : <Copy size={14} />}
-      <span>{copied ? "Copiado" : label}</span>
+    <button className="copy-button" onClick={copy} aria-label={label} title={state === "manual" ? "A cópia foi bloqueada. Seleciona o código e usa Ctrl+C ou ⌘C." : label}>
+      {state === "copied" ? <Check size={14} /> : <Copy size={14} />}
+      <span aria-live="polite">{state === "copied" ? "Copiado" : state === "manual" ? "Cópia manual" : text}</span>
     </button>
   );
 }
 
-function GanttPreview() {
-  const tasks = [
-    { name: "Discovery", owner: "MB", start: 4, width: 23, color: "#6e7dff", progress: 100 },
-    { name: "Design system", owner: "IR", start: 19, width: 35, color: "#ff7657", progress: 82 },
-    { name: "Core renderer", owner: "LA", start: 40, width: 39, color: "#c8fa63", progress: 64 },
-    { name: "Acessibilidade", owner: "SF", start: 58, width: 27, color: "#52d6c7", progress: 38 },
-    { name: "Release 1.0", owner: "EQ", start: 81, width: 15, color: "#f5c451", progress: 12 },
-  ];
+const initialGanttTasks: GanttTask[] = [
+  { id: "discovery", label: "Discovery", start: "2026-01-04", end: "2026-01-30", progress: 100, owner: { name: "Marta", color: "#7884ff" }, color: "#7884ff" },
+  { id: "design", label: "Design system", start: "2026-01-24", end: "2026-03-05", progress: 82, dependencies: ["discovery"], owner: { name: "Inês", color: "#ff7657" }, color: "#ff7657" },
+  { id: "renderer", label: "Core renderer", start: "2026-02-19", end: "2026-04-02", progress: 64, dependencies: ["design"], owner: { name: "Luís", color: "#c8fa63" }, color: "#c8fa63" },
+  { id: "a11y", label: "Acessibilidade", start: "2026-03-11", end: "2026-04-11", progress: 38, dependencies: ["renderer"], owner: { name: "Sofia", color: "#52d6c7" }, color: "#52d6c7" },
+  { id: "release", label: "Release 1.0", start: "2026-04-01", end: "2026-04-22", progress: 12, dependencies: ["a11y"], owner: { name: "Equipa", color: "#f5c451" }, color: "#f5c451" },
+];
 
-  return (
-    <div className="gantt-shell">
-      <div className="gantt-toolbar">
-        <div className="avatar-stack" aria-label="5 colaboradores">
-          <span>MB</span><span>IR</span><span>LA</span><span>+2</span>
-        </div>
-        <div className="gantt-toolbar-right">
-          <button>Hoje</button>
-          <button className="select-button">Trimestre <ChevronDown size={13} /></button>
-        </div>
-      </div>
-      <div className="gantt-chart" role="img" aria-label="Cronograma do roadmap de produto">
-        <div className="gantt-labels">
-          <div className="gantt-label-head">Tarefa</div>
-          {tasks.map((task) => (
-            <div className="gantt-label" key={task.name}>
-              <span className="task-avatar" style={{ background: task.color }}>{task.owner}</span>
-              <div><strong>{task.name}</strong><small>{task.progress}% concluído</small></div>
-            </div>
-          ))}
-        </div>
-        <div className="gantt-timeline">
-          <div className="gantt-months"><span>JAN</span><span>FEV</span><span>MAR</span><span>ABR</span></div>
-          {tasks.map((task, index) => (
-            <div className="gantt-row" key={task.name}>
-              <div
-                className="gantt-bar"
-                style={{ left: `${task.start}%`, width: `${task.width}%`, background: task.color }}
-                title={`${task.name}: ${task.progress}%`}
-              >
-                <span style={{ width: `${task.progress}%` }} />
-                {index === 2 && <i className="gantt-milestone" />}
-              </div>
-            </div>
-          ))}
-          <div className="today-line"><span>HOJE</span></div>
-        </div>
-      </div>
-    </div>
-  );
+const baseChartSeries: ChartSeries[] = [
+  { id: "actual", label: "MRR", color: "#7884ff", data: [31, 46, 42, 68, 58, 77, 70, 90, 76, 96].map((y, index) => ({ x: ["NOV", "DEZ", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO"][index]!, y: y * 4_820 })) },
+  { id: "forecast", label: "Forecast", color: "#52d6c7", data: [28, 39, 45, 57, 64, 70, 78, 84, 91, 100].map((y, index) => ({ x: index, y: y * 1_600 })) },
+];
+
+const baseTopology: TopologyData = {
+  nodes: [
+    { id: "gateway", label: "API Gateway", status: "healthy", value: "2.4k/s" },
+    { id: "auth", label: "Auth", status: "healthy", value: "99.99%" },
+    { id: "billing", label: "Billing", status: "warning", value: "99.97%" },
+    { id: "events", label: "Events", status: "healthy", value: "8.1k/s" },
+    { id: "warehouse", label: "Warehouse", status: "healthy", value: "12.8 TB" },
+  ],
+  edges: [
+    { from: "gateway", to: "auth", directed: true, label: "JWT" },
+    { from: "gateway", to: "billing", directed: true },
+    { from: "gateway", to: "events", directed: true },
+    { from: "events", to: "warehouse", directed: true },
+    { from: "billing", to: "warehouse", directed: true },
+  ],
+};
+
+const baseCalendarEvents: CalendarEvent[] = [
+  { id: "planning", title: "Planning", start: "2026-08-17T09:30:00", durationMinutes: 60, resourceId: "product", color: "#7884ff", recurrence: "FREQ=DAILY;COUNT=5" },
+  { id: "research", title: "Research", start: "2026-08-18T13:00:00", durationMinutes: 90, resourceId: "studio", color: "#52d6c7" },
+  { id: "api-review", title: "API review", start: "2026-08-19T10:30:00", durationMinutes: 75, resourceId: "platform", color: "#ff7657" },
+  { id: "release", title: "Release 1.0", start: "2026-08-21T12:00:00", durationMinutes: 120, allDay: false, color: "#f5c451" },
+];
+
+type PlaygroundDataMap = {
+  gantt: GanttTask[];
+  charts: ChartSeries[];
+  topology: TopologyData;
+  calendar: CalendarEvent[];
+};
+
+const initialPlaygroundData: PlaygroundDataMap = {
+  gantt: initialGanttTasks,
+  charts: baseChartSeries,
+  topology: baseTopology,
+  calendar: baseCalendarEvents,
+};
+
+const payloads: Record<FeatureId, string> = {
+  gantt: JSON.stringify(initialGanttTasks, null, 2),
+  charts: JSON.stringify(baseChartSeries, null, 2),
+  topology: JSON.stringify(baseTopology, null, 2),
+  calendar: JSON.stringify(baseCalendarEvents, null, 2),
+};
+
+function assertEditableCollection(value: unknown, feature: FeatureId): asserts value is Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) throw new Error(`O contrato de ${feature} deve ser um array JSON.`);
+  if (value.some((item) => !item || typeof item !== "object" || Array.isArray(item))) {
+    throw new Error("Cada item deve ser um objeto JSON.");
+  }
+  value.forEach((item, index) => {
+    if (typeof item.id !== "string" || !item.id.trim()) throw new Error(`O item ${index + 1} requer um id de texto não vazio.`);
+  });
 }
 
-function ChartsPreview({ dense }: { dense: boolean }) {
-  const values = dense ? [38, 55, 46, 71, 62, 84, 73, 94, 81, 100] : [31, 46, 42, 68, 58, 77, 70, 90, 76, 96];
-  return (
-    <div className="charts-shell">
-      <div className="chart-summary">
-        <div><small>MRR TOTAL</small><strong>€ 482.8k</strong><span className="positive">↗ 18,4%</span></div>
-        <div><small>RETENÇÃO</small><strong>94,2%</strong><span>+2,1 pp</span></div>
-        <div><small>FORECAST</small><strong>€ 521k</strong><span>Setembro</span></div>
-      </div>
-      <div className="bar-chart" role="img" aria-label="Gráfico de receita mensal crescente">
-        <div className="chart-axis"><span>500k</span><span>250k</span><span>0</span></div>
-        <div className="chart-grid-lines"><i /><i /><i /></div>
-        <div className="chart-bars">
-          {values.map((value, index) => (
-            <div className="bar-column" key={index}>
-              <div className="bar-tooltip">€ {Math.round(value * 4.82)}k</div>
-              <div className="bar" style={{ height: `${value}%` }}><span /></div>
-              <small>{["NOV", "DEZ", "JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO"][index]}</small>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+function assertTextField(item: Record<string, unknown>, field: string, context: string) {
+  if (typeof item[field] !== "string" || !(item[field] as string).trim()) {
+    throw new Error(`${context} requer o campo ${field} como texto não vazio.`);
+  }
 }
 
-function TopologyPreview() {
-  const edges = [
-    { left: "19%", top: "27%", width: "25%", rotate: "18deg" },
-    { left: "42%", top: "40%", width: "22%", rotate: "-20deg" },
-    { left: "42%", top: "49%", width: "28%", rotate: "22deg" },
-    { left: "20%", top: "70%", width: "26%", rotate: "-22deg" },
-    { left: "67%", top: "39%", width: "14%", rotate: "52deg" },
-  ];
-  return (
-    <div className="topology-shell">
-      <div className="topology-board" role="img" aria-label="Topologia de cinco serviços conectados">
-        {edges.map((edge, index) => (
-          <span className="topology-edge" key={index} style={{ left: edge.left, top: edge.top, width: edge.width, transform: `rotate(${edge.rotate})` }}><i /></span>
-        ))}
-        <div className="topology-node gateway"><span><Zap size={15} /></span><div><strong>API Gateway</strong><small>2.4k req/s</small></div><i /></div>
-        <div className="topology-node auth"><span><ShieldCheck size={15} /></span><div><strong>Auth</strong><small>99.99%</small></div><i /></div>
-        <div className="topology-node billing"><span><Database size={15} /></span><div><strong>Billing</strong><small>99.97%</small></div><i /></div>
-        <div className="topology-node events"><span><Layers3 size={15} /></span><div><strong>Events</strong><small>8.1k msg/s</small></div><i /></div>
-        <div className="topology-node warehouse"><span><Blocks size={15} /></span><div><strong>Warehouse</strong><small>12.8 TB</small></div><i /></div>
-      </div>
-      <div className="topology-legend"><span><i /> Saudável</span><span><i /> 5 serviços</span><span><i /> 0 incidentes</span></div>
-    </div>
-  );
+function parsePlaygroundData(feature: FeatureId, source: string): PlaygroundDataMap[FeatureId] {
+  let parsed: unknown;
+  try {
+    parsed = parsePortalJSON(source);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "estrutura incompleta";
+    throw new Error(`JSON inválido: ${message}`);
+  }
+
+  if (feature === "topology") {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("A topologia requer um objeto com nodes e edges.");
+    const topology = parsed as Partial<TopologyData>;
+    if (!Array.isArray(topology.nodes) || !Array.isArray(topology.edges)) throw new Error("A topologia requer os arrays nodes e edges.");
+    if (topology.nodes.some((node) => !node || typeof node !== "object") || topology.edges.some((edge) => !edge || typeof edge !== "object")) {
+      throw new Error("Cada node e edge deve ser um objeto JSON.");
+    }
+    topology.nodes.forEach((node, index) => {
+      const record = node as unknown as Record<string, unknown>;
+      assertTextField(record, "id", `O node ${index + 1}`);
+      assertTextField(record, "label", `O node ${index + 1}`);
+    });
+    topology.edges.forEach((edge, index) => {
+      const record = edge as unknown as Record<string, unknown>;
+      assertTextField(record, "from", `O edge ${index + 1}`);
+      assertTextField(record, "to", `O edge ${index + 1}`);
+    });
+    return normalizeTopology(topology as TopologyData);
+  }
+
+  assertEditableCollection(parsed, feature);
+  if (feature === "gantt") {
+    parsed.forEach((task, index) => assertTextField(task, "label", `A task ${index + 1}`));
+    return normalizeGanttTasks(parsed as unknown as GanttTask[]);
+  }
+  if (feature === "charts") {
+    parsed.forEach((series, index) => {
+      assertTextField(series, "label", `A série ${index + 1}`);
+      if (!Array.isArray(series.data)) throw new Error(`A série ${index + 1} requer um array data.`);
+      if (series.data.some((point) => !point || typeof point !== "object" || Array.isArray(point))) {
+        throw new Error(`Cada ponto da série ${index + 1} deve ser um objeto JSON.`);
+      }
+    });
+    return normalizeChartSeries(parsed as unknown as ChartSeries[]);
+  }
+  parsed.forEach((event, index) => assertTextField(event, "title", `O evento ${index + 1}`));
+  return normalizeCalendarEvents(parsed as unknown as CalendarEvent[]);
 }
 
-function CalendarPreview() {
-  const days = ["SEG 17", "TER 18", "QUA 19", "QUI 20", "SEX 21"];
-  const events = [
-    { day: 0, top: 19, height: 25, title: "Planning", meta: "09:30 · Produto", color: "violet" },
-    { day: 1, top: 47, height: 30, title: "Research", meta: "13:00 · Studio 2", color: "mint" },
-    { day: 2, top: 28, height: 36, title: "API review", meta: "10:30 · Platform", color: "coral" },
-    { day: 3, top: 15, height: 27, title: "Design critique", meta: "09:00 · Equipa", color: "yellow" },
-    { day: 3, top: 57, height: 24, title: "1:1 · Rita", meta: "15:00 · Meet", color: "violet" },
-    { day: 4, top: 37, height: 32, title: "Release 1.0", meta: "12:00 · All hands", color: "mint" },
-  ];
-  return (
-    <div className="calendar-shell">
-      <div className="calendar-heading"><button>‹</button><strong>17 – 21 agosto, 2026</strong><button>›</button><span>Semana</span></div>
-      <div className="calendar-grid" role="img" aria-label="Calendário semanal com seis eventos">
-        <div className="time-column"><span>09:00</span><span>12:00</span><span>15:00</span><span>18:00</span></div>
-        {days.map((day, dayIndex) => (
-          <div className={`calendar-day ${dayIndex === 3 ? "is-today" : ""}`} key={day}>
-            <strong>{day}</strong>
-            {events.filter((event) => event.day === dayIndex).map((event) => (
-              <div className={`calendar-event ${event.color}`} key={event.title} style={{ top: `${event.top}%`, height: `${event.height}%` }}>
-                <strong>{event.title}</strong><small>{event.meta}</small>
-              </div>
-            ))}
+function GanttPreview({ data, onChange, theme, liveTick }: { data: GanttTask[]; onChange: (data: GanttTask[]) => void; theme: VisualTheme; liveTick: number }) {
+  const displayedTasks = useMemo(() => data.map((task, index) => ({
+    ...task,
+    progress: Math.min(100, (task.progress ?? 0) + (liveTick > 0 ? (liveTick + index) % 6 : 0)),
+  })), [data, liveTick]);
+
+  return <div className="real-preview gantt-shell"><Gantt data={displayedTasks} theme={theme} locale="pt-PT" start="2026-01-01" end="2026-04-30" zoom="month" snap="day" rowHeight={54} dependencyRouting="orthogonal" onTaskChange={({ task }) => onChange(data.map((item) => item.id === task.id ? task : item))} style={{ height: 420 }} /></div>;
+}
+
+function ChartsPreview({ data, liveTick, theme }: { data: ChartSeries[]; liveTick: number; theme: VisualTheme }) {
+  const series = useMemo(() => data.map((entry, seriesIndex) => ({
+    ...entry,
+    data: entry.data.map((point, pointIndex) => ({
+      ...point,
+      y: Math.max(0, point.y + (((liveTick + pointIndex * 3 + seriesIndex) % 7) - 3) * 1_250),
+    })),
+  })), [data, liveTick]);
+  return <div className="real-preview charts-shell"><Chart series={series} theme={theme} locale="pt-PT" type="area" stacked showTooltip valueFormatter={(value) => new Intl.NumberFormat("pt-PT", { notation: "compact", style: "currency", currency: "EUR" }).format(value)} performance={{ canvasThreshold: 500, webglThreshold: 1_000 }} style={{ height: 420 }} /></div>;
+}
+
+function TopologyPreview({ data, liveTick, theme }: { data: TopologyData; liveTick: number; theme: VisualTheme }) {
+  const displayedData = useMemo<TopologyData>(() => ({
+    nodes: data.nodes.map((node, index) => ({
+      ...node,
+      status: liveTick > 0 && index === liveTick % data.nodes.length && liveTick % 4 === 0 ? "warning" : node.status,
+      value: node.id === "gateway" ? `${2.4 + (liveTick % 5) * 0.1}k/s`
+        : node.id === "events" ? `${8.1 + (liveTick % 4) * 0.2}k/s`
+          : node.value,
+    })),
+    edges: data.edges,
+  }), [data, liveTick]);
+  return <div className="real-preview topology-shell"><Topology data={displayedData} theme={theme} layout="hierarchical" renderer="auto" performance={{ canvasThreshold: 80, webglThreshold: 150 }} interactive={{ keyboard: true, pointer: true, pan: true, zoom: true }} style={{ height: 420 }} /></div>;
+}
+
+function CalendarPreview({ data, onChange, theme, liveTick }: { data: CalendarEvent[]; onChange: (data: CalendarEvent[]) => void; theme: VisualTheme; liveTick: number }) {
+  const displayedEvents = useMemo(() => data.map((event, index) => ({
+    ...event,
+    durationMinutes: Math.max(30, (event.durationMinutes ?? 60) + (liveTick > 0 && index === liveTick % data.length ? (liveTick % 2 === 0 ? 5 : -5) : 0)),
+  })), [data, liveTick]);
+
+  return <div className="real-preview calendar-shell"><Calendar events={displayedEvents} theme={theme} locale="pt-PT" date="2026-08-20" view="workweek" weekStartsOn={1} expandRecurrence resources={[{ id: "product", label: "Produto", color: "#7884ff" }, { id: "studio", label: "Studio 2", color: "#52d6c7" }, { id: "platform", label: "Platform", color: "#ff7657" }]} onEventChange={({ event }) => onChange(replaceCalendarEvent(data, event.id, event))} style={{ height: 420 }} /></div>;
+}
+
+function FeaturePreview({ data, feature, liveTick, onCalendarChange, onGanttChange, theme }: {
+  data: PlaygroundDataMap;
+  feature: FeatureId;
+  liveTick: number;
+  onCalendarChange: (data: CalendarEvent[]) => void;
+  onGanttChange: (data: GanttTask[]) => void;
+  theme: VisualTheme;
+}) {
+  if (feature === "charts") return <ChartsPreview data={data.charts} liveTick={liveTick} theme={theme} />;
+  if (feature === "topology") return <TopologyPreview data={data.topology} liveTick={liveTick} theme={theme} />;
+  if (feature === "calendar") return <CalendarPreview data={data.calendar} onChange={onCalendarChange} liveTick={liveTick} theme={theme} />;
+  return <GanttPreview data={data.gantt} onChange={onGanttChange} liveTick={liveTick} theme={theme} />;
+}
+
+function manageDialogFocus(panel: HTMLElement, initial: HTMLElement, opener: HTMLElement | null) {
+  initial.focus();
+  const trapFocus = (event: KeyboardEvent) => {
+    if (event.key !== "Tab") return;
+    const controls = [...panel.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')].filter(element => element.tabIndex >= 0 && !element.matches(":disabled") && element.getClientRects().length > 0 && getComputedStyle(element).visibility !== "hidden");
+    // Safari can omit buttons/links from its native Tab order. Manage the whole
+    // cycle, including labelled scrollable code, not only its ends.
+    event.preventDefault();
+    const index = controls.indexOf(document.activeElement as HTMLElement);
+    const next = index < 0 ? (event.shiftKey ? controls.at(-1) : controls[0]) : controls[(index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length];
+    (next ?? initial).focus();
+  };
+  document.addEventListener("keydown", trapFocus, true);
+  return () => { document.removeEventListener("keydown", trapFocus, true); if (opener?.isConnected) opener.focus({ preventScroll: true }); };
+}
+
+function DialogCode({ value, label }: { value: string; label: string }) {
+  // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- A named, scrollable code region must support keyboard scrolling.
+  return <pre tabIndex={0} role="region" aria-label={`Código: ${label}`}><code>{value}</code></pre>;
+}
+
+function PortalDialog({ dialog, feature, data, theme, opener, onClose }: { dialog: DialogId; feature: FeatureId; data: PlaygroundDataMap[FeatureId]; theme: VisualTheme; opener: HTMLElement; onClose: () => void }) {
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const featureData = featureItems.find((item) => item.id === feature)!;
+
+  useEffect(() => {
+    const panel = closeRef.current?.closest<HTMLElement>('[role="dialog"]');
+    if (panel && closeRef.current) return manageDialogFocus(panel, closeRef.current, opener);
+  }, [opener]);
+
+  if (dialog === "example") {
+    const payload = JSON.stringify(data, null, 2);
+    const code = integrationFiles({ family: feature, options: featureOptions[feature] }, data, { theme, height: 420, interactive: true }, "react")[0]!.code;
+    return (
+      <div className="info-overlay">
+        <button type="button" className="info-backdrop" aria-label="Fechar exemplo" onClick={onClose} />
+        <section className="info-dialog info-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+          <div className="info-dialog-head"><div><span>EXEMPLO EXECUTÁVEL</span><h2 id="dialog-title">{featureData.name}</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+          <p>Copia um componente React completo com os últimos dados validados. A simulação local de dados e os formatadores visuais do portal não são exportados. Usa os pacotes disponíveis na documentação de instalação.</p>
+          <div className="example-dialog-grid">
+            <article><div className="dialog-code-head"><span>DADOS DE ENTRADA</span><CopyButton value={payload} label="Copiar dados" text="Copiar" /></div><DialogCode value={payload} label="Dados de entrada" /></article>
+            <article><div className="dialog-code-head"><span>INTEGRAÇÃO REACT</span><CopyButton value={code} label="Copiar integração React" text="Copiar" /></div><DialogCode value={code} label="Integração React" /></article>
           </div>
-        ))}
+          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href={`/docs#${feature}`}>Documentação de {featureData.name} <ArrowRight size={15} /></a></div>
+        </section>
       </div>
+    );
+  }
+
+  if (dialog === "help") {
+    return (
+      <div className="info-overlay">
+        <button type="button" className="info-backdrop" aria-label="Fechar ajuda" onClick={onClose} />
+        <section className="info-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+          <div className="info-dialog-head"><div><span>SUPORTE DE ENGENHARIA</span><h2 id="dialog-title">Precisas de ajuda?</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+          <p>Partilha o caso de uso, volume de dados, framework e resultado esperado. Assim conseguimos responder com um exemplo reproduzível.</p>
+          <div className="support-options"><a className="primary-button" href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer"><ExternalLink size={15} /> Abrir pedido no GitHub</a><a className="secondary-button" href="/docs#overview">Ver documentação</a></div>
+        </section>
+      </div>
+    );
+  }
+
+  if (dialog === "architecture") {
+    return (
+      <div className="info-overlay">
+        <button type="button" className="info-backdrop" aria-label="Fechar arquitetura" onClick={onClose} />
+        <section className="info-dialog info-dialog-wide" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+          <div className="info-dialog-head"><div><span>ARQUITETURA NODARA</span><h2 id="dialog-title">Um core, seis motores.</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+          <p>A API mantém-se estável enquanto o motor escolhe a estratégia adequada ao volume e às capacidades do browser.</p>
+          <div className="architecture-dialog-grid"><article><b>DOM</b><strong>Semântica primeiro</strong><span>Listas pequenas, edição e acessibilidade nativa.</span></article><article><b>CANVAS</b><strong>Interação fluida</strong><span>Centenas a milhares de elementos visuais.</span></article><article><b>WEBGL</b><strong>Grandes volumes</strong><span>Buffers compactos e renderização acelerada.</span></article></div>
+          <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href="/docs#architecture">Ver arquitetura completa <ArrowRight size={15} /></a></div>
+        </section>
+      </div>
+    );
+  }
+
+  const details = foundationDetails[dialog];
+  const docsTarget = dialog === "schemas" ? "schemas" : dialog === "tokens" ? "themes" : "accessibility";
+  return (
+    <div className="info-overlay">
+      <button type="button" className="info-backdrop" aria-label={`Fechar ${details.title}`} onClick={onClose} />
+      <section className="info-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <div className="info-dialog-head"><div><span>{details.eyebrow}</span><h2 id="dialog-title">{details.title}</h2></div><button ref={closeRef} onClick={onClose} aria-label="Fechar painel"><X size={18} /></button></div>
+        <p>{details.description}</p>
+        <ul className="foundation-list">{details.items.map((item) => <li key={item}><CheckCircle2 size={16} />{item}</li>)}</ul>
+        <div className="foundation-code"><div className="dialog-code-head"><span>EXEMPLO</span><CopyButton value={details.code} /></div><DialogCode value={details.code} label={details.title} /></div>
+        <div className="info-dialog-actions"><button className="secondary-button" onClick={onClose}>Fechar</button><a className="primary-button" href={`/docs#${docsTarget}`}>Documentação completa <ArrowRight size={15} /></a></div>
+      </section>
     </div>
   );
-}
-
-function FeaturePreview({ feature, dense }: { feature: FeatureId; dense: boolean }) {
-  if (feature === "charts") return <ChartsPreview dense={dense} />;
-  if (feature === "topology") return <TopologyPreview />;
-  if (feature === "calendar") return <CalendarPreview />;
-  return <GanttPreview />;
 }
 
 export default function Home() {
@@ -389,13 +560,25 @@ export default function Home() {
   const [activeFramework, setActiveFramework] = useState<FrameworkId>("react");
   const [workspaceTab, setWorkspaceTab] = useState<"preview" | "data" | "api">("preview");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [dense, setDense] = useState(false);
+  const [liveData, setLiveData] = useState(false);
+  const [liveTick, setLiveTick] = useState(0);
+  const [playgroundData, setPlaygroundData] = useState<PlaygroundDataMap>(initialPlaygroundData);
+  const [editorValues, setEditorValues] = useState<Record<FeatureId, string>>(payloads);
+  const [editorErrors, setEditorErrors] = useState<Partial<Record<FeatureId, string>>>({});
   const [showSearch, setShowSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchIndex, setSearchIndex] = useState(0);
   const [mobileNav, setMobileNav] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeDialog, setActiveDialog] = useState<{ id: DialogId; opener: HTMLElement } | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const searchOpenerRef = useRef<HTMLElement | null>(null);
+  const siteRef = useRef<HTMLDivElement>(null);
 
   const activeFrameworkData = frameworks.find((item) => item.id === activeFramework)!;
   const activeFeatureData = featureItems.find((item) => item.id === activeFeature)!;
+  const activeEditorError = editorErrors[activeFeature];
   const filteredSearch = useMemo(
     () => searchEntries.filter((entry) => entry.toLowerCase().includes(query.toLowerCase())),
     [query],
@@ -403,15 +586,48 @@ export default function Home() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      const searchShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
+      // Do not move focus into a second, visually covered modal.
+      if (activeDialog && (searchShortcut || event.key === "/")) { event.preventDefault(); return; }
+      if (searchShortcut) {
         event.preventDefault();
-        setShowSearch((value) => !value);
+        if (!showSearch) searchOpenerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTriggerRef.current;
+        setShowSearch(!showSearch);
       }
-      if (event.key === "Escape") setShowSearch(false);
+      const target = event.target as HTMLElement | null;
+      const isEditing = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+      if (event.key === "/" && !isEditing) {
+        event.preventDefault();
+        if (!showSearch) searchOpenerRef.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : searchTriggerRef.current;
+        setShowSearch(true);
+      }
+      if (event.key === "Escape") {
+        setShowSearch(false);
+        setActiveDialog(null);
+      }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeDialog, showSearch]);
+
+  useEffect(() => {
+    const field = searchInputRef.current;
+    const panel = field?.closest<HTMLElement>('[role="dialog"]');
+    if (showSearch && panel && field) return manageDialogFocus(panel, field, searchOpenerRef.current);
+  }, [showSearch]);
+
+  useEffect(() => {
+    const site = siteRef.current;
+    if (!site) return;
+    site.dataset.ready = "true";
+    return () => { delete site.dataset.ready; };
   }, []);
+
+  useEffect(() => {
+    if (!liveData) return;
+    const timer = window.setInterval(() => setLiveTick((value) => value + 1), 1500);
+    return () => window.clearInterval(timer);
+  }, [liveData]);
 
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
@@ -423,8 +639,89 @@ export default function Home() {
     setWorkspaceTab("preview");
   }
 
+  function openSearchResult(entry: string) {
+    setShowSearch(false);
+    setQuery("");
+    const lower = entry.toLowerCase();
+    const target = lower.includes("gantt") ? "gantt"
+      : lower.includes("gráfico") ? "charts"
+        : lower.includes("topologia") ? "topology"
+          : lower.includes("calendário") ? "calendar"
+            : lower.includes("token") ? "themes"
+              : lower.includes("migração") ? "installation"
+                : "overview";
+    window.location.assign(`/docs#${target}`);
+  }
+
+  function toggleLiveData() {
+    if (liveData) {
+      setLiveData(false);
+      setLiveTick(0);
+      return;
+    }
+    setLiveTick(1);
+    setLiveData(true);
+  }
+
+  function setFeatureData(feature: "gantt", data: GanttTask[]): void;
+  function setFeatureData(feature: "calendar", data: CalendarEvent[]): void;
+  function setFeatureData(feature: "charts", data: ChartSeries[]): void;
+  function setFeatureData(feature: "topology", data: TopologyData): void;
+  function setFeatureData(feature: FeatureId, data: PlaygroundDataMap[FeatureId]) {
+    setPlaygroundData((current) => ({ ...current, [feature]: data } as PlaygroundDataMap));
+    setEditorValues((current) => ({ ...current, [feature]: JSON.stringify(data, null, 2) }));
+    setEditorErrors((current) => ({ ...current, [feature]: undefined }));
+  }
+
+  function updateEditor(feature: FeatureId, value: string) {
+    setEditorValues((current) => ({ ...current, [feature]: value }));
+    try {
+      const data = parsePlaygroundData(feature, value);
+      setPlaygroundData((current) => ({ ...current, [feature]: data } as PlaygroundDataMap));
+      setEditorErrors((current) => ({ ...current, [feature]: undefined }));
+    } catch (error) {
+      setEditorErrors((current) => ({
+        ...current,
+        [feature]: error instanceof Error ? error.message : "Não foi possível validar estes dados.",
+      }));
+    }
+  }
+
+  function resetEditor(feature: FeatureId) {
+    updateEditor(feature, payloads[feature]);
+  }
+
+  function onEditorKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    const editor = event.currentTarget;
+    const start = editor.selectionStart;
+    const end = editor.selectionEnd;
+    const nextValue = `${editor.value.slice(0, start)}  ${editor.value.slice(end)}`;
+    updateEditor(activeFeature, nextValue);
+    window.requestAnimationFrame(() => {
+      editor.selectionStart = start + 2;
+      editor.selectionEnd = start + 2;
+    });
+  }
+
+  function onSearchKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSearchIndex((value) => Math.min(filteredSearch.length - 1, value + 1));
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSearchIndex((value) => Math.max(0, value - 1));
+    }
+    if (event.key === "Enter" && filteredSearch[searchIndex]) {
+      event.preventDefault();
+      openSearchResult(filteredSearch[searchIndex]);
+    }
+  }
+
   return (
-    <div className="site" data-theme={theme}>
+    <div ref={siteRef} className="site" data-theme={theme}>
       <header className="site-header">
         <button className="brand" onClick={() => scrollTo("inicio")} aria-label="Nodara, início">
           <span className="brand-mark"><i /><i /><i /><i /></span>
@@ -432,20 +729,21 @@ export default function Home() {
           <sup>BETA</sup>
         </button>
         <nav className={mobileNav ? "main-nav is-open" : "main-nav"} aria-label="Navegação principal">
-          <button onClick={() => scrollTo("componentes")}>Componentes</button>
-          <button onClick={() => scrollTo("integrar")}>Documentação</button>
+          <a href="/catalog">Catálogo</a>
+          <a href="/operations">Operações</a>
+          <a href="/docs">Documentação</a>
           <button onClick={() => scrollTo("arquitetura")}>Arquitetura</button>
           <button onClick={() => scrollTo("enterprise")}>Enterprise</button>
         </nav>
         <div className="header-actions">
-          <button className="header-search" onClick={() => setShowSearch(true)} aria-label="Pesquisar documentação">
+          <button ref={searchTriggerRef} className="header-search" onClick={event => { searchOpenerRef.current = event.currentTarget; setShowSearch(true); }} aria-label="Pesquisar documentação">
             <Search size={15} /><span>Pesquisar</span><kbd>⌘ K</kbd>
           </button>
           <button className="icon-button theme-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="Alternar tema">
             {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-          <button className="github-button"><Code2 size={16} /><span>GitHub</span><b>12.8k</b></button>
-          <button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-label="Abrir menu">
+          <a className="github-button" href="https://github.com/gftsantos/nodara" target="_blank" rel="noreferrer"><Code2 size={16} /><span>GitHub</span><b>BETA</b></a>
+          <button className="mobile-menu" onClick={() => setMobileNav(!mobileNav)} aria-expanded={mobileNav} aria-label={mobileNav ? "Fechar menu" : "Abrir menu"}>
             {mobileNav ? <X /> : <Menu />}
           </button>
         </div>
@@ -455,12 +753,12 @@ export default function Home() {
         <section className="hero" id="inicio">
           <div className="hero-grid" />
           <div className="hero-copy">
-            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.8</b></div>
+            <div className="eyebrow"><span /> VISUAL INFRASTRUCTURE FOR THE WEB <b>v0.1 beta privada</b></div>
             <h1>Dados complexos.<br /><em>Clareza instantânea.</em></h1>
-            <p>Uma biblioteca TypeScript, quatro ecossistemas e todas as visualizações de que um produto ambicioso precisa.</p>
+            <p>Uma biblioteca TypeScript com 6 componentes, 69 configurações visuais e 100 receitas prontas para produtos ambiciosos.</p>
             <div className="hero-actions">
-              <button className="primary-button" onClick={() => scrollTo("componentes")}><Play size={16} fill="currentColor" /> Explorar playground</button>
-              <CopyButton value="npm i @nodara/react" label="npm i @nodara/react" />
+              <a className="primary-button" href="/catalog"><Play size={16} fill="currentColor" /> Explorar o catálogo</a>
+              <CopyButton value="npm i ./nodara-core-0.1.0-beta.1.tgz ./nodara-react-0.1.0-beta.1.tgz" label="Instalar os pacotes beta" />
             </div>
             <div className="framework-proof">
               <span>Funciona onde trabalhas</span>
@@ -493,14 +791,14 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="float-card float-a"><CheckCircle2 size={17} /><div><strong>Render concluído</strong><small>8.4ms · 60 FPS</small></div></div>
-            <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós</strong><small>WebGL renderer</small></div></div>
+            <div className="float-card float-a"><CheckCircle2 size={17} /><div><strong>200+ testes verdes</strong><small>core + adaptadores + E2E</small></div></div>
+            <div className="float-card float-b"><Gauge size={17} /><div><strong>10.000 nós testados</strong><small>Canvas / WebGL adaptativo</small></div></div>
           </div>
           <div className="hero-foot">
-            <div><strong>5</strong><span>pacotes alpha</span></div>
-            <div><strong>6.2 kB</strong><span>core gzipped</span></div>
+            <div><strong>5</strong><span>pacotes beta</span></div>
+            <div><strong>69</strong><span>configurações visuais</span></div>
             <div><strong>4</strong><span>adaptadores</span></div>
-            <div><strong>AA</strong><span>WCAG 2.2</span></div>
+            <div><strong>200+</strong><span>testes automatizados</span></div>
           </div>
         </section>
 
@@ -508,14 +806,14 @@ export default function Home() {
           <div className="section-heading">
             <div><span className="section-number">01</span><p>O MESMO MOTOR. TODAS AS FORMAS.</p></div>
             <h2>Um playground para<br />dados do mundo real.</h2>
-            <p>Troca de componente, inspeciona o contrato de dados e leva o código contigo. Tudo sem sair da página.</p>
+            <p>Experimenta aqui quatro workspaces centrais ou explora seis componentes, 69 variantes de configuração e 100 exemplos. Cada exemplo tem dados editáveis e código copiável; alguns reutilizam a mesma configuração.</p>
           </div>
 
-          <div className="product-shell">
+          <div className={sidebarCollapsed ? "product-shell sidebar-collapsed" : "product-shell"}>
             <aside className="component-sidebar">
-              <div className="sidebar-title"><span>EXPLORADOR</span><button aria-label="Recolher menu"><PanelLeftClose size={15} /></button></div>
-              <button className="sidebar-search" onClick={() => setShowSearch(true)}><Search size={14} /> Procurar componente <kbd>/</kbd></button>
-              <p className="sidebar-label">VISUALIZAÇÕES</p>
+              <div className="sidebar-title"><span>EXPLORADOR</span><button onClick={() => setSidebarCollapsed((value) => !value)} aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"} title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}><PanelLeftClose size={15} /></button></div>
+              <button className="sidebar-search" onClick={event => { searchOpenerRef.current = event.currentTarget; setShowSearch(true); }}><Search size={14} /><span>Procurar componente</span><kbd>/</kbd></button>
+              <p className="sidebar-label">72 RECEITAS · 4 WORKSPACES</p>
               <div className="feature-nav">
                 {featureItems.map((item) => {
                   const Icon = item.icon;
@@ -523,16 +821,16 @@ export default function Home() {
                     <button key={item.id} className={activeFeature === item.id ? "active" : ""} onClick={() => selectFeature(item.id)}>
                       <span className="feature-icon" style={{ "--feature-accent": item.accent } as React.CSSProperties}><Icon size={16} /></span>
                       <span><strong>{item.name}</strong><small>{item.description}</small></span>
-                      <b>{item.count}</b>
+                      <b>{String(item.count).padStart(2, "0")}</b>
                     </button>
                   );
                 })}
               </div>
               <p className="sidebar-label">FUNDAÇÕES</p>
-              <button className="foundation-link"><Braces size={15} /> Tipos & schemas <ChevronRight size={14} /></button>
-              <button className="foundation-link"><Sparkles size={15} /> Temas & tokens <ChevronRight size={14} /></button>
-              <button className="foundation-link"><ShieldCheck size={15} /> Acessibilidade <ChevronRight size={14} /></button>
-              <div className="sidebar-help"><CircleHelp size={17} /><div><strong>Precisas de ajuda?</strong><small>Fala com um engenheiro</small></div><ArrowRight size={15} /></div>
+              <button className="foundation-link" onClick={event => setActiveDialog({ id: "schemas", opener: event.currentTarget })}><Braces size={15} /><span>Tipos & schemas</span><ChevronRight size={14} /></button>
+              <button className="foundation-link" onClick={event => setActiveDialog({ id: "tokens", opener: event.currentTarget })}><Sparkles size={15} /><span>Temas & tokens</span><ChevronRight size={14} /></button>
+              <button className="foundation-link" onClick={event => setActiveDialog({ id: "accessibility", opener: event.currentTarget })}><ShieldCheck size={15} /><span>Acessibilidade</span><ChevronRight size={14} /></button>
+              <button className="sidebar-help" onClick={event => setActiveDialog({ id: "help", opener: event.currentTarget })}><CircleHelp size={17} /><span><strong>Precisas de ajuda?</strong><small>Fala com um engenheiro</small></span><ArrowRight size={15} /></button>
             </aside>
 
             <div className="workspace">
@@ -542,37 +840,68 @@ export default function Home() {
                   <h3>{featureCopy[activeFeature].title}</h3>
                   <p>{featureCopy[activeFeature].description}</p>
                 </div>
-                <div className="workspace-actions">
-                  <button className={dense ? "active" : ""} onClick={() => setDense(!dense)}><Zap size={14} /> Live data</button>
-                  <button><ExternalLink size={14} /> Abrir exemplo</button>
+                <div className="workspace-action-stack">
+                  <div className="workspace-actions">
+                    <button className={liveData ? "active" : ""} aria-pressed={liveData} aria-describedby="live-data-description" onClick={toggleLiveData} title="Simula atualizações dos dados a cada 1,5 segundos"><Zap size={14} /> Simular stream</button>
+                    <button onClick={event => setActiveDialog({ id: "example", opener: event.currentTarget })}><ExternalLink size={14} /> Abrir exemplo</button>
+                  </div>
+                  <span className={liveData ? "live-explainer is-live" : "live-explainer"} id="live-data-description">{liveData ? `Stream simulado · ciclo ${liveTick} · JSON intacto` : "Varia o preview a cada 1,5 s; não altera o JSON"}</span>
                 </div>
               </div>
               <div className="workspace-tabs" role="tablist">
                 <button role="tab" aria-selected={workspaceTab === "preview"} className={workspaceTab === "preview" ? "active" : ""} onClick={() => setWorkspaceTab("preview")}><Play size={13} /> Preview</button>
                 <button role="tab" aria-selected={workspaceTab === "data"} className={workspaceTab === "data" ? "active" : ""} onClick={() => setWorkspaceTab("data")}><FileJson size={13} /> Dados</button>
                 <button role="tab" aria-selected={workspaceTab === "api"} className={workspaceTab === "api" ? "active" : ""} onClick={() => setWorkspaceTab("api")}><Braces size={13} /> API</button>
-                <div className="tab-meta"><span className="status-dot" /> 60 FPS <i /> {dense ? "streaming" : "1.240 items"}</div>
+                <div className="tab-meta"><span className="status-dot" /> Motor ativo <i /> {liveData ? `streaming · ciclo ${liveTick}` : `${activeFeatureData.name} · ${activeFeatureData.count} receitas`}</div>
               </div>
               <div className="workspace-canvas">
-                {workspaceTab === "preview" && <FeaturePreview feature={activeFeature} dense={dense} />}
+                {workspaceTab === "preview" && <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />}
                 {workspaceTab === "data" && (
-                  <div className="data-inspector">
-                    <div className="data-inspector-head"><span><FileJson size={14} /> data.json</span><CopyButton value={payloads[activeFeature]} /></div>
-                    <pre><code>{payloads[activeFeature]}</code></pre>
-                    <div className="schema-success"><CheckCircle2 size={16} /><span><strong>Schema válido</strong><small>Todos os campos obrigatórios estão presentes.</small></span><b>8.4 ms</b></div>
+                  <div className="live-editor-layout">
+                    <section className="data-inspector live-editor" aria-label={`Editor de dados de ${activeFeatureData.name}`}>
+                      <div className="data-inspector-head">
+                        <span><FileJson size={14} /> data.json <i>EDITÁVEL</i></span>
+                        <div className="editor-actions">
+                          <button className="editor-reset" onClick={() => resetEditor(activeFeature)} title="Repor os dados iniciais"><RotateCcw size={13} /> Repor</button>
+                          <CopyButton value={editorValues[activeFeature]} />
+                        </div>
+                      </div>
+                      <textarea
+                        className="json-editor"
+                        value={editorValues[activeFeature]}
+                        onChange={(event) => updateEditor(activeFeature, event.target.value)}
+                        onKeyDown={onEditorKeyDown}
+                        aria-label={`Editar JSON de ${activeFeatureData.name}`}
+                        aria-invalid={Boolean(activeEditorError)}
+                        aria-describedby="editor-validation-status"
+                        spellCheck={false}
+                      />
+                      <div className={activeEditorError ? "schema-success schema-error" : "schema-success"} id="editor-validation-status" role={activeEditorError ? "alert" : "status"}>
+                        {activeEditorError ? <X size={16} /> : <CheckCircle2 size={16} />}
+                        <span>
+                          <strong>{activeEditorError ? "Corrige o JSON" : "Render atualizado automaticamente"}</strong>
+                          <small>{activeEditorError ?? "O componente real está a usar estes dados."}</small>
+                        </span>
+                        <b>{activeEditorError ? "ÚLTIMO VÁLIDO" : "LIVE"}</b>
+                      </div>
+                    </section>
+                    <section className="live-output" aria-label={`Output ao vivo de ${activeFeatureData.name}`}>
+                      <div className="live-output-head"><span><span className="status-dot" /> OUTPUT AO VIVO</span><small>{activeEditorError ? "A mostrar o último JSON válido" : "Sincronizado"}</small></div>
+                      <FeaturePreview data={playgroundData} feature={activeFeature} liveTick={liveTick} theme={theme} onGanttChange={(data) => setFeatureData("gantt", data)} onCalendarChange={(data) => setFeatureData("calendar", data)} />
+                    </section>
                   </div>
                 )}
                 {workspaceTab === "api" && (
                   <div className="api-table">
                     <div className="api-row api-head"><span>PROPRIEDADE</span><span>TIPO</span><span>DEFAULT</span><span>DESCRIÇÃO</span></div>
                     <div className="api-row"><code>data</code><span className="type-pill">T[]</span><code>[]</code><span>Itens normalizados da visualização.</span></div>
-                    <div className="api-row"><code>renderer</code><span className="type-pill">auto | svg | webgl</span><code>auto</code><span>Seleciona o motor de renderização.</span></div>
-                    <div className="api-row"><code>interactive</code><span className="type-pill">boolean</span><code>true</code><span>Ativa zoom, seleção e teclado.</span></div>
+                    <div className="api-row"><code>renderer</code><span className="type-pill">auto | dom | canvas | webgl</span><code>auto</code><span>Seleciona o motor de renderização.</span></div>
+                    <div className="api-row"><code>interactive</code><span className="type-pill">boolean | options</span><code>true</code><span>Controla ponteiro, teclado, pan e zoom.</span></div>
                     <div className="api-row"><code>onChange</code><span className="type-pill">(event) =&gt; void</span><code>—</code><span>Emite alterações com tipagem estrita.</span></div>
                   </div>
                 )}
               </div>
-              <div className="workspace-footer"><span><CheckCircle2 size={14} /> Dados validados</span><span>Canvas 1.240 × 620</span><span><ShieldCheck size={14} /> WCAG AA</span><span>Zoom 100%</span></div>
+              <div className="workspace-footer"><span className={activeEditorError ? "has-error" : ""}>{activeEditorError ? <X size={14} /> : <CheckCircle2 size={14} />} {activeEditorError ? "JSON com erro · último válido preservado" : "Dados validados"}</span><span>Motor real Nodara</span><span><ShieldCheck size={14} /> Teclado + semântica</span><span>Zoom interativo</span></div>
             </div>
           </div>
         </section>
@@ -581,7 +910,7 @@ export default function Home() {
           <div className="section-heading integration-heading">
             <div><span className="section-number">02</span><p>INTEGRAÇÃO SEM ATRITO</p></div>
             <h2>A tua stack.<br />A mesma API.</h2>
-            <p>Core agnóstico, adaptadores oficiais e tipos que acompanham cada decisão. Começa em menos de cinco minutos.</p>
+            <p>Core agnóstico, adaptadores oficiais e exemplos tipados. Experimenta a integração com os dados da tua aplicação.</p>
           </div>
 
           <div className="integration-lab">
@@ -615,7 +944,7 @@ export default function Home() {
               <div className="code-window">
                 <div className="code-window-head"><span><i /><i /><i /></span><p>ProductPlan.{activeFramework === "vue" ? "vue" : "tsx"}</p><CopyButton value={snippets[activeFramework]} /></div>
                 <pre><code>{snippets[activeFramework]}</code></pre>
-                <div className="code-status"><span><CheckCircle2 size={14} /> Compilado sem erros</span><b>6.8 kB core + adapter</b></div>
+                <div className="code-status"><span><CheckCircle2 size={14} /> Exemplos verificados no build</span><b>TypeScript</b></div>
               </div>
             </div>
           </div>
@@ -630,7 +959,7 @@ export default function Home() {
             <div className="contract-flow">
               <div className="flow-card flow-input"><span>INPUT</span><FileJson size={22} /><strong>JSON / REST / Stream</strong><small>Qualquer fonte de dados</small></div>
               <div className="flow-arrow"><i /><Zap size={17} /></div>
-              <div className="flow-card flow-core"><span>NODARA CORE</span><div className="brand-mark"><i /><i /><i /><i /></div><strong>Normalize + Render</strong><small>Schema validado · 8.4ms</small></div>
+              <div className="flow-card flow-core"><span>NODARA CORE</span><div className="brand-mark"><i /><i /><i /><i /></div><strong>Normalize + Render</strong><small>Schema validado · API partilhada</small></div>
               <div className="flow-arrow"><i /><Check size={17} /></div>
               <div className="flow-card flow-output"><span>OUTPUT</span><Sparkles size={22} /><strong>Canvas acessível</strong><small>Interativo e responsivo</small></div>
             </div>
@@ -642,8 +971,8 @@ export default function Home() {
             <span className="section-number">03</span>
             <p className="mini-label">FEITA PARA ESCALAR</p>
             <h2>Bonita por fora.<br /><em>Séria por dentro.</em></h2>
-            <p>Um core independente, renderização adaptativa e contratos públicos estáveis. O tipo de fundação que não obriga a reescrever o produto daqui a dois anos.</p>
-            <button className="secondary-button">Explorar arquitetura <ArrowRight size={15} /></button>
+            <p>Um core independente, renderização adaptativa e contratos públicos versionados. A API ainda está em pré-release: consulta os limites e as notas de migração.</p>
+            <button className="secondary-button" onClick={event => setActiveDialog({ id: "architecture", opener: event.currentTarget })}>Explorar arquitetura <ArrowRight size={15} /></button>
           </div>
           <div className="architecture-grid">
             <article className="arch-card arch-wide">
@@ -653,41 +982,44 @@ export default function Home() {
               <div className="performance-bars"><i><span style={{ width: "24%" }} /></i><i><span style={{ width: "56%" }} /></i><i><span style={{ width: "88%" }} /></i></div>
               <div className="performance-labels"><span>DOM</span><span>CANVAS</span><span>WEBGL</span></div>
             </article>
-            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Cinco pacotes independentes e tree-shaking real.</p><strong className="metric">6.2 <small>kB CORE</small></strong></article>
-            <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBLE</span><h3>Acessível de raiz.</h3><p>Teclado, leitores de ecrã e contraste testados.</p><strong className="metric">AA <small>WCAG 2.2</small></strong></article>
-            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>OPEN CORE</span><h3>Construída em público.</h3><p>Roadmap aberto, RFCs e releases previsíveis.</p><div className="community-row"><span>12.8k <small>stars</small></span><span>84 <small>contributors</small></span><span>99.9% <small>uptime</small></span></div></article>
+            <article className="arch-card"><div className="arch-icon"><PackageCheck /></div><span>MODULAR</span><h3>Importa só o que usas.</h3><p>Pacotes de integração por framework. O tamanho final depende dos imports e do bundler.</p><strong className="metric">5 <small>PACOTES</small></strong></article>
+            <article className="arch-card"><div className="arch-icon"><ShieldCheck /></div><span>ACCESSIBILITY</span><h3>Semântica e teclado.</h3><p>Testes automatizados de contraste e interação. Validação com leitor de ecrã real ainda pendente.</p><strong className="metric">A11Y <small>EM VALIDAÇÃO</small></strong></article>
+            <article className="arch-card arch-community"><div className="arch-icon"><Code2 /></div><span>ENGINEERING</span><h3>Validada de forma contínua.</h3><p>Contratos documentados, testes automatizados e releases controladas.</p><div className="community-row"><span>200+ <small>testes</small></span><span>5 <small>pacotes</small></span><span>4 <small>adaptadores</small></span></div></article>
           </div>
         </section>
 
         <section className="enterprise-section" id="enterprise">
           <div className="enterprise-orbit"><i /><i /><i /><span className="brand-mark"><i /><i /><i /><i /></span></div>
-          <p className="mini-label">PRONTO PARA PRODUÇÃO</p>
+          <p className="mini-label">BETA PRIVADA · EM VALIDAÇÃO</p>
           <h2>Os teus dados já têm uma história.<br /><em>Vamos torná-la visível.</em></h2>
-          <p>Começa com a comunidade. Cresce com suporte, colaboração e segurança enterprise.</p>
-          <div className="enterprise-actions"><button className="primary-button">Começar gratuitamente <ArrowRight size={16} /></button><button className="secondary-button">Falar com engenharia</button></div>
+          <p>Explora a avaliação privada. Ainda não existe uma oferta comercial, SLA ou suporte enterprise contratado.</p>
+          <div className="enterprise-actions"><a className="primary-button" href="/docs#installation">Explorar integração <ArrowRight size={16} /></a><a className="secondary-button" href="/docs#architecture">Ver arquitetura</a></div>
           <div className="enterprise-note"><span><Check size={14} /> MIT core</span><span><Check size={14} /> Sem cartão</span><span><Check size={14} /> Suporte TypeScript</span></div>
         </section>
       </main>
 
       <footer>
         <div className="footer-brand"><div className="brand"><span className="brand-mark"><i /><i /><i /><i /></span><span>NODARA</span></div><p>Visual infrastructure for the web.</p></div>
-        <div className="footer-links"><div><strong>PRODUTO</strong><a href="#componentes">Componentes</a><a href="#integrar">Frameworks</a><a href="#arquitetura">Roadmap</a></div><div><strong>RECURSOS</strong><a href="#integrar">Documentação</a><a href="#componentes">Exemplos</a><a href="#arquitetura">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="#enterprise">Segurança</a><a href="#enterprise">Contacto</a></div></div>
-        <div className="footer-bottom"><span>© 2026 Nodara Labs</span><span>Feito com precisão em Portugal.</span><div><a href="#">GitHub</a><a href="#">Discord</a><a href="#">X / Twitter</a></div></div>
+        <div className="footer-links"><div><strong>PRODUTO</strong><a href="/catalog">Catálogo visual</a><a href="/docs#installation">Frameworks</a><a href="/docs#architecture">Arquitetura</a></div><div><strong>RECURSOS</strong><a href="/docs">Documentação</a><a href="#componentes">Playground</a><a href="https://github.com/gftsantos/nodara/releases" target="_blank" rel="noreferrer">Changelog</a></div><div><strong>EMPRESA</strong><a href="#enterprise">Enterprise</a><a href="/docs#accessibility">Acessibilidade</a><a href="https://github.com/gftsantos/nodara/issues/new" target="_blank" rel="noreferrer">Contacto</a></div></div>
+        <div className="footer-bottom"><span>© 2026 Nodara</span><span>Avaliação privada · em desenvolvimento.</span><div><a href="/legal">Privacidade e condições</a><a href="/docs">Documentação</a><a href="/docs#architecture">Arquitetura</a></div></div>
       </footer>
 
       {showSearch && (
-        <div className="search-overlay" role="presentation" onMouseDown={() => setShowSearch(false)}>
-          <div className="search-dialog" role="dialog" aria-modal="true" aria-label="Pesquisa da documentação" onMouseDown={(event) => event.stopPropagation()}>
-            <div className="search-input-wrap"><Search size={19} /><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar componentes, APIs e guias…" /><kbd>ESC</kbd></div>
+        <div className="search-overlay">
+          <button type="button" className="search-backdrop" aria-label="Fechar pesquisa" onClick={() => setShowSearch(false)} />
+          <div className="search-dialog" role="dialog" aria-modal="true" aria-label="Pesquisa da documentação">
+            <div className="search-input-wrap"><Search size={19} /><input ref={searchInputRef} value={query} onChange={(event) => { setQuery(event.target.value); setSearchIndex(0); }} onKeyDown={onSearchKeyDown} placeholder="Pesquisar componentes, APIs e guias…" aria-label="Pesquisar na documentação" aria-activedescendant={filteredSearch[searchIndex] ? `search-result-${searchIndex}` : undefined} /><button className="search-close" aria-label="Fechar pesquisa" onClick={() => setShowSearch(false)}><X size={16} /></button></div>
             <p>SUGESTÕES</p>
             <div className="search-results">
-              {filteredSearch.map((entry, index) => <button key={entry} onClick={() => { setShowSearch(false); scrollTo(index < 8 ? "componentes" : "integrar"); }}><span><Command size={14} />{entry}</span><ChevronRight size={14} /></button>)}
+              {filteredSearch.map((entry, index) => <button id={`search-result-${index}`} className={searchIndex === index ? "selected" : ""} key={entry} onMouseEnter={() => setSearchIndex(index)} onClick={() => openSearchResult(entry)}><span><Command size={14} />{entry}</span><ChevronRight size={14} /></button>)}
               {filteredSearch.length === 0 && <div className="no-results">Nenhum resultado. Experimenta “Gantt” ou “schema”.</div>}
             </div>
             <div className="search-footer"><span><kbd>↑</kbd><kbd>↓</kbd> navegar</span><span><kbd>↵</kbd> abrir</span></div>
           </div>
         </div>
       )}
+
+      {activeDialog && <PortalDialog dialog={activeDialog.id} opener={activeDialog.opener} feature={activeFeature} data={playgroundData[activeFeature]} theme={theme} onClose={() => setActiveDialog(null)} />}
     </div>
   );
 }

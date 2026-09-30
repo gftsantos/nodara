@@ -1,11 +1,17 @@
 {
   "name": "@nodara/core",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.1",
   "description": "Framework-agnostic visual engine for Gantt, charts, topologies and calendars.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",
-  "repository": { "type": "git", "url": "https://github.com/gftsantos/nodara.git", "directory": "packages/core" },
-  "bugs": { "url": "https://github.com/gftsantos/nodara/issues" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gftsantos/nodara.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/gftsantos/nodara/issues"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -16,14 +22,40 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./working-time": {
+      "import": { "types": "./dist/working-time.d.ts", "default": "./dist/working-time.js" },
+      "require": { "types": "./dist/working-time.d.cts", "default": "./dist/working-time.cjs" }
+    }
   },
-  "files": ["dist", "src/styles.css", "README.md"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist",
+    "src/styles.css",
+    "README.md",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake",
+    "build": "tsup src/index.ts src/working-time.ts --format esm,cjs --dts --clean --sourcemap --treeshake",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "publishConfig": { "access": "public" },
-  "keywords": ["gantt", "charts", "graph", "topology", "calendar", "typescript", "visualization"]
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "gantt",
+    "charts",
+    "graph",
+    "topology",
+    "calendar",
+    "typescript",
+    "visualization"
+  ],
+  "dependencies": {
+    "@js-temporal/polyfill": "0.5.1",
+    "d3-hierarchy": "3.1.2",
+    "d3-sankey": "0.12.3"
+  }
 }

@@ -1,0 +1,42 @@
+import { describe, expect, it } from "vitest";
+import { gaussianKDE, histogram, histogramSeries, marchingSquares, scalarGridSeries, seriesScalarGrid, validateScalarGrid } from "../src/statistics";
+
+describe("Gaussian KDE — reference densities", () => {
+  it("preserves a representable tail when value minus sample overflows", () => { const actual = gaussianKDE([-1e308], { bandwidth: 1e308, evaluationPoints: [1e308] }).points[0]!.density; const expected = 0.05399096651318806 / 1e308; expect(Math.abs(actual / expected - 1)).toBeLessThan(1e-12); });
+  it("rejects sparse arrays instead of silently producing missing densities", () => { expect(() => gaussianKDE(new Array(2), { bandwidth: 1, evaluationPoints: [0] })).toThrow(); });
+  it("matches the standard normal density", () => { const result = gaussianKDE([0], { bandwidth: 1, evaluationPoints: [-2, -1, 0, 1, 2] }); expect(result.bandwidth).toBe(1); [0.05399096651318806, 0.24197072451914337, 0.3989422804014327, 0.24197072451914337, 0.05399096651318806].forEach((value, index) => expect(result.points[index]!.density).toBeCloseTo(value, 12)); });
+  it("matches a two-kernel mixture", () => { const result = gaussianKDE([-1, 1], { bandwidth: 1, evaluationPoints: [-1, 0, 1] }); expect(result.points[0]!.density).toBeCloseTo(0.2264666234573104, 12); expect(result.points[1]!.density).toBeCloseTo(0.24197072451914337, 12); });
+  it("Scott uses sample SD and an absolute bandwidth", () => { expect(gaussianKDE([0, 2], { bandwidth: "scott", evaluationPoints: [1] }).bandwidth).toBeCloseTo(1.2311444133449163, 12); });
+  it("duplicating samples with a fixed bandwidth preserves density", () => { const options = { bandwidth: 2, evaluationPoints: [0, 1, 3, 5] }; expect(gaussianKDE([1, 4, 1, 4], options).points).toEqual(gaussianKDE([1, 4], options).points); });
+  it("translation and positive scaling preserve density units", () => { const a = gaussianKDE([0, 2], { bandwidth: 1, evaluationPoints: [1] }); const b = gaussianKDE([10, 14], { bandwidth: 2, evaluationPoints: [12] }); expect(b.points[0]!.density).toBeCloseTo(a.points[0]!.density / 2, 12); });
+  it("integrates to one on a sufficiently wide window", () => { const h = 0.01; const points = Array.from({ length: 2001 }, (_, i) => -10 + i * h); const result = gaussianKDE([-1, 1], { bandwidth: 1, evaluationPoints: points }); expect(result.points.reduce((sum, point) => sum + point.density * h, 0)).toBeCloseTo(1, 10); });
+  it("does not renormalize a truncated evaluation window", () => { expect(gaussianKDE([0], { bandwidth: 1, evaluationPoints: [0] }).points[0]!.density).toBeLessThan(1); });
+  it("empty samples have zero density and no inferred bandwidth", () => { expect(gaussianKDE([], { bandwidth: "scott", evaluationPoints: [0] })).toEqual({ bandwidth: null, sampleCount: 0, points: [{ value: 0, density: 0 }] }); });
+  it.each([[1], [1, 1], [1e308, -1e308]])("does not invent Scott bandwidth for degenerate/overflowing data %j", (...samples) => { expect(() => gaussianKDE(samples, { bandwidth: "scott", evaluationPoints: [0] })).toThrow(); });
+  it.each([0, -1, NaN, Infinity])("rejects invalid bandwidth %s", bandwidth => { expect(() => gaussianKDE([0], { bandwidth, evaluationPoints: [0] })).toThrow(); });
+  it("limits work before entering the evaluation loop", () => { expect(() => gaussianKDE(Array(10_001).fill(0), { bandwidth: 1, evaluationPoints: Array(1000).fill(0) })).toThrow(/exceeds/); });
+});
+
+describe("Histogram — boundaries and probability density", () => {
+  it("includes the final right edge and otherwise uses half-open bins", () => { expect(histogram([0, 1, 2, 3], { edges: [0, 1, 2, 3] }).bins.map(bin => bin.count)).toEqual([1, 1, 2]); });
+  it("uses widths, not just counts, for unequal-bin density", () => { const result = histogram([0, 0.5, 1, 2, 4], { edges: [0, 1, 4] }); expect(result.bins.map(bin => bin.count)).toEqual([2, 3]); expect(result.bins[0]!.density).toBeCloseTo(0.4); expect(result.bins[1]!.density).toBeCloseTo(0.2); expect(result.bins.reduce((sum, bin) => sum + bin.density * (bin.end - bin.start), 0)).toBeCloseTo(1); });
+  it("reports underflow and overflow without silently discarding them", () => { const result = histogram([-1, 0, 1, 2, 2.5, 3, 4], { edges: [0, 1, 3] }); expect(result).toMatchObject({ includedCount: 5, underflowCount: 1, overflowCount: 1 }); expect(result.bins.map(bin => bin.count)).toEqual([1, 4]); });
+  it("empty samples return explicit zero bins", () => { expect(histogram([], { edges: [0, 1] }).bins).toEqual([{ start: 0, end: 1, count: 0, density: 0 }]); });
+  it("preserves numeric bin bounds in the chart bridge", () => { const series = histogramSeries(histogram([0, 1, 4], { edges: [0, 1, 4] }), { id: "h", label: "Density", measure: "density" }); expect(series.data[1]).toMatchObject({ x: 2.5, y: 2 / 9, meta: { binStart: 1, binEnd: 4, count: 2 } }); });
+  it.each([[], [1], [0, 0], [1, 0], [0, Infinity]])("rejects invalid edges %j", (...edges) => { expect(() => histogram([0], { edges })).toThrow(); });
+  it("rejects invalid samples", () => { expect(() => histogram([NaN], { edges: [0, 1] })).toThrow(); });
+});
+
+describe("Scalar grid isolines — marching squares", () => {
+  it("interpolates in physical coordinates, not cell indices", () => { const segments = marchingSquares({ x: [0, 2], y: [10, 14], values: [0, 2, 0, 2] }, [1]); expect(segments).toHaveLength(1); expect([segments[0]!.a, segments[0]!.b]).toEqual(expect.arrayContaining([{ x: 1, y: 10 }, { x: 1, y: 14 }])); });
+  it("forms a four-edge diamond around a peak", () => { const segments = marchingSquares({ x: [0, 1, 2], y: [0, 1, 2], values: [0, 0, 0, 0, 1, 0, 0, 0, 0] }, [0.5]); expect(segments).toHaveLength(4); expect(new Set(segments.flatMap(segment => [JSON.stringify(segment.a), JSON.stringify(segment.b)])).size).toBe(4); });
+  it("uses the asymptotic determinant, not the mean of the corners", () => { const segments = marchingSquares({ x: [0, 1], y: [0, 1], values: [10, -4, -4, 1] }, [0]); expect(segments).toHaveLength(2); const lower = segments.find(segment => segment.a.y === 0 || segment.b.y === 0)!; const bottom = lower.a.y === 0 ? lower.a : lower.b; const left = lower.a.y === 0 ? lower.b : lower.a; expect(bottom.x).toBeCloseTo(5 / 7, 12); expect(left.x).toBe(0); expect(left.y).toBeCloseTo(5 / 7, 12); });
+  it("exact saddle is a cross with four arms", () => { const segments = marchingSquares({ x: [0, 1], y: [0, 1], values: [1, -1, -1, 1] }, [0]); expect(segments).toHaveLength(4); expect(segments.every(segment => segment.b.x === 0.5 && segment.b.y === 0.5)).toBe(true); });
+  it.each(Array.from({ length: 16 }, (_, i) => i))("handles corner mask %i with finite nonzero segments", mask => { const corner = (bit: number) => mask & 1 << bit ? 3 : -1; const segments = marchingSquares({ x: [0, 1], y: [0, 1], values: [corner(0), corner(1), corner(3), corner(2)] }, [0]); expect(segments.length).toBe(mask === 0 || mask === 15 ? 0 : mask === 5 || mask === 10 ? 2 : 1); for (const segment of segments) { expect([segment.a.x, segment.a.y, segment.b.x, segment.b.y].every(Number.isFinite)).toBe(true); expect(segment.a).not.toEqual(segment.b); } });
+  it("deduplicates requested levels", () => { const grid = { x: [0, 1], y: [0, 1], values: [0, 2, 0, 2] }; expect(marchingSquares(grid, [1, 1])).toHaveLength(1); });
+  it("handles constant and one-dimensional grids without fake contours", () => { expect(marchingSquares({ x: [0, 1], y: [0, 1], values: [2, 2, 2, 2] }, [1, 2, 3])).toEqual([]); expect(marchingSquares({ x: [0], y: [0, 1], values: [0, 2] }, [1])).toEqual([]); });
+  it("normalizes extreme scalar values before computing the determinant", () => { const segments = marchingSquares({ x: [0, 1], y: [0, 1], values: [1e308, -1e308, -1e308, 1e308] }, [0]); expect(segments).toHaveLength(4); expect(segments.every(segment => Number.isFinite(segment.b.x))).toBe(true); });
+  it("round-trips a typed grid through editable series without inventing row coordinates", () => { const grid = { x: [0, 2], y: [10, 14], values: [0, 2, 1, 3] }; expect(seriesScalarGrid(scalarGridSeries(grid))).toEqual(grid); });
+  it("rejects implicit string-labelled rows", () => { expect(() => seriesScalarGrid([{ id: "a", label: "A", data: [{ x: "Jan", y: 2 }] }])).toThrow(); });
+  it("rejects ragged or inverted grids", () => { for (const grid of [{ x: [0, 1], y: [0, 1], values: [1] }, { x: [1, 0], y: [0], values: [1, 2] }]) expect(() => validateScalarGrid(grid)).toThrow(); });
+});

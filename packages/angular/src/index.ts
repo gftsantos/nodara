@@ -11,21 +11,32 @@ import type { AfterViewInit, OnChanges, OnDestroy, SimpleChanges } from "@angula
 import {
   createCalendar,
   createChart,
+  createDiagram,
   createGantt,
+  createGeoMap,
   createTopology,
   type CalendarEvent,
+  type CalendarEventChangeEvent,
   type CalendarEventSelectEvent,
   type CalendarOptions,
   type ChartOptions,
   type ChartPointEvent,
   type ChartSeries,
+  type DiagramData,
+  type DiagramNodeEvent,
+  type DiagramOptions,
   type GanttOptions,
   type GanttTask,
   type GanttTaskEvent,
+  type GeoMapData,
+  type GeoMapOptions,
+  type GeoPointEvent,
+  type GeoViewportEvent,
   type NodaraController,
   type TopologyData,
   type TopologyNodeEvent,
   type TopologyOptions,
+  type TopologyViewportEvent,
 } from "@nodara/core";
 
 const template = `<div #host class="nd-angular-host"></div>`;
@@ -40,14 +51,23 @@ export class NodaraGanttComponent implements AfterViewInit, OnChanges, OnDestroy
   @Output() taskSelect = new EventEmitter<GanttTaskEvent>();
   @Output() taskChange = new EventEmitter<GanttTaskEvent>();
   private controller?: NodaraController<GanttTask[]>;
+  private appliedOptions: Record<string, unknown> = {};
 
   ngAfterViewInit() {
     this.controller = createGantt(this.host.nativeElement, { ...this.options, data: this.data });
+    this.appliedOptions = { ...this.options };
     this.controller.on<GanttTaskEvent>("task:select", (event) => this.taskSelect.emit(event));
     this.controller.on<GanttTaskEvent>("task:change", (event) => this.taskChange.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["data"] && this.controller) this.controller.update(this.data); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.controller && (changes["options"] || changes["data"])) {
+      const removed = Object.fromEntries(Object.keys(this.appliedOptions).map(key => [key, undefined]));
+      const before = this.controller.getOptions();
+      try { this.controller.setState(this.data, { ...removed, ...this.options }); }
+      finally { if (this.controller.getOptions() !== before) this.appliedOptions = { ...this.options }; }
+    }
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -59,13 +79,22 @@ export class NodaraChartComponent implements AfterViewInit, OnChanges, OnDestroy
   @Output() ready = new EventEmitter<NodaraController<ChartSeries[]>>();
   @Output() pointSelect = new EventEmitter<ChartPointEvent>();
   private controller?: NodaraController<ChartSeries[]>;
+  private appliedOptions: Record<string, unknown> = {};
 
   ngAfterViewInit() {
     this.controller = createChart(this.host.nativeElement, { ...this.options, series: this.series });
+    this.appliedOptions = { ...this.options };
     this.controller.on<ChartPointEvent>("point:select", (event) => this.pointSelect.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["series"] && this.controller) this.controller.update(this.series); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.controller && (changes["options"] || changes["series"])) {
+      const removed = Object.fromEntries(Object.keys(this.appliedOptions).map(key => [key, undefined]));
+      const before = this.controller.getOptions();
+      try { this.controller.setState(this.series, { ...removed, ...this.options }); }
+      finally { if (this.controller.getOptions() !== before) this.appliedOptions = { ...this.options }; }
+    }
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -76,14 +105,25 @@ export class NodaraTopologyComponent implements AfterViewInit, OnChanges, OnDest
   @Input() options: Omit<TopologyOptions, "data"> = {};
   @Output() ready = new EventEmitter<NodaraController<TopologyData>>();
   @Output() nodeSelect = new EventEmitter<TopologyNodeEvent>();
+  @Output() viewportChange = new EventEmitter<TopologyViewportEvent>();
   private controller?: NodaraController<TopologyData>;
+  private appliedOptions: Record<string, unknown> = {};
 
   ngAfterViewInit() {
     this.controller = createTopology(this.host.nativeElement, { ...this.options, data: this.data });
+    this.appliedOptions = { ...this.options };
     this.controller.on<TopologyNodeEvent>("node:select", (event) => this.nodeSelect.emit(event));
+    this.controller.on<TopologyViewportEvent>("viewport:change", (event) => this.viewportChange.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["data"] && this.controller) this.controller.update(this.data); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.controller && (changes["options"] || changes["data"])) {
+      const removed = Object.fromEntries(Object.keys(this.appliedOptions).map(key => [key, undefined]));
+      const before = this.controller.getOptions();
+      try { this.controller.setState(this.data, { ...removed, ...this.options }); }
+      finally { if (this.controller.getOptions() !== before) this.appliedOptions = { ...this.options }; }
+    }
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -94,14 +134,81 @@ export class NodaraCalendarComponent implements AfterViewInit, OnChanges, OnDest
   @Input() options: Omit<CalendarOptions, "events"> = {};
   @Output() ready = new EventEmitter<NodaraController<CalendarEvent[]>>();
   @Output() eventSelect = new EventEmitter<CalendarEventSelectEvent>();
+  @Output() eventChange = new EventEmitter<CalendarEventChangeEvent>();
   private controller?: NodaraController<CalendarEvent[]>;
+  private appliedOptions: Record<string, unknown> = {};
 
   ngAfterViewInit() {
     this.controller = createCalendar(this.host.nativeElement, { ...this.options, events: this.events });
+    this.appliedOptions = { ...this.options };
     this.controller.on<CalendarEventSelectEvent>("event:select", (event) => this.eventSelect.emit(event));
+    this.controller.on<CalendarEventChangeEvent>("event:change", (event) => this.eventChange.emit(event));
     this.ready.emit(this.controller);
   }
-  ngOnChanges(changes: SimpleChanges) { if (changes["events"] && this.controller) this.controller.update(this.events); }
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.controller && (changes["options"] || changes["events"])) {
+      const removed = Object.fromEntries(Object.keys(this.appliedOptions).map(key => [key, undefined]));
+      const before = this.controller.getOptions();
+      try { this.controller.setState(this.events, { ...removed, ...this.options }); }
+      finally { if (this.controller.getOptions() !== before) this.appliedOptions = { ...this.options }; }
+    }
+  }
+  ngOnDestroy() { this.controller?.destroy(); }
+}
+
+@Component({ selector: "nd-geo-map", standalone: true, template, styles, encapsulation: ViewEncapsulation.None })
+export class NodaraGeoMapComponent implements AfterViewInit, OnChanges, OnDestroy {
+  @ViewChild("host", { static: true }) host!: ElementRef<HTMLElement>;
+  @Input({ required: true }) data: GeoMapData = { points: [], routes: [], regions: [] };
+  @Input() options: Omit<GeoMapOptions, "data"> = {};
+  @Output() ready = new EventEmitter<NodaraController<GeoMapData>>();
+  @Output() pointSelect = new EventEmitter<GeoPointEvent>();
+  @Output() viewportChange = new EventEmitter<GeoViewportEvent>();
+  private controller?: NodaraController<GeoMapData>;
+  private appliedOptions: Record<string, unknown> = {};
+
+  ngAfterViewInit() {
+    this.controller = createGeoMap(this.host.nativeElement, { ...this.options, data: this.data });
+    this.appliedOptions = { ...this.options };
+    this.controller.on<GeoPointEvent>("point:select", (event) => this.pointSelect.emit(event));
+    this.controller.on<GeoViewportEvent>("viewport:change", (event) => this.viewportChange.emit(event));
+    this.ready.emit(this.controller);
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.controller && (changes["options"] || changes["data"])) {
+      const removed = Object.fromEntries(Object.keys(this.appliedOptions).map(key => [key, undefined]));
+      const before = this.controller.getOptions();
+      try { this.controller.setState(this.data, { ...removed, ...this.options }); }
+      finally { if (this.controller.getOptions() !== before) this.appliedOptions = { ...this.options }; }
+    }
+  }
+  ngOnDestroy() { this.controller?.destroy(); }
+}
+
+@Component({ selector: "nd-diagram", standalone: true, template, styles, encapsulation: ViewEncapsulation.None })
+export class NodaraDiagramComponent implements AfterViewInit, OnChanges, OnDestroy {
+  @ViewChild("host", { static: true }) host!: ElementRef<HTMLElement>;
+  @Input({ required: true }) data: DiagramData = { nodes: [], links: [] };
+  @Input() options: Omit<DiagramOptions, "data"> = {};
+  @Output() ready = new EventEmitter<NodaraController<DiagramData>>();
+  @Output() nodeSelect = new EventEmitter<DiagramNodeEvent>();
+  private controller?: NodaraController<DiagramData>;
+  private appliedOptions: Record<string, unknown> = {};
+
+  ngAfterViewInit() {
+    this.controller = createDiagram(this.host.nativeElement, { ...this.options, data: this.data });
+    this.appliedOptions = { ...this.options };
+    this.controller.on<DiagramNodeEvent>("node:select", (event) => this.nodeSelect.emit(event));
+    this.ready.emit(this.controller);
+  }
+  ngOnChanges(changes: SimpleChanges) {
+    if (this.controller && (changes["options"] || changes["data"])) {
+      const removed = Object.fromEntries(Object.keys(this.appliedOptions).map(key => [key, undefined]));
+      const before = this.controller.getOptions();
+      try { this.controller.setState(this.data, { ...removed, ...this.options }); }
+      finally { if (this.controller.getOptions() !== before) this.appliedOptions = { ...this.options }; }
+    }
+  }
   ngOnDestroy() { this.controller?.destroy(); }
 }
 
@@ -110,8 +217,12 @@ export type {
   CalendarOptions,
   ChartOptions,
   ChartSeries,
+  DiagramData,
+  DiagramOptions,
   GanttOptions,
   GanttTask,
+  GeoMapData,
+  GeoMapOptions,
   NodaraController,
   TopologyData,
   TopologyOptions,

@@ -1,6 +1,6 @@
 {
   "name": "@nodara/web-components",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-beta.1",
   "description": "Standards-based Nodara custom elements for any frontend stack.",
   "license": "MIT",
   "homepage": "https://nodara-visual.gftsantos.chatgpt.site",
@@ -22,6 +22,6 @@
     "build": "tsup src/index.ts --format esm,cjs --dts --clean --sourcemap --treeshake --external @nodara/core",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
-  "dependencies": { "@nodara/core": "0.1.0-alpha.1" },
+  "dependencies": { "@nodara/core": "0.1.0-beta.1" },
   "publishConfig": { "access": "public" }
 }

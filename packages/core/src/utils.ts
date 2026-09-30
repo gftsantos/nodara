@@ -9,8 +9,8 @@ export function resolveElement(target: string | Element): HTMLElement {
 }
 
 export function toTimestamp(input: DateInput, field = "date"): number {
-  const value = input instanceof Date ? input.getTime() : typeof input === "number" ? input : Date.parse(input);
-  if (!Number.isFinite(value)) {
+  const value = input instanceof Date ? input.getTime() : typeof input === "number" ? input : typeof input === "string" ? Date.parse(input) : NaN;
+  if (!Number.isFinite(value) || Math.abs(value) > 8.64e15) {
     throw new NodaraError("ND_INVALID_DATE", `Invalid ${field}: ${String(input)}.`);
   }
   return value;
@@ -40,8 +40,17 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
   return element;
 }
 
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
 export function formatDate(timestamp: number, locale = "en", options?: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(locale, options ?? { day: "2-digit", month: "short" }).format(timestamp);
+  const settings = options ?? { day: "2-digit", month: "short" };
+  const key = JSON.stringify([locale, Object.entries(settings).sort(([a], [b]) => a.localeCompare(b))]);
+  let formatter = dateFormatters.get(key);
+  if (!formatter) formatter = new Intl.DateTimeFormat(locale, settings);
+  // Bounded LRU: do not retain a formatter per event or per arbitrary user option.
+  dateFormatters.delete(key);
+  dateFormatters.set(key, formatter);
+  if (dateFormatters.size > 32) dateFormatters.delete(dateFormatters.keys().next().value!);
+  return formatter.format(timestamp);
 }
 
 export class NodaraError extends Error {
